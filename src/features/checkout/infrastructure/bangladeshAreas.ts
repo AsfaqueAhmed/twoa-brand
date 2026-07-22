@@ -84,6 +84,7 @@ export const thanas: Thana[] = [
   { id: 'cantonment', name: 'Cantonment', districtId: 'dhaka_dist' },
   { id: 'lalbagh', name: 'Lalbagh', districtId: 'dhaka_dist' },
   { id: 'savar', name: 'Savar', districtId: 'dhaka_dist' },
+  { id: 'ashulia', name: 'Ashulia', districtId: 'dhaka_dist' },
   { id: 'keraniganj', name: 'Keraniganj', districtId: 'dhaka_dist' },
   { id: 'dhamrai', name: 'Dhamrai', districtId: 'dhaka_dist' },
   { id: 'dohar', name: 'Dohar', districtId: 'dhaka_dist' },
@@ -91,6 +92,7 @@ export const thanas: Thana[] = [
 
   // Gazipur District
   { id: 'gazipur_sadar', name: 'Gazipur Sadar', districtId: 'gazipur' },
+  { id: 'tongi', name: 'Tongi', districtId: 'gazipur' },
   { id: 'kaliakair', name: 'Kaliakair', districtId: 'gazipur' },
   { id: 'kaliganj', name: 'Kaliganj', districtId: 'gazipur' },
   { id: 'kapasia', name: 'Kapasia', districtId: 'gazipur' },
