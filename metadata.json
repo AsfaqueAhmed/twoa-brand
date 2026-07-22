@@ -1,0 +1,6 @@
+{
+  "name": "E-Commerce App",
+  "description": "A complete PWA e-commerce web application with payment on delivery and live order tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

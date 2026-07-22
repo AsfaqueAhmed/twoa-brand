@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- REUSABLE PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Only this account may manage the catalog and administer orders.
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'asfaqueahmedsakkar@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    // Admin has unrestricted read/write on every collection, present and future.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- COLLECTION RULES (non-admin access) ---
+
+    // 1. Products Catalog
+    match /products/{productId} {
+      allow read: if true; // Storefront catalog is public
+    }
+
+    // 1b. Categories & Subcategories (persisted independently of products)
+    match /categories/{categoryId} {
+      allow read: if true;
+    }
+
+    // 2. Orders Collection
+    match /orders/{orderId} {
+      // Customers can read their own orders.
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Any signed-in user can place an order for themselves.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Customers may cancel their own order, changing only the status field.
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        request.resource.data.status == 'cancelled';
+    }
+
+    // 3. Test Connection
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

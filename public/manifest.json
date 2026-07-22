@@ -1,0 +1,22 @@
+{
+  "short_name": "SwiftCart",
+  "name": "SwiftCart Delivery & Tracking",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/shopping-bag.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/shopping-bag.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "Premium e-commerce mobile-first store with Cash on Delivery and live tracking timeline."
+}
