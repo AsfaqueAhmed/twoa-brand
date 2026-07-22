@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider';
 import { CartProvider } from '@/features/cart/presentation/CartProvider';
 import CartDrawer from '@/features/cart/presentation/CartDrawer';
+import { ProductModalProvider } from '@/features/product/presentation/ProductModalProvider';
 
 export const metadata: Metadata = {
   title: 'SwiftCart',
@@ -16,8 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-white text-slate-900 antialiased overflow-x-hidden">
         <AuthProvider>
           <CartProvider>
-            {children}
-            <CartDrawer />
+            <ProductModalProvider>
+              {children}
+              <CartDrawer />
+            </ProductModalProvider>
           </CartProvider>
         </AuthProvider>
       </body>

@@ -10,12 +10,13 @@ import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 interface ProductDetailViewProps {
   product: Product;
+  onClose?: () => void;
 }
 
-export default function ProductDetailView({ product }: ProductDetailViewProps) {
+export default function ProductDetailView({ product, onClose: onCloseProp }: ProductDetailViewProps) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const onClose = () => router.push('/');
+  const onClose = onCloseProp ?? (() => router.push('/'));
   const onAddToCart = (p: Product, quantity: number, selectedSize?: string, selectedVariant?: ProductVariant) =>
     addToCart(p, quantity, selectedSize, selectedVariant);
 
@@ -42,7 +43,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
 
       {/* Image side */}
       <div
-        className="relative w-full aspect-[4/3] md:aspect-auto md:w-[45%] lg:w-[50%] md:h-full bg-[#F5F5F5] shrink-0"
+        className="relative w-full aspect-square md:w-[45%] lg:w-[50%] bg-[#F5F5F5] shrink-0"
         id="modal-product-image-container"
       >
         <img

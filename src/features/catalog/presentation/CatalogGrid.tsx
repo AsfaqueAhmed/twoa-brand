@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { Search, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { Product } from '@/shared/domain/types';
 import { filterProducts, getCategories, getSubcategories } from '../domain/filter';
 import { useCart } from '@/features/cart/presentation/CartProvider';
+import { useProductModal } from '@/features/product/presentation/ProductModalProvider';
 import ProductCard from './ProductCard';
 import EmptyState from '@/shared/ui/EmptyState';
 
@@ -14,7 +14,7 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubcategory, setSelectedSubcategory] = useState('All');
   const { addToCart } = useCart();
-  const router = useRouter();
+  const { open } = useProductModal();
 
   const categories = getCategories(initialProducts);
   const subcategories = selectedCategory === 'All' ? [] : getSubcategories(initialProducts, selectedCategory);
@@ -109,11 +109,11 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
             <ProductCard
               key={product.id}
               product={product}
-              onSelect={(p) => router.push(`/product?id=${p.id}`)}
+              onSelect={(p) => open(p.id)}
               onAddToCart={(p, e) => {
                 e.stopPropagation();
                 if ((p.sizes && p.sizes.length > 0) || (p.variants && p.variants.length > 0)) {
-                  router.push(`/product?id=${p.id}`);
+                  open(p.id);
                 } else {
                   addToCart(p, 1);
                 }

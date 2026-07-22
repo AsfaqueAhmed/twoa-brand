@@ -3,6 +3,7 @@ build/
 dist/
 out/
 .next/
+.firebase/
 coverage/
 .DS_Store
 *.log
