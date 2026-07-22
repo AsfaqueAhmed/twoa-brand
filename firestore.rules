@@ -35,6 +35,18 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // 1c. Coupons (promo codes)
+    match /coupons/{couponId} {
+      // Public read so the checkout "Active Promotions" panel and code lookup both work.
+      allow read: if true;
+
+      // Signed-in customers may increment usageCount by exactly 1 when redeeming a coupon
+      // at checkout — nothing else about the coupon may change via this path.
+      allow update: if isSignedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usageCount']) &&
+        request.resource.data.usageCount == resource.data.usageCount + 1;
+    }
+
     // 2. Orders Collection
     match /orders/{orderId} {
       // Customers can read their own orders.
