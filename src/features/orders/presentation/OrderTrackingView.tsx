@@ -11,12 +11,15 @@ import { updateOrderStatus } from '../application/updateOrderStatus';
 export default function OrderTrackingView() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [simulating, setSimulating] = useState<string | null>(null);
 
   const onRefresh = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setOrders([]);
+      return;
+    }
     setLoading(true);
     try {
       setOrders(await getUserOrders(user.uid));
