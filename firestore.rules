@@ -35,7 +35,12 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // 1c. Coupons (promo codes)
+    // 1c. Sizes (master list of size options for the product editor)
+    match /sizes/{sizeDocId} {
+      allow read: if true;
+    }
+
+    // 1d. Coupons (promo codes)
     match /coupons/{couponId} {
       // Public read so the checkout "Active Promotions" panel and code lookup both work.
       allow read: if true;

@@ -12,6 +12,7 @@ import {
   type CategoryDoc,
 } from '../infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
+import { fetchSizes, persistNewSize } from '../infrastructure/firestoreSizesRepository';
 import ImageCropperModal from './ImageCropperModal';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 
@@ -43,6 +44,22 @@ export default function InventoryManager() {
   const [availableSizes, setAvailableSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+
+  // Master sizes list (persisted independently in Firestore, so a custom size added
+  // on one product is immediately reusable on every other product, and survives reloads)
+  const [masterSizes, setMasterSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
+
+  const loadSizes = useCallback(async () => {
+    try {
+      setMasterSizes(await fetchSizes());
+    } catch (err) {
+      console.error('Error fetching sizes: ', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSizes();
+  }, [loadSizes]);
 
   // Categories collection (persisted independently in Firestore, so category/
   // subcategory names survive even if no product currently uses them)
@@ -121,7 +138,7 @@ export default function InventoryManager() {
       stock: 10,
     });
     setSelectedSizes([]);
-    setAvailableSizes(['S', 'M', 'L', 'XL']);
+    setAvailableSizes(masterSizes);
     setCustomSizeInput('');
     setProductVariants([]);
     setEditorError('');
@@ -135,8 +152,7 @@ export default function InventoryManager() {
   const handleOpenEditProduct = (p: Product) => {
     setEditingProduct({ ...p });
     setSelectedSizes(p.sizes || []);
-    const defaultSizes = ['S', 'M', 'L', 'XL'];
-    const mergedSizes = Array.from(new Set([...defaultSizes, ...(p.sizes || [])]));
+    const mergedSizes = Array.from(new Set([...masterSizes, ...(p.sizes || [])]));
     setAvailableSizes(mergedSizes);
     setCustomSizeInput('');
     setProductVariants(p.variants || []);
@@ -168,7 +184,7 @@ export default function InventoryManager() {
     await loadCategories();
   };
 
-  const handleAddCustomSize = () => {
+  const handleAddCustomSize = async () => {
     const trimmed = customSizeInput.trim().toUpperCase();
     if (!trimmed) return;
     if (!availableSizes.includes(trimmed)) {
@@ -178,6 +194,8 @@ export default function InventoryManager() {
       setSelectedSizes((prev) => [...prev, trimmed]);
     }
     setCustomSizeInput('');
+    await persistNewSize(trimmed);
+    await loadSizes();
   };
 
   const handleTriggerCrop = (target: 'primary' | 'variant') => {
