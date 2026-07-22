@@ -109,11 +109,11 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
             <ProductCard
               key={product.id}
               product={product}
-              onSelect={(p) => router.push(`/products/${p.id}`)}
+              onSelect={(p) => router.push(`/product?id=${p.id}`)}
               onAddToCart={(p, e) => {
                 e.stopPropagation();
                 if ((p.sizes && p.sizes.length > 0) || (p.variants && p.variants.length > 0)) {
-                  router.push(`/products/${p.id}`);
+                  router.push(`/product?id=${p.id}`);
                 } else {
                   addToCart(p, 1);
                 }

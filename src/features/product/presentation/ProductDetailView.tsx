@@ -10,13 +10,12 @@ import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 interface ProductDetailViewProps {
   product: Product;
-  mode: 'page' | 'modal';
 }
 
-export default function ProductDetailView({ product, mode }: ProductDetailViewProps) {
+export default function ProductDetailView({ product }: ProductDetailViewProps) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const onClose = () => (mode === 'modal' ? router.back() : router.push('/'));
+  const onClose = () => router.push('/');
   const onAddToCart = (p: Product, quantity: number, selectedSize?: string, selectedVariant?: ProductVariant) =>
     addToCart(p, quantity, selectedSize, selectedVariant);
 
@@ -33,15 +32,13 @@ export default function ProductDetailView({ product, mode }: ProductDetailViewPr
 
   return (
     <div className="relative w-full flex flex-col md:flex-row" id="product-detail-view">
-      {mode === 'page' && (
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 rounded-none border border-[#EEEEEE] bg-white/95 backdrop-blur-xs p-2 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-200 shadow-sm"
-          id="product-modal-close"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      )}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-20 rounded-none border border-[#EEEEEE] bg-white/95 backdrop-blur-xs p-2 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-200 shadow-sm"
+        id="product-modal-close"
+      >
+        <X className="h-4 w-4" />
+      </button>
 
       {/* Image side */}
       <div

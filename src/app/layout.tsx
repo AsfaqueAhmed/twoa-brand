@@ -10,20 +10,13 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
-export default function RootLayout({
-  children,
-  modal,
-}: {
-  children: React.ReactNode;
-  modal: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-white text-slate-900 antialiased overflow-x-hidden">
         <AuthProvider>
           <CartProvider>
             {children}
-            {modal}
             <CartDrawer />
           </CartProvider>
         </AuthProvider>
