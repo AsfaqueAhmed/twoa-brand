@@ -22,6 +22,12 @@ export default function AdminOrdersPage() {
               <span className="text-xs font-bold uppercase tracking-wider text-black border-b-2 border-black pb-4 -mb-4">
                 Orders
               </span>
+              <Link
+                href="/admin/coupons"
+                className="text-xs font-bold uppercase tracking-wider text-[#717171] hover:text-black pb-4 -mb-4"
+              >
+                Coupons
+              </Link>
             </div>
             <AdminOrderManager />
           </div>

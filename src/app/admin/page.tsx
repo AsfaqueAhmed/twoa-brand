@@ -22,6 +22,12 @@ export default function AdminPage() {
               >
                 Orders
               </Link>
+              <Link
+                href="/admin/coupons"
+                className="text-xs font-bold uppercase tracking-wider text-[#717171] hover:text-black pb-4 -mb-4"
+              >
+                Coupons
+              </Link>
             </div>
             <InventoryManager />
           </div>
