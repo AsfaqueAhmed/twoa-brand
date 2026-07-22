@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Coupon, DiscountType } from '@/features/coupons/domain/coupon';
+import { divisions, districts } from '@/features/checkout/infrastructure/bangladeshAreas';
 import {
   listAllCoupons,
   createCoupon,
@@ -241,13 +242,24 @@ export default function CouponManager() {
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
                       District Restriction (optional)
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={form.districtRestriction ?? ''}
                       onChange={(e) => setForm((prev) => ({ ...prev, districtRestriction: e.target.value || undefined }))}
-                      placeholder="e.g. dhaka_dist"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none font-mono"
-                    />
+                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    >
+                      <option value="">No restriction</option>
+                      {divisions.map((div) => (
+                        <optgroup key={div.id} label={div.name}>
+                          {districts
+                            .filter((d) => d.divisionId === div.id)
+                            .map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
@@ -333,7 +345,9 @@ export default function CouponManager() {
                   </td>
                   <td className="py-4 px-6 text-[10px] text-[#717171]">
                     {c.minOrderSubtotal ? `Min $${c.minOrderSubtotal.toFixed(2)}. ` : ''}
-                    {c.districtRestriction ? `District: ${c.districtRestriction}. ` : ''}
+                    {c.districtRestriction
+                      ? `District: ${districts.find((d) => d.id === c.districtRestriction)?.name || c.districtRestriction}. `
+                      : ''}
                     {c.expiresAt ? `Expires ${new Date(c.expiresAt).toLocaleDateString()}.` : ''}
                   </td>
                   <td className="py-4 px-6 font-mono">
