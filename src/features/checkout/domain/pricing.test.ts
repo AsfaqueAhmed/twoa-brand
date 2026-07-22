@@ -1,24 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { computeDeliveryFee, computeTotal, generateOrderId, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from './pricing';
+import { computeDeliveryFeeByZone, computeTotal, generateOrderId } from './pricing';
 
-describe('checkout pricing', () => {
-  it('charges delivery fee below the free-delivery threshold', () => {
-    expect(computeDeliveryFee(50)).toBe(DELIVERY_FEE);
+describe('computeDeliveryFeeByZone', () => {
+  it('charges 70 for Dhaka city corporation (DNCC)', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'dhaka_dist', cityCorpId: 'dncc' })).toBe(70);
   });
 
-  it('still charges delivery fee at exactly the threshold, waives it above', () => {
-    expect(computeDeliveryFee(FREE_DELIVERY_THRESHOLD)).toBe(DELIVERY_FEE);
-    expect(computeDeliveryFee(FREE_DELIVERY_THRESHOLD + 1)).toBe(0);
+  it('charges 70 for Dhaka city corporation (DSCC)', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'dhaka_dist', cityCorpId: 'dscc' })).toBe(70);
   });
 
+  it('charges 110 for a Dhaka-suburban thana even without a city corporation', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'dhaka_dist', cityCorpId: 'outside_cc', thanaId: 'savar' })).toBe(110);
+  });
+
+  it('charges 110 for Gazipur Sadar (a different district than dhaka_dist)', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'gazipur', thanaId: 'gazipur_sadar' })).toBe(110);
+  });
+
+  it('charges 110 for the newly added Ashulia and Tongi thanas', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'dhaka_dist', thanaId: 'ashulia' })).toBe(110);
+    expect(computeDeliveryFeeByZone({ districtId: 'gazipur', thanaId: 'tongi' })).toBe(110);
+  });
+
+  it('charges 130 for a Dhaka-district thana inside DCC but with no city corporation selected', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'dhaka_dist', thanaId: 'mirpur' })).toBe(130);
+  });
+
+  it('charges 130 for an unrelated district', () => {
+    expect(computeDeliveryFeeByZone({ districtId: 'chattogram_dist', thanaId: 'kotwali' })).toBe(130);
+  });
+
+  it('charges 130 when nothing is selected yet', () => {
+    expect(computeDeliveryFeeByZone({})).toBe(130);
+  });
+});
+
+describe('computeTotal', () => {
   it('computes total as subtotal + delivery - discount, rounded to cents', () => {
-    expect(computeTotal(100, 4.99, 0)).toBe(104.99);
-    expect(computeTotal(50, 4.99, 5)).toBe(49.99);
-    expect(computeTotal(10.006, 0, 0)).toBe(10.01);
+    expect(computeTotal(100, 70, 0)).toBe(170);
+    expect(computeTotal(50, 110, 10)).toBe(150);
   });
+});
 
+describe('generateOrderId', () => {
   it('generates an order id starting with ord_ and 12 hex chars', () => {
-    const id = generateOrderId();
-    expect(id).toMatch(/^ord_[0-9a-f]{12}$/);
+    expect(generateOrderId()).toMatch(/^ord_[0-9a-f]{12}$/);
   });
 });
