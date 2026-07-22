@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/shared/infrastructure/firebase/app';
 import type { Coupon, DiscountType } from '@/features/coupons/domain/coupon';
 
@@ -29,6 +29,19 @@ function toCoupon(id: string, data: Record<string, any>): Coupon {
   };
 }
 
+// Firestore rejects `undefined` field values outright. Optional coupon fields
+// (minOrderSubtotal, districtRestriction, expiresAt, usageLimit) are `undefined`
+// whenever the admin leaves them blank, so every write must sanitize them first.
+function omitUndefined(payload: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== undefined));
+}
+
+// For merge-updates, an undefined field means "the admin cleared this" and must
+// actively delete the key in Firestore, not just be omitted from the write.
+function undefinedToDeleteField(payload: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
+}
+
 export async function listAllCoupons(): Promise<Coupon[]> {
   const snap = await getDocs(collection(db, 'coupons'));
   return snap.docs.map((d) => toCoupon(d.id, d.data()));
@@ -37,7 +50,7 @@ export async function listAllCoupons(): Promise<Coupon[]> {
 export async function createCoupon(payload: CouponFormPayload): Promise<void> {
   const id = payload.code.trim().toUpperCase();
   await setDoc(doc(db, 'coupons', id), {
-    ...payload,
+    ...omitUndefined(payload),
     code: id,
     usageCount: 0,
     createdAt: serverTimestamp(),
@@ -46,7 +59,11 @@ export async function createCoupon(payload: CouponFormPayload): Promise<void> {
 }
 
 export async function updateCoupon(code: string, payload: Partial<CouponFormPayload>): Promise<void> {
-  await setDoc(doc(db, 'coupons', code.toUpperCase()), { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(
+    doc(db, 'coupons', code.toUpperCase()),
+    { ...undefinedToDeleteField(payload), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }
 
 export async function deleteCoupon(code: string): Promise<void> {
