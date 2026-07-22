@@ -6,8 +6,8 @@ describe('checkout pricing', () => {
     expect(computeDeliveryFee(50)).toBe(DELIVERY_FEE);
   });
 
-  it('waives delivery fee at or above the free-delivery threshold', () => {
-    expect(computeDeliveryFee(FREE_DELIVERY_THRESHOLD)).toBe(0);
+  it('still charges delivery fee at exactly the threshold, waives it above', () => {
+    expect(computeDeliveryFee(FREE_DELIVERY_THRESHOLD)).toBe(DELIVERY_FEE);
     expect(computeDeliveryFee(FREE_DELIVERY_THRESHOLD + 1)).toBe(0);
   });
 

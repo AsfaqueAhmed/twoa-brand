@@ -2,7 +2,7 @@ export const FREE_DELIVERY_THRESHOLD = 100;
 export const DELIVERY_FEE = 4.99;
 
 export function computeDeliveryFee(subtotal: number): number {
-  return subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  return subtotal > FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
 }
 
 export function computeTotal(subtotal: number, deliveryFee: number, discount = 0): number {
