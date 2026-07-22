@@ -3,12 +3,15 @@ import type { CartItem, OrderItem, OrderStatus } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { updateProductStock } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import { incrementCouponUsage } from '@/features/coupons/infrastructure/firestoreCouponsRepository';
-import { computeDeliveryFee, computeTotal, generateOrderId } from '../domain/pricing';
+import { computeDeliveryFeeByZone, computeTotal, generateOrderId } from '../domain/pricing';
 
 export interface DeliveryDetails {
   name: string;
   phone: string;
   address: string;
+  districtId?: string;
+  cityCorpId?: string;
+  thanaId?: string;
   promoCode?: string;
   discount?: number;
   finalTotal?: number;
@@ -33,7 +36,11 @@ export async function placeOrder(params: {
   }));
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const deliveryFee = computeDeliveryFee(subtotal);
+  const deliveryFee = computeDeliveryFeeByZone({
+    districtId: deliveryDetails.districtId,
+    cityCorpId: deliveryDetails.cityCorpId,
+    thanaId: deliveryDetails.thanaId,
+  });
   const computedTotal = computeTotal(subtotal, deliveryFee, deliveryDetails.discount ?? 0);
   const finalTotal = deliveryDetails.finalTotal !== undefined ? deliveryDetails.finalTotal : computedTotal;
 

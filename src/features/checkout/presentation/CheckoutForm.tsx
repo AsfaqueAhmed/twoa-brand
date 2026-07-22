@@ -8,7 +8,7 @@ import { divisions, districts, thanas, cityCorporations } from '../infrastructur
 import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { placeOrder, type DeliveryDetails } from '../application/placeOrder';
-import { computeDeliveryFee, computeTotal } from '../domain/pricing';
+import { computeDeliveryFeeByZone, computeTotal } from '../domain/pricing';
 import type { Coupon } from '@/features/coupons/domain/coupon';
 import { applyCoupon } from '@/features/coupons/application/applyCoupon';
 import { listActiveCoupons } from '@/features/coupons/application/listActiveCoupons';
@@ -42,7 +42,7 @@ export default function CheckoutForm() {
     listActiveCoupons().then(setActiveCoupons);
   }, []);
 
-  const deliveryFee = computeDeliveryFee(subtotal);
+  const deliveryFee = computeDeliveryFeeByZone({ districtId, cityCorpId, thanaId });
 
   const discountAmount = appliedCoupon ? appliedDiscountAmount : 0;
 
@@ -164,6 +164,9 @@ export default function CheckoutForm() {
         name: name.trim(),
         phone: phone.trim(),
         address: formattedAddress,
+        districtId,
+        cityCorpId: cityCorpId || undefined,
+        thanaId,
         promoCode: appliedCoupon?.code,
         discount: discountAmount > 0 ? discountAmount : undefined,
         finalTotal: grandTotal,
@@ -610,7 +613,7 @@ export default function CheckoutForm() {
               </div>
               <div className="flex justify-between text-[#717171]">
                 <span>Shipping Fee</span>
-                <span className="font-bold text-black">{deliveryFee === 0 ? 'FREE' : `$${deliveryFee.toFixed(2)}`}</span>
+                <span className="font-bold text-black">${deliveryFee.toFixed(2)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold animate-in fade-in duration-200">
