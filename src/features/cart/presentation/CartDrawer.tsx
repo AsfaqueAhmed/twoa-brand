@@ -33,7 +33,7 @@ export default function CartDrawer() {
         />
 
         {/* Slide-out Panel: full-screen "page" on mobile, right-side drawer on desktop */}
-        <div className="fixed inset-0 sm:inset-y-0 sm:right-0 flex max-w-full sm:pl-10">
+        <div className="fixed inset-0 sm:inset-y-0 sm:right-0 flex justify-end max-w-full sm:pl-10">
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
