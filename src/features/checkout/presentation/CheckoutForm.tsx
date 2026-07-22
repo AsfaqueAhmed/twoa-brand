@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, MapPin, Phone, User as UserIcon, Truck, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -9,6 +9,10 @@ import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { placeOrder, type DeliveryDetails } from '../application/placeOrder';
 import { computeDeliveryFee, computeTotal } from '../domain/pricing';
+import type { Coupon } from '@/features/coupons/domain/coupon';
+import { applyCoupon } from '@/features/coupons/application/applyCoupon';
+import { listActiveCoupons } from '@/features/coupons/application/listActiveCoupons';
+import { meetsMinimumSubtotal, meetsDistrictRestriction } from '@/features/coupons/domain/coupon';
 
 export default function CheckoutForm() {
   const router = useRouter();
@@ -28,23 +32,19 @@ export default function CheckoutForm() {
 
   // Promo Code / Discount state
   const [promoInput, setPromoInput] = useState('');
-  const [appliedPromoCode, setAppliedPromoCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [appliedDiscountAmount, setAppliedDiscountAmount] = useState(0);
+  const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([]);
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
+  useEffect(() => {
+    listActiveCoupons().then(setActiveCoupons);
+  }, []);
+
   const deliveryFee = computeDeliveryFee(subtotal);
 
-  // Calculate discount
-  let discountAmount = 0;
-  if (appliedPromoCode === 'WELCOME10') {
-    discountAmount = Math.round(subtotal * 0.1 * 100) / 100;
-  } else if (appliedPromoCode === 'FREESHIP') {
-    discountAmount = deliveryFee;
-  } else if (appliedPromoCode === 'SAVE15') {
-    discountAmount = Math.round(subtotal * 0.15 * 100) / 100;
-  } else if (appliedPromoCode === 'DHAKALOVE') {
-    discountAmount = districtId === 'dhaka_dist' ? 5.0 : 0;
-  }
+  const discountAmount = appliedCoupon ? appliedDiscountAmount : 0;
 
   const grandTotal = Math.max(0, computeTotal(subtotal, deliveryFee, discountAmount));
 
@@ -60,7 +60,7 @@ export default function CheckoutForm() {
     }
   };
 
-  const handleApplyPromo = (code: string) => {
+  const handleApplyPromo = async (code: string) => {
     setPromoError('');
     setPromoSuccess('');
     const cleanCode = code.trim().toUpperCase();
@@ -69,38 +69,29 @@ export default function CheckoutForm() {
       setPromoError('Please enter a promo code.');
       return;
     }
+    if (!user) return;
 
-    if (cleanCode === 'WELCOME10') {
-      setAppliedPromoCode('WELCOME10');
-      setPromoSuccess('Promo WELCOME10 applied: 10% discount!');
-    } else if (cleanCode === 'FREESHIP') {
-      if (deliveryFee === 0) {
-        setPromoError('Free shipping is already active for orders over $100.');
-      } else {
-        setAppliedPromoCode('FREESHIP');
-        setPromoSuccess('Promo FREESHIP applied: Shipping fee waived!');
-      }
-    } else if (cleanCode === 'SAVE15') {
-      if (subtotal < 100) {
-        setPromoError('SAVE15 requires a minimum subtotal of $100.');
-      } else {
-        setAppliedPromoCode('SAVE15');
-        setPromoSuccess('Promo SAVE15 applied: 15% discount!');
-      }
-    } else if (cleanCode === 'DHAKALOVE') {
-      if (districtId !== 'dhaka_dist') {
-        setPromoError('DHAKALOVE is only valid for deliveries within Dhaka District.');
-      } else {
-        setAppliedPromoCode('DHAKALOVE');
-        setPromoSuccess('Promo DHAKALOVE applied: $5.00 flat discount!');
-      }
-    } else {
-      setPromoError('Invalid promo code. Please try another one.');
+    const result = await applyCoupon({
+      code: cleanCode,
+      user,
+      subtotal,
+      deliveryFee,
+      districtId: districtId || undefined,
+    });
+
+    if (!result.valid || !result.coupon) {
+      setPromoError(result.reason || 'Invalid promo code. Please try another one.');
+      return;
     }
+
+    setAppliedCoupon(result.coupon);
+    setAppliedDiscountAmount(result.discountAmount || 0);
+    setPromoSuccess(`Promo ${result.coupon.code} applied!`);
   };
 
   const handleRemovePromo = () => {
-    setAppliedPromoCode('');
+    setAppliedCoupon(null);
+    setAppliedDiscountAmount(0);
     setPromoInput('');
     setPromoSuccess('');
     setPromoError('');
@@ -173,7 +164,7 @@ export default function CheckoutForm() {
         name: name.trim(),
         phone: phone.trim(),
         address: formattedAddress,
-        promoCode: appliedPromoCode || undefined,
+        promoCode: appliedCoupon?.code,
         discount: discountAmount > 0 ? discountAmount : undefined,
         finalTotal: grandTotal,
       });
@@ -511,13 +502,13 @@ export default function CheckoutForm() {
                 Have a Promo Code?
               </label>
 
-              {appliedPromoCode ? (
+              {appliedCoupon ? (
                 <div className="flex items-center justify-between border border-black bg-black text-white p-3 mb-4 animate-in fade-in duration-200">
                   <div className="min-w-0">
                     <span className="text-[9px] font-bold uppercase tracking-wider block opacity-70">
                       Code Applied
                     </span>
-                    <span className="text-xs font-bold tracking-widest font-mono">{appliedPromoCode}</span>
+                    <span className="text-xs font-bold tracking-widest font-mono">{appliedCoupon.code}</span>
                   </div>
                   <button
                     type="button"
@@ -570,80 +561,42 @@ export default function CheckoutForm() {
                   Active Promotions:
                 </span>
                 <div className="space-y-2">
-                  <div
-                    onClick={() => {
-                      setPromoInput('WELCOME10');
-                      handleApplyPromo('WELCOME10');
-                    }}
-                    className={`border p-2 bg-white cursor-pointer transition-all duration-200 text-left ${
-                      appliedPromoCode === 'WELCOME10' ? 'border-black bg-black/5' : 'border-dashed border-[#DDDDDD] hover:border-black'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-black font-mono tracking-wider">WELCOME10</span>
-                      <span className="text-[8px] font-bold uppercase tracking-wider bg-black text-white px-1.5 py-0.5">
-                        10% OFF
-                      </span>
-                    </div>
-                    <p className="text-[9px] text-[#717171] mt-0.5">Get 10% discount on entire catalog subtotal.</p>
-                  </div>
-
-                  <div
-                    onClick={() => {
-                      setPromoInput('FREESHIP');
-                      handleApplyPromo('FREESHIP');
-                    }}
-                    className={`border p-2 bg-white cursor-pointer transition-all duration-200 text-left ${
-                      appliedPromoCode === 'FREESHIP' ? 'border-black bg-black/5' : 'border-dashed border-[#DDDDDD] hover:border-black'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-black font-mono tracking-wider">FREESHIP</span>
-                      <span className="text-[8px] font-bold uppercase tracking-wider bg-black text-white px-1.5 py-0.5">
-                        FREE SHIPPING
-                      </span>
-                    </div>
-                    <p className="text-[9px] text-[#717171] mt-0.5">Waives the flat standard delivery fee of $4.99.</p>
-                  </div>
-
-                  {subtotal >= 100 && (
-                    <div
-                      onClick={() => {
-                        setPromoInput('SAVE15');
-                        handleApplyPromo('SAVE15');
-                      }}
-                      className={`border p-2 bg-white cursor-pointer transition-all duration-200 text-left ${
-                        appliedPromoCode === 'SAVE15' ? 'border-black bg-black/5' : 'border-dashed border-[#DDDDDD] hover:border-black'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-black font-mono tracking-wider">SAVE15</span>
-                        <span className="text-[8px] font-bold uppercase tracking-wider bg-black text-white px-1.5 py-0.5">
-                          15% OFF
-                        </span>
+                  {activeCoupons
+                    .filter(
+                      (c) =>
+                        meetsMinimumSubtotal(c, subtotal) &&
+                        meetsDistrictRestriction(c, districtId || undefined) &&
+                        !(c.discountType === 'free_shipping' && deliveryFee === 0)
+                    )
+                    .map((c) => (
+                      <div
+                        key={c.code}
+                        onClick={() => {
+                          setPromoInput(c.code);
+                          handleApplyPromo(c.code);
+                        }}
+                        className={`border p-2 bg-white cursor-pointer transition-all duration-200 text-left ${
+                          appliedCoupon?.code === c.code ? 'border-black bg-black/5' : 'border-dashed border-[#DDDDDD] hover:border-black'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-black font-mono tracking-wider">{c.code}</span>
+                          <span className="text-[8px] font-bold uppercase tracking-wider bg-black text-white px-1.5 py-0.5">
+                            {c.discountType === 'percentage'
+                              ? `${c.value}% OFF`
+                              : c.discountType === 'flat'
+                                ? `$${c.value.toFixed(2)} OFF`
+                                : 'FREE SHIPPING'}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-[#717171] mt-0.5">
+                          {c.minOrderSubtotal ? `Minimum order $${c.minOrderSubtotal.toFixed(2)}. ` : ''}
+                          {c.districtRestriction ? 'Restricted delivery area.' : ''}
+                        </p>
                       </div>
-                      <p className="text-[9px] text-[#717171] mt-0.5">Get 15% discount for orders above $100.</p>
-                    </div>
-                  )}
-
-                  {districtId === 'dhaka_dist' && (
-                    <div
-                      onClick={() => {
-                        setPromoInput('DHAKALOVE');
-                        handleApplyPromo('DHAKALOVE');
-                      }}
-                      className={`border p-2 bg-white cursor-pointer transition-all duration-200 text-left ${
-                        appliedPromoCode === 'DHAKALOVE' ? 'border-black bg-black/5' : 'border-dashed border-[#DDDDDD] hover:border-black'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-black font-mono tracking-wider">DHAKALOVE</span>
-                        <span className="text-[8px] font-bold uppercase tracking-wider bg-black text-white px-1.5 py-0.5">
-                          FLAT $5 OFF
-                        </span>
-                      </div>
-                      <p className="text-[9px] text-[#717171] mt-0.5">Special $5 discount for Dhaka District deliveries.</p>
-                    </div>
+                    ))}
+                  {activeCoupons.length === 0 && (
+                    <p className="text-[9px] text-[#919191] italic">No active promotions right now.</p>
                   )}
                 </div>
               </div>
@@ -661,7 +614,7 @@ export default function CheckoutForm() {
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold animate-in fade-in duration-200">
-                  <span>Discount ({appliedPromoCode})</span>
+                  <span>Discount ({appliedCoupon?.code})</span>
                   <span>-${discountAmount.toFixed(2)}</span>
                 </div>
               )}

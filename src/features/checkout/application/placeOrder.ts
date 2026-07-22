@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import type { CartItem, OrderItem, OrderStatus } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { updateProductStock } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { incrementCouponUsage } from '@/features/coupons/infrastructure/firestoreCouponsRepository';
 import { computeDeliveryFee, computeTotal, generateOrderId } from '../domain/pricing';
 
 export interface DeliveryDetails {
@@ -51,6 +52,10 @@ export async function placeOrder(params: {
   if (deliveryDetails.discount !== undefined) payload.discount = deliveryDetails.discount;
 
   await createOrder(orderId, payload);
+
+  if (deliveryDetails.promoCode) {
+    await incrementCouponUsage(deliveryDetails.promoCode);
+  }
 
   for (const item of cartItems) {
     const nextStock = Math.max(0, item.product.stock - item.quantity);
