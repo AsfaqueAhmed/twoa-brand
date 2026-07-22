@@ -1,3 +1,5 @@
+import { formatCurrency } from '@/shared/lib/formatCurrency';
+
 export type DiscountType = 'percentage' | 'flat' | 'free_shipping';
 
 export interface Coupon {
@@ -59,7 +61,7 @@ export function validateCouponEligibility(
   if (!meetsMinimumSubtotal(coupon, ctx.subtotal)) {
     return {
       valid: false,
-      reason: `This coupon requires a minimum subtotal of $${coupon.minOrderSubtotal?.toFixed(2)}.`,
+      reason: `This coupon requires a minimum subtotal of ${formatCurrency(coupon.minOrderSubtotal ?? 0)}.`,
     };
   }
   if (!meetsDistrictRestriction(coupon, ctx.districtId)) {

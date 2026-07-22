@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { getUserOrders } from '../application/getUserOrders';
 import { cancelOrder } from '../application/cancelOrder';
 import { updateOrderStatus } from '../application/updateOrderStatus';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function OrderTrackingView() {
   const { user } = useAuth();
@@ -178,7 +179,7 @@ export default function OrderTrackingView() {
                       <div>
                         <span className="text-[10px] uppercase tracking-wider text-[#717171]">Grand Total</span>
                         <span className="block font-bold text-black font-mono mt-0.5">
-                          ${order.totalAmount.toFixed(2)}
+                          {formatCurrency(order.totalAmount)}
                         </span>
                       </div>
                       <span className="text-[10px] text-[#717171] font-mono">
@@ -378,7 +379,7 @@ export default function OrderTrackingView() {
                             {item.name} <span className="text-[#717171] font-normal">× {item.quantity}</span>
                           </span>
                           <span className="font-bold text-black font-mono">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            {formatCurrency(item.price * item.quantity)}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -413,7 +414,7 @@ export default function OrderTrackingView() {
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="text-xs font-bold text-black uppercase tracking-wider">Grand Total Paid</span>
                     <span className="text-base font-bold text-black font-mono">
-                      ${activeOrder.totalAmount.toFixed(2)}
+                      {formatCurrency(activeOrder.totalAmount)}
                     </span>
                   </div>
                 </div>

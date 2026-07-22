@@ -13,6 +13,7 @@ import {
 } from '../infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
 import ImageCropperModal from './ImageCropperModal';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -950,9 +951,9 @@ export default function InventoryManager() {
 
                   {/* Price */}
                   <td className="py-4 px-6 font-mono font-bold text-black">
-                    ${p.price.toFixed(2)}
+                    {formatCurrency(p.price)}
                     {p.originalPrice && (
-                      <span className="block text-[9px] text-[#919191] line-through font-normal">${p.originalPrice.toFixed(2)}</span>
+                      <span className="block text-[9px] text-[#919191] line-through font-normal">{formatCurrency(p.originalPrice)}</span>
                     )}
                   </td>
 

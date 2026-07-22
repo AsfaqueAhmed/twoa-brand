@@ -5,6 +5,7 @@ import type { ProductVariant } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCart } from './CartProvider';
 import { useRouter } from 'next/navigation';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function CartDrawer() {
   const { items: cartItems, isOpen, closeCart, updateQuantity, removeFromCart, subtotal } = useCart();
@@ -119,11 +120,11 @@ export default function CartDrawer() {
 
                           <div className="flex items-baseline space-x-1.5 mt-0.5">
                             <span className="text-[11px] font-bold text-black font-mono">
-                              ${item.product.price.toFixed(2)}
+                              {formatCurrency(item.product.price)}
                             </span>
                             {item.product.originalPrice && item.product.originalPrice > item.product.price && (
                               <span className="text-[10px] text-[#919191] line-through font-mono">
-                                ${item.product.originalPrice.toFixed(2)}
+                                {formatCurrency(item.product.originalPrice)}
                               </span>
                             )}
                             <span className="text-[10px] text-[#717171] font-normal font-sans">each</span>
@@ -181,7 +182,7 @@ export default function CartDrawer() {
 
                 <div className="flex justify-between items-baseline border-t border-[#EEEEEE] pt-4">
                   <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#717171]">Subtotal</span>
-                  <span className="text-2xl font-bold text-black">${subtotal.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-black">{formatCurrency(subtotal)}</span>
                 </div>
 
                 <button

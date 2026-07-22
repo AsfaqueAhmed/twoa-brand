@@ -6,6 +6,7 @@ import type { Product, ProductVariant } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/features/cart/presentation/CartProvider';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -74,11 +75,11 @@ export default function ProductDetailView({ product, mode }: ProductDetailViewPr
 
           {/* Price Tag */}
           <div className="mt-4 flex flex-wrap items-baseline gap-2.5">
-            <span className="text-2xl font-bold text-black">${product.price.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-black">{formatCurrency(product.price)}</span>
             {product.originalPrice && product.originalPrice > product.price && (
               <>
                 <span className="text-sm font-semibold text-[#919191] line-through font-mono">
-                  ${product.originalPrice.toFixed(2)}
+                  {formatCurrency(product.originalPrice)}
                 </span>
                 <span className="bg-red-600 text-white px-2 py-0.5 text-[9px] uppercase font-bold tracking-[0.1em] font-mono">
                   {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
@@ -289,7 +290,7 @@ export default function ProductDetailView({ product, mode }: ProductDetailViewPr
                 {selectedVariant ? selectedVariant.name : ''}
                 {selectedVariant && selectedSize ? ' - ' : ''}
                 {selectedSize ? selectedSize : ''}
-                {selectedVariant || selectedSize ? ')' : ''} - ${(product.price * quantity).toFixed(2)}
+                {selectedVariant || selectedSize ? ')' : ''} - {formatCurrency(product.price * quantity)}
               </span>
             </button>
           </div>

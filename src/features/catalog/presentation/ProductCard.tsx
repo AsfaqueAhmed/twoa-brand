@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { motion } from 'motion/react';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 interface ProductCardProps {
   key?: string;
@@ -183,10 +184,10 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
               Price
             </span>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-black leading-tight">${product.price.toFixed(2)}</span>
+              <span className="text-[15px] font-bold text-black leading-tight">{formatCurrency(product.price)}</span>
               {hasDiscount && (
                 <span className="text-[10px] text-[#919191] line-through font-semibold font-mono mt-0.5 leading-none">
-                  ${product.originalPrice?.toFixed(2)}
+                  {product.originalPrice !== undefined && formatCurrency(product.originalPrice)}
                 </span>
               )}
             </div>

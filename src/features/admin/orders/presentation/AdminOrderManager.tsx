@@ -5,6 +5,7 @@ import { RefreshCw, ShoppingBag, Search } from 'lucide-react';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 const getStatusStyle = (status: OrderStatus) => {
   switch (status) {
@@ -172,7 +173,7 @@ export default function AdminOrderManager() {
                             </div>
                           </div>
                         </div>
-                        <span className="font-mono font-bold text-black">${(item.price * item.quantity).toFixed(2)}</span>
+                        <span className="font-mono font-bold text-black">{formatCurrency(item.price * item.quantity)}</span>
                       </div>
                     ))}
                   </div>
@@ -183,7 +184,7 @@ export default function AdminOrderManager() {
               <div className="flex flex-col md:items-end justify-between self-stretch shrink-0 gap-4">
                 <div className="text-right">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#717171]">Total Delivery Amount</span>
-                  <p className="text-2xl font-bold text-black font-mono mt-1">${ord.totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-black font-mono mt-1">{formatCurrency(ord.totalAmount)}</p>
                   <span className="inline-block mt-1 bg-black text-white px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold">
                     Pay on Delivery
                   </span>

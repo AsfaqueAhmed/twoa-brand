@@ -13,6 +13,7 @@ import type { Coupon } from '@/features/coupons/domain/coupon';
 import { applyCoupon } from '@/features/coupons/application/applyCoupon';
 import { listActiveCoupons } from '@/features/coupons/application/listActiveCoupons';
 import { meetsMinimumSubtotal, meetsDistrictRestriction } from '@/features/coupons/domain/coupon';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function CheckoutForm() {
   const router = useRouter();
@@ -426,7 +427,7 @@ export default function CheckoutForm() {
                   ) : (
                     <>
                       <ShieldCheck className="h-4.5 w-4.5" />
-                      <span>Confirm COD Order - ${grandTotal.toFixed(2)}</span>
+                      <span>Confirm COD Order - {formatCurrency(grandTotal)}</span>
                     </>
                   )}
                 </button>
@@ -482,17 +483,17 @@ export default function CheckoutForm() {
                         </div>
 
                         <p className="text-[10px] text-[#717171] mt-1 font-mono">
-                          Qty: {item.quantity} × ${item.product.price.toFixed(2)}
+                          Qty: {item.quantity} × {formatCurrency(item.product.price)}
                           {item.product.originalPrice && item.product.originalPrice > item.product.price && (
                             <span className="text-[9px] text-[#919191] line-through ml-1.5">
-                              ${item.product.originalPrice.toFixed(2)}
+                              {formatCurrency(item.product.originalPrice)}
                             </span>
                           )}
                         </p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-black font-mono ml-3">
-                      ${(item.product.price * item.quantity).toFixed(2)}
+                      {formatCurrency(item.product.price * item.quantity)}
                     </span>
                   </div>
                 );
@@ -588,12 +589,12 @@ export default function CheckoutForm() {
                             {c.discountType === 'percentage'
                               ? `${c.value}% OFF`
                               : c.discountType === 'flat'
-                                ? `$${c.value.toFixed(2)} OFF`
+                                ? `${formatCurrency(c.value)} OFF`
                                 : 'FREE SHIPPING'}
                           </span>
                         </div>
                         <p className="text-[9px] text-[#717171] mt-0.5">
-                          {c.minOrderSubtotal ? `Minimum order $${c.minOrderSubtotal.toFixed(2)}. ` : ''}
+                          {c.minOrderSubtotal ? `Minimum order ${formatCurrency(c.minOrderSubtotal)}. ` : ''}
                           {c.districtRestriction ? 'Restricted delivery area.' : ''}
                         </p>
                       </div>
@@ -609,16 +610,16 @@ export default function CheckoutForm() {
             <div className="mt-6 border-t border-[#EEEEEE] pt-4 space-y-2.5 text-xs">
               <div className="flex justify-between text-[#717171]">
                 <span>Subtotal</span>
-                <span className="font-bold text-black">${subtotal.toFixed(2)}</span>
+                <span className="font-bold text-black">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-[#717171]">
                 <span>Shipping Fee</span>
-                <span className="font-bold text-black">${deliveryFee.toFixed(2)}</span>
+                <span className="font-bold text-black">{formatCurrency(deliveryFee)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold animate-in fade-in duration-200">
                   <span>Discount ({appliedCoupon?.code})</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-[#717171]">
@@ -627,7 +628,7 @@ export default function CheckoutForm() {
               </div>
               <div className="flex justify-between border-t border-[#EEEEEE] pt-4 text-black font-semibold">
                 <span className="font-bold uppercase tracking-[0.1em] text-[11px]">Grand Total</span>
-                <span className="text-lg font-bold text-black font-mono">${grandTotal.toFixed(2)}</span>
+                <span className="text-lg font-bold text-black font-mono">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Coupon, DiscountType } from '@/features/coupons/domain/coupon';
 import { divisions, districts } from '@/features/checkout/infrastructure/bangladeshAreas';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
 import {
   listAllCoupons,
   createCoupon,
@@ -340,11 +341,11 @@ export default function CouponManager() {
                     {c.discountType === 'percentage'
                       ? `${c.value}% off`
                       : c.discountType === 'flat'
-                        ? `$${c.value.toFixed(2)} off`
+                        ? `${formatCurrency(c.value)} off`
                         : 'Free shipping'}
                   </td>
                   <td className="py-4 px-6 text-[10px] text-[#717171]">
-                    {c.minOrderSubtotal ? `Min $${c.minOrderSubtotal.toFixed(2)}. ` : ''}
+                    {c.minOrderSubtotal ? `Min ${formatCurrency(c.minOrderSubtotal)}. ` : ''}
                     {c.districtRestriction
                       ? `District: ${districts.find((d) => d.id === c.districtRestriction)?.name || c.districtRestriction}. `
                       : ''}
