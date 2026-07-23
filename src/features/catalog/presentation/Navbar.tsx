@@ -26,18 +26,11 @@ export default function Navbar() {
           {/* Brand Logo */}
           <div
             onClick={() => setTab('shop')}
-            className="flex cursor-pointer items-center space-x-3 text-[#1A1A1A]"
+            className="flex cursor-pointer items-center"
             id="brand-logo-trigger"
           >
-            <div className="flex h-10 w-10 items-center justify-center border border-[#EEEEEE] rounded-full text-black">
-              <ShoppingBag className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h1 className="font-sans text-lg font-bold tracking-tighter uppercase text-black">SwiftCart</h1>
-              <span className="hidden text-[9px] font-bold uppercase tracking-[0.2em] text-[#717171] sm:block">
-                Premium Hardware
-              </span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-9 w-auto sm:h-10" />
           </div>
 
           {/* Navigation Tabs (desktop/tablet only — mobile uses the bottom nav bar) */}
