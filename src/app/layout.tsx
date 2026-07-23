@@ -6,7 +6,7 @@ import CartDrawer from '@/features/cart/presentation/CartDrawer';
 import { ProductModalProvider } from '@/features/product/presentation/ProductModalProvider';
 
 export const metadata: Metadata = {
-  title: 'SwiftCart',
+  title: '2A',
   description: 'Premium Quality, Paid on Delivery',
   manifest: '/manifest.json',
 };
