@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy } from 'lucide-react';
 import Link from 'next/link';
 import type { Product, ProductVariant, ParentProduct } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -162,6 +162,20 @@ export default function InventoryManager() {
 
   const handleOpenEditProduct = (p: Product) => {
     setEditingProduct({ ...p });
+    setProductVariants(p.variants || []);
+    setEditorError('');
+    setIsAddingNewCategory(false);
+    setNewCategoryInput('');
+    setIsAddingNewSubcategory(false);
+    setNewSubcategoryInput('');
+    setIsEditingProduct(true);
+  };
+
+  // Pre-fills the create form from an existing product (fresh ID, everything
+  // else — including the Parent Product link — carried over) so a similar
+  // listing (e.g. another color) can be created without re-entering every field.
+  const handleDuplicateProduct = (p: Product) => {
+    setEditingProduct({ ...p, id: `prod-${Date.now()}`, name: `${p.name} (Copy)` });
     setProductVariants(p.variants || []);
     setEditorError('');
     setIsAddingNewCategory(false);
@@ -1061,6 +1075,14 @@ export default function InventoryManager() {
                       id={`admin-edit-prod-btn-${p.id}`}
                     >
                       <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicateProduct(p)}
+                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
+                      title="Duplicate Product"
+                      id={`admin-duplicate-prod-btn-${p.id}`}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteProduct(p.id)}
