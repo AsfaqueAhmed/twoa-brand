@@ -69,6 +69,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
           alt={product.name}
           className="h-full w-full object-cover object-center transition-all duration-500 group-hover:scale-103"
           referrerPolicy="no-referrer"
+          loading="lazy"
         />
         {/* Category tag */}
         <span className="absolute top-3 left-3 bg-black px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white">
@@ -122,6 +123,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
                     alt={v.name}
                     className="h-full w-full object-cover"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
                 </button>
               );

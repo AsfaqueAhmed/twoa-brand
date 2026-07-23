@@ -92,6 +92,7 @@ export default function CartDrawer() {
                           alt={item.product.name}
                           className="h-16 w-16 rounded-none object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"
                           referrerPolicy="no-referrer"
+                          loading="lazy"
                         />
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-black truncate">
