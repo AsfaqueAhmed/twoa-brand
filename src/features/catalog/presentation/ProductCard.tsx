@@ -152,16 +152,16 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
 
         {/* Active Variant Indicator */}
         {hasVariants && (
-          <div className="mt-2.5 flex items-center gap-1.5">
-            <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-[#919191]">Color/Design:</span>
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-black bg-[#FAF9F6] border border-[#EEEEEE] px-1.5 py-0.5">
+          <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
+            <span className="shrink-0 text-[8px] font-bold uppercase tracking-[0.1em] text-[#919191]">Color/Design:</span>
+            <span className="inline-flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase text-black bg-[#FAF9F6] border border-[#EEEEEE] px-1.5 py-0.5">
               {product.variants![activeVariantIndex]?.colorCode && (
                 <span
                   className="h-2 w-2 rounded-full border border-black/10 shrink-0"
                   style={{ backgroundColor: product.variants![activeVariantIndex].colorCode }}
                 />
               )}
-              <span>{displayedVariantName}</span>
+              <span className="truncate">{displayedVariantName}</span>
             </span>
           </div>
         )}
