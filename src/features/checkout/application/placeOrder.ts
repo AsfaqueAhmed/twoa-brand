@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import type { CartItem, OrderItem, OrderStatus } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
-import { updateProductStock } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { reserveStockForOrder } from '../infrastructure/reserveParentStock';
 import { incrementCouponUsage } from '@/features/coupons/infrastructure/firestoreCouponsRepository';
 import { computeDeliveryFeeByZone, computeTotal, generateOrderId } from '../domain/pricing';
 
@@ -38,6 +38,7 @@ export async function placeOrder(params: {
     };
     if (item.selectedSize) orderItem.selectedSize = item.selectedSize;
     if (item.selectedVariant) orderItem.selectedVariant = item.selectedVariant;
+    if (item.product.parentProductId) orderItem.parentProductId = item.product.parentProductId;
     return orderItem;
   });
 
@@ -64,15 +65,12 @@ export async function placeOrder(params: {
   if (deliveryDetails.promoCode) payload.promoCode = deliveryDetails.promoCode;
   if (deliveryDetails.discount !== undefined) payload.discount = deliveryDetails.discount;
 
+  await reserveStockForOrder(cartItems);
+
   await createOrder(orderId, payload);
 
   if (deliveryDetails.promoCode) {
     await incrementCouponUsage(deliveryDetails.promoCode);
-  }
-
-  for (const item of cartItems) {
-    const nextStock = Math.max(0, item.product.stock - item.quantity);
-    await updateProductStock(item.product.id, nextStock);
   }
 
   return orderId;

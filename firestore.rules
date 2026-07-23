@@ -28,14 +28,25 @@ service cloud.firestore {
     // 1. Products Catalog
     match /products/{productId} {
       allow read: if true; // Storefront catalog is public
+    }
 
-      // Checkout (signed-in or guest) decrements stock after placing an order.
-      // Scoped to exactly that: only the `stock` field, only a non-negative
-      // value, and only ever decreasing — never an arbitrary product edit.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']) &&
-        request.resource.data.stock is number &&
-        request.resource.data.stock >= 0 &&
-        request.resource.data.stock <= resource.data.stock;
+    // 1a. Parent Products — pooled per-size stock, referenced by product.parentProductId.
+    // Metadata (name, sizeOrder) is admin-only, covered by the blanket isAdmin() rule above.
+    match /parentProducts/{parentId} {
+      allow read: if true; // storefront needs name/sizeOrder for display
+
+      match /sizeStock/{sizeId} {
+        allow read: if true; // storefront needs per-size stock for badges/quantity caps
+
+        // Checkout (signed-in or guest) decrements pooled stock for exactly one
+        // size after placing an order — same shape as the legacy
+        // products/{id}.stock rule: only the `stock` field, only a non-negative
+        // value, and only ever decreasing.
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']) &&
+          request.resource.data.stock is number &&
+          request.resource.data.stock >= 0 &&
+          request.resource.data.stock <= resource.data.stock;
+      }
     }
 
     // 1b. Categories & Subcategories (persisted independently of products)
@@ -43,12 +54,7 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // 1c. Sizes (master list of size options for the product editor)
-    match /sizes/{sizeDocId} {
-      allow read: if true;
-    }
-
-    // 1d. Size Charts (reusable measurement templates, referenced by product.sizeChartId)
+    // 1c. Size Charts (reusable measurement templates, referenced by product.sizeChartId)
     match /sizeCharts/{chartId} {
       allow read: if true;
     }

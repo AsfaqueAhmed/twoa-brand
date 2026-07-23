@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { CartItem, Product, ProductVariant } from '@/shared/domain/types';
 import { addItem, updateItemQuantity, removeItem, computeSubtotal, computeCartCount } from '../domain/cart';
 import { loadCart, saveCart } from '../infrastructure/localStorageCartRepository';
+import { resolveAvailableStock } from '@/shared/domain/stock';
 
 interface CartContextValue {
   items: CartItem[];
@@ -34,7 +35,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems((prev) => addItem(prev, product, quantity, selectedSize, selectedVariant)),
     updateQuantity: (productId, quantity, selectedSize, selectedVariant) =>
       setItems((prev) => {
-        const stock = prev.find((i) => i.product.id === productId)?.product.stock ?? 0;
+        const existing = prev.find(
+          (i) =>
+            i.product.id === productId &&
+            i.selectedSize === selectedSize &&
+            i.selectedVariant?.id === selectedVariant?.id
+        );
+        const stock = existing ? resolveAvailableStock(existing.product, selectedSize) : 0;
         return updateItemQuantity(prev, productId, quantity, selectedSize, selectedVariant, stock);
       }),
     removeFromCart: (productId, selectedSize, selectedVariant) =>

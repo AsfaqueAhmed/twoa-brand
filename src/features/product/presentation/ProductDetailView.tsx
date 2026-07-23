@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
+import { resolveAvailableStock, isProductOutOfStock } from '@/shared/domain/stock';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -22,8 +23,9 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
     addToCart(p, quantity, selectedSize, selectedVariant);
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] ?? '');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(product.variants?.[0] ?? null);
+  const availableStock = resolveAvailableStock(product, selectedSize);
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [sizeChart, setSizeChart] = useState<SizeChart | null>(null);
 
@@ -147,7 +149,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
           )}
 
           {/* Size Variant Selector */}
-          {product.sizes && product.sizes.length > 0 && (
+          {product.parentProduct && product.parentProduct.sizeOrder.length > 0 && (
             <div className="mt-6 border-t border-[#EEEEEE] pt-6" id="product-size-section">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#717171]">
@@ -170,20 +172,29 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
 
               {/* Size pills */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {product.sizes.map((sz) => (
-                  <button
-                    key={sz}
-                    type="button"
-                    onClick={() => setSelectedSize(sz)}
-                    className={`min-w-[40px] h-10 px-3 flex items-center justify-center text-xs font-bold font-mono transition-all duration-200 border rounded-none ${
-                      selectedSize === sz
-                        ? 'bg-black text-white border-black'
-                        : 'bg-white text-black border-[#EEEEEE] hover:border-black'
-                    }`}
-                  >
-                    {sz}
-                  </button>
-                ))}
+                {product.parentProduct.sizeOrder.map((sz) => {
+                  const sizeStock = product.parentProduct!.stockBySize[sz] ?? 0;
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      disabled={sizeStock <= 0}
+                      onClick={() => {
+                        setSelectedSize(sz);
+                        setQuantity(1);
+                      }}
+                      className={`min-w-[40px] h-10 px-3 flex items-center justify-center text-xs font-bold font-mono transition-all duration-200 border rounded-none ${
+                        selectedSize === sz
+                          ? 'bg-black text-white border-black'
+                          : sizeStock <= 0
+                            ? 'bg-[#F5F5F5] text-[#B5B5B5] border-[#EEEEEE] line-through cursor-not-allowed'
+                            : 'bg-white text-black border-[#EEEEEE] hover:border-black'
+                      }`}
+                    >
+                      {sz}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Size Chart Table Panel */}
@@ -233,11 +244,20 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
 
           {/* Stock Status */}
           <div className="mt-6 flex items-center space-x-2 rounded-none border border-[#EEEEEE] bg-[#F9F9F9] p-3">
-            {product.stock > 0 ? (
+            {!product.parentProduct ? (
+              <>
+                <X className="h-4.5 w-4.5 text-[#717171]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">Unavailable</span>
+              </>
+            ) : !selectedSize ? (
+              <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">
+                Select a size to see availability
+              </span>
+            ) : availableStock > 0 ? (
               <>
                 <CheckCircle className="h-4.5 w-4.5 text-black" />
                 <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A]">
-                  In Stock ({product.stock} units left)
+                  In Stock ({availableStock} units left)
                 </span>
               </>
             ) : (
@@ -252,7 +272,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
         </div>
 
         {/* Add to Cart Actions */}
-        {product.stock > 0 && (
+        {product.parentProduct && (
           <div className="mt-8 space-y-4">
             {/* Quantity selector */}
             <div className="flex items-center justify-between">
@@ -267,7 +287,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
                 </button>
                 <span className="w-10 text-center text-xs font-bold text-black">{quantity}</span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
                   className="flex h-8 w-8 items-center justify-center text-black hover:bg-white transition-colors"
                   id="modal-qty-plus"
                 >
@@ -279,17 +299,17 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
             {/* Submit Add to Cart */}
             <button
               onClick={handleAddToCart}
-              className="flex w-full items-center justify-center space-x-2 rounded-none bg-black py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#333333]"
+              disabled={!selectedSize || availableStock <= 0}
+              className="flex w-full items-center justify-center space-x-2 rounded-none bg-black py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
               id="modal-add-to-cart-action"
             >
               <ShoppingBag className="h-4 w-4" />
               <span>
-                Add to Cart
-                {selectedVariant || selectedSize ? ' (' : ''}
-                {selectedVariant ? selectedVariant.name : ''}
-                {selectedVariant && selectedSize ? ' - ' : ''}
-                {selectedSize ? selectedSize : ''}
-                {selectedVariant || selectedSize ? ')' : ''} - {formatCurrency(product.price * quantity)}
+                {!selectedSize
+                  ? 'Select a Size'
+                  : availableStock <= 0
+                    ? 'Out of Stock'
+                    : `Add to Cart${selectedVariant ? ` (${selectedVariant.name} - ${selectedSize})` : ` (${selectedSize})`} - ${formatCurrency(product.price * quantity)}`}
               </span>
             </button>
           </div>

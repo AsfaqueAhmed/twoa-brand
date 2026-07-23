@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload } from 'lucide-react';
-import type { Product, ProductVariant } from '@/shared/domain/types';
+import Link from 'next/link';
+import type { Product, ProductVariant, ParentProduct } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
@@ -12,7 +13,7 @@ import {
   type CategoryDoc,
 } from '../infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
-import { fetchSizes, persistNewSize } from '../infrastructure/firestoreSizesRepository';
+import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
 import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
@@ -41,27 +42,23 @@ export default function InventoryManager() {
   const [editorError, setEditorError] = useState('');
   const [isSavingProduct, setIsSavingProduct] = useState(false);
 
-  // Temp arrays for sizes and variants
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [availableSizes, setAvailableSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
-  const [customSizeInput, setCustomSizeInput] = useState('');
+  // Temp array for design/color variants
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
 
-  // Master sizes list (persisted independently in Firestore, so a custom size added
-  // on one product is immediately reusable on every other product, and survives reloads)
-  const [masterSizes, setMasterSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
+  // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
+  const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
 
-  const loadSizes = useCallback(async () => {
+  const loadParentProducts = useCallback(async () => {
     try {
-      setMasterSizes(await fetchSizes());
+      setParentProducts(await fetchParentProducts());
     } catch (err) {
-      console.error('Error fetching sizes: ', err);
+      console.error('Error fetching parent products: ', err);
     }
   }, []);
 
   useEffect(() => {
-    loadSizes();
-  }, [loadSizes]);
+    loadParentProducts();
+  }, [loadParentProducts]);
 
   // Size chart templates (reusable across products, managed on the Size Charts tab)
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
@@ -133,8 +130,7 @@ export default function InventoryManager() {
       category: editingProduct.category,
       subcategory: editingProduct.subcategory,
       rating: editingProduct.rating,
-      stock: editingProduct.stock,
-      sizes: selectedSizes,
+      parentProductId: editingProduct.parentProductId,
       variants: productVariants,
       sizeChartId: editingProduct.sizeChartId,
     };
@@ -153,11 +149,8 @@ export default function InventoryManager() {
       category: '',
       subcategory: '',
       rating: 5,
-      stock: 10,
+      parentProductId: undefined,
     });
-    setSelectedSizes([]);
-    setAvailableSizes(masterSizes);
-    setCustomSizeInput('');
     setProductVariants([]);
     setEditorError('');
     setIsAddingNewCategory(false);
@@ -169,10 +162,6 @@ export default function InventoryManager() {
 
   const handleOpenEditProduct = (p: Product) => {
     setEditingProduct({ ...p });
-    setSelectedSizes(p.sizes || []);
-    const mergedSizes = Array.from(new Set([...masterSizes, ...(p.sizes || [])]));
-    setAvailableSizes(mergedSizes);
-    setCustomSizeInput('');
     setProductVariants(p.variants || []);
     setEditorError('');
     setIsAddingNewCategory(false);
@@ -200,20 +189,6 @@ export default function InventoryManager() {
     setNewSubcategoryInput('');
     await persistNewSubcategory(editingProduct.category, trimmed);
     await loadCategories();
-  };
-
-  const handleAddCustomSize = async () => {
-    const trimmed = customSizeInput.trim().toUpperCase();
-    if (!trimmed) return;
-    if (!availableSizes.includes(trimmed)) {
-      setAvailableSizes((prev) => [...prev, trimmed]);
-    }
-    if (!selectedSizes.includes(trimmed)) {
-      setSelectedSizes((prev) => [...prev, trimmed]);
-    }
-    setCustomSizeInput('');
-    await persistNewSize(trimmed);
-    await loadSizes();
   };
 
   const handleTriggerCrop = (target: 'primary' | 'variant') => {
@@ -258,23 +233,24 @@ export default function InventoryManager() {
     setProductVariants((prev) => prev.filter((v) => v.id !== varId));
   };
 
-  const toggleSizeSelection = (sz: string) => {
-    setSelectedSizes((prev) => (prev.includes(sz) ? prev.filter((item) => item !== sz) : [...prev, sz]));
-  };
-
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
 
-    const { id, name, description, price, image, category, subcategory, stock } = editingProduct;
+    const { id, name, description, price, image, category, subcategory, parentProductId } = editingProduct;
 
     if (!id || !name || !description || price === undefined || !image || !category) {
       setEditorError('Please fill in all required fields (ID, Name, Description, Price, Primary Image, Category).');
       return;
     }
 
-    if (price <= 0 || stock === undefined || stock < 0) {
-      setEditorError('Price must be greater than 0, and stock must be 0 or more.');
+    if (price <= 0) {
+      setEditorError('Price must be greater than 0.');
+      return;
+    }
+
+    if (!parentProductId) {
+      setEditorError('Please select a Parent Product — it is what supplies this product\'s sizes and stock.');
       return;
     }
 
@@ -292,8 +268,7 @@ export default function InventoryManager() {
         category,
         subcategory: subcategory || '',
         rating: editingProduct.rating || 5,
-        stock: Number(stock),
-        sizes: selectedSizes,
+        parentProductId,
         variants: productVariants,
         sizeChartId: editingProduct.sizeChartId || null,
       });
@@ -482,7 +457,7 @@ export default function InventoryManager() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Price */}
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
@@ -512,21 +487,6 @@ export default function InventoryManager() {
                         setEditingProduct((prev) => ({ ...prev, originalPrice: parseFloat(e.target.value) || undefined }))
                       }
                       placeholder="e.g. 60.00"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Stock */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                      Stock Units*
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={editingProduct.stock === undefined ? '' : editingProduct.stock}
-                      onChange={(e) => setEditingProduct((prev) => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
-                      placeholder="e.g. 50"
                       className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
@@ -746,55 +706,67 @@ export default function InventoryManager() {
                   />
                 </div>
 
-                {/* Sizes Selection (Checkboxes) */}
+                {/* Parent Product picker (supplies sizes & per-size stock) */}
                 <div className="border-t border-[#EEEEEE] pt-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-                      Size Variations (Check to Enable)
+                      Parent Product*
                     </span>
+                    <Link
+                      href="/admin/parent-products"
+                      className="text-[9px] font-bold uppercase tracking-wider text-black border-b border-black hover:opacity-70"
+                    >
+                      Manage Parent Products
+                    </Link>
+                  </div>
 
-                    {/* Custom Size Addition Form */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={customSizeInput}
-                        onChange={(e) => setCustomSizeInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddCustomSize();
-                          }
-                        }}
-                        placeholder="Add custom size (e.g. XXL, 42, 9.5)"
-                        className="rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2.5 text-[11px] font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none w-48"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomSize}
-                        className="bg-black hover:bg-[#333333] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-2 transition-colors shrink-0"
-                      >
-                        Add Size
-                      </button>
+                  {editingProduct.id && products.find((p) => p.id === editingProduct.id) && !editingProduct.parentProductId && (
+                    <div className="bg-red-50 text-red-800 border border-red-200 text-[10px] p-3 mb-2 font-medium">
+                      This product has no linked Parent Product — it has zero stock and will show as unavailable on
+                      the storefront. Select one below.
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex flex-wrap gap-2.5">
-                    {availableSizes.map((sz) => {
-                      const isSel = selectedSizes.includes(sz);
+                  <select
+                    required
+                    value={editingProduct.parentProductId || ''}
+                    onChange={(e) =>
+                      setEditingProduct((prev) => ({ ...prev, parentProductId: e.target.value || undefined }))
+                    }
+                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                  >
+                    <option value="" disabled>
+                      Select a parent product…
+                    </option>
+                    {parentProducts.map((pp) => (
+                      <option key={pp.id} value={pp.id}>
+                        {pp.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {editingProduct.parentProductId &&
+                    (() => {
+                      const pp = parentProducts.find((p) => p.id === editingProduct.parentProductId);
+                      if (!pp) return null;
                       return (
-                        <button
-                          key={sz}
-                          type="button"
-                          onClick={() => toggleSizeSelection(sz)}
-                          className={`h-10 px-4 text-xs font-bold font-mono flex items-center justify-center border transition-all duration-150 ${
-                            isSel ? 'bg-black text-white border-black' : 'bg-white text-black border-[#EEEEEE] hover:border-black'
-                          }`}
-                        >
-                          {sz}
-                        </button>
+                        <div className="mt-3 bg-[#FAF9F6] border border-[#EEEEEE] p-3">
+                          <span className="block text-[9px] font-bold uppercase tracking-wider text-[#717171] mb-2">
+                            Sizes & Stock (read-only — edit on the Parent Products tab)
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {pp.sizeOrder.map((sz) => (
+                              <span
+                                key={sz}
+                                className="inline-flex items-center gap-1 px-2 py-1 border border-[#EEEEEE] bg-white text-[10px] font-mono font-bold text-black"
+                              >
+                                {sz}: {pp.stockBySize[sz] ?? 0}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       );
-                    })}
-                  </div>
+                    })()}
                 </div>
 
                 {/* Size Chart template picker */}
@@ -1019,37 +991,64 @@ export default function InventoryManager() {
                     )}
                   </td>
 
-                  {/* Stock */}
+                  {/* Stock (per size, sourced from the linked Parent Product) */}
                   <td className="py-4 px-6">
-                    <span
-                      className={`font-mono font-bold px-2 py-0.5 border ${
-                        p.stock === 0
-                          ? 'bg-red-50 text-red-800 border-red-200'
-                          : p.stock < 10
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      }`}
-                    >
-                      {p.stock} units
-                    </span>
+                    {(() => {
+                      const pp = parentProducts.find((x) => x.id === p.parentProductId);
+                      if (!pp) {
+                        return (
+                          <span className="font-mono font-bold px-2 py-0.5 border bg-red-50 text-red-800 border-red-200">
+                            No Parent Product
+                          </span>
+                        );
+                      }
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {pp.sizeOrder.map((sz) => {
+                            const stock = pp.stockBySize[sz] ?? 0;
+                            return (
+                              <span
+                                key={sz}
+                                className={`font-mono font-bold px-1.5 py-0.5 border text-[10px] ${
+                                  stock === 0
+                                    ? 'bg-red-50 text-red-800 border-red-200'
+                                    : stock < 10
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                {sz}:{stock}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* Variants & Sizes list summaries */}
                   <td className="py-4 px-6">
                     <div className="space-y-1">
-                      {p.sizes && p.sizes.length > 0 && (
-                        <span className="block text-[10px] text-[#717171]">
-                          <strong className="text-black uppercase text-[9px]">Sizes:</strong> {p.sizes.join(', ')}
-                        </span>
-                      )}
+                      {(() => {
+                        const pp = parentProducts.find((x) => x.id === p.parentProductId);
+                        return (
+                          pp &&
+                          pp.sizeOrder.length > 0 && (
+                            <span className="block text-[10px] text-[#717171]">
+                              <strong className="text-black uppercase text-[9px]">Sizes:</strong> {pp.sizeOrder.join(', ')}
+                            </span>
+                          )
+                        );
+                      })()}
                       {p.variants && p.variants.length > 0 && (
                         <span className="block text-[10px] text-[#717171]">
                           <strong className="text-black uppercase text-[9px]">Design Colors:</strong> {p.variants.length} options
                         </span>
                       )}
-                      {(!p.sizes || p.sizes.length === 0) && (!p.variants || p.variants.length === 0) && (
-                        <span className="text-[10px] italic text-[#919191]">Standard</span>
-                      )}
+                      {!parentProducts.find((x) => x.id === p.parentProductId) &&
+                        (!p.variants || p.variants.length === 0) && (
+                          <span className="text-[10px] italic text-[#919191]">Standard</span>
+                        )}
                     </div>
                   </td>
 

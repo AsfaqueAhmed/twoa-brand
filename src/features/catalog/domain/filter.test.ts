@@ -3,9 +3,9 @@ import { matchesSearch, filterProducts, getCategories, getSubcategories } from '
 import type { Product } from '@/shared/domain/types';
 
 const products: Product[] = [
-  { id: '1', name: 'Black Backpack', description: 'Durable pack', price: 50, image: '', category: 'Bags', subcategory: 'Backpacks', rating: 5, stock: 3 },
-  { id: '2', name: 'White Mug', description: 'Ceramic mug', price: 10, image: '', category: 'Kitchen', subcategory: 'Mugs', rating: 4, stock: 0 },
-  { id: '3', name: 'Tote Bag', description: 'Canvas tote', price: 20, image: '', category: 'Bags', subcategory: 'Totes', rating: 5, stock: 5 },
+  { id: '1', name: 'Black Backpack', description: 'Durable pack', price: 50, image: '', category: 'Bags', subcategory: 'Backpacks', rating: 5 },
+  { id: '2', name: 'White Mug', description: 'Ceramic mug', price: 10, image: '', category: 'Kitchen', subcategory: 'Mugs', rating: 4 },
+  { id: '3', name: 'Tote Bag', description: 'Canvas tote', price: 20, image: '', category: 'Bags', subcategory: 'Totes', rating: 5 },
 ];
 
 describe('catalog filter domain', () => {

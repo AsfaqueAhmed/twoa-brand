@@ -1,4 +1,5 @@
 import type { CartItem, Product, ProductVariant } from '@/shared/domain/types';
+import { resolveAvailableStock } from '@/shared/domain/stock';
 
 function matches(item: CartItem, productId: string, selectedSize?: string, selectedVariantId?: string): boolean {
   return (
@@ -15,13 +16,16 @@ export function addItem(
   selectedSize?: string,
   selectedVariant?: ProductVariant
 ): CartItem[] {
+  const availableStock = resolveAvailableStock(product, selectedSize);
+  if (availableStock <= 0) return items;
+
   const existingIndex = items.findIndex((item) => matches(item, product.id, selectedSize, selectedVariant?.id));
   if (existingIndex >= 0) {
     const existing = items[existingIndex];
-    const newQty = Math.min(product.stock, existing.quantity + quantity);
+    const newQty = Math.min(availableStock, existing.quantity + quantity);
     return items.map((item, i) => (i === existingIndex ? { ...item, quantity: newQty } : item));
   }
-  return [...items, { product, quantity: Math.min(product.stock, quantity), selectedSize, selectedVariant }];
+  return [...items, { product, quantity: Math.min(availableStock, quantity), selectedSize, selectedVariant }];
 }
 
 export function updateItemQuantity(

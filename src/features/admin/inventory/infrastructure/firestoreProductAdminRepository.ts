@@ -12,8 +12,7 @@ export interface ProductPayload {
   category: string;
   subcategory: string;
   rating: number;
-  stock: number;
-  sizes: string[];
+  parentProductId: string | null;
   variants: ProductVariant[];
   sizeChartId: string | null;
 }

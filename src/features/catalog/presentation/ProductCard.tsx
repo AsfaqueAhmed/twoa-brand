@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { motion } from 'motion/react';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { isProductOutOfStock } from '@/shared/domain/stock';
 
 interface ProductCardProps {
   key?: string;
@@ -77,14 +78,14 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
         </span>
 
         {/* Discount Badge */}
-        {hasDiscount && product.stock > 0 && (
+        {hasDiscount && !isProductOutOfStock(product) && (
           <span className="absolute top-3 right-3 bg-red-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white font-mono">
             {discountPercent}% OFF
           </span>
         )}
 
         {/* Out of Stock banner */}
-        {product.stock === 0 && (
+        {isProductOutOfStock(product) && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-xs">
             <span className="bg-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white">
               Out of stock
@@ -166,10 +167,10 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
         )}
 
         {/* Available Sizes Variant */}
-        {product.sizes && product.sizes.length > 0 && (
+        {product.parentProduct && product.parentProduct.sizeOrder.length > 0 && (
           <div className="mt-3 mb-4 flex flex-wrap items-center gap-1.5" id={`product-card-sizes-${product.id}`}>
             <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-[#919191]">Sizes:</span>
-            {product.sizes.map((sz) => (
+            {product.parentProduct.sizeOrder.map((sz) => (
               <span
                 key={sz}
                 className="inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center text-[9px] font-bold font-mono text-black border border-[#EEEEEE] bg-[#FAF9F6]"
@@ -197,7 +198,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
 
           <button
             id={`add-to-cart-btn-${product.id}`}
-            disabled={product.stock === 0}
+            disabled={isProductOutOfStock(product)}
             onClick={(e) => onAddToCart(product, e)}
             className="flex h-9 px-2.5 sm:px-4 items-center justify-center border border-black bg-black text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-colors hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:bg-[#F5F5F5] disabled:border-[#EEEEEE] disabled:text-[#A1A1A1]"
           >

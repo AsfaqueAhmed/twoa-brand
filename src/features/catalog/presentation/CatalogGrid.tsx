@@ -112,10 +112,11 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
               onSelect={(p) => open(p.id)}
               onAddToCart={(p, e) => {
                 e.stopPropagation();
-                if ((p.sizes && p.sizes.length > 0) || (p.variants && p.variants.length > 0)) {
-                  open(p.id);
+                const sizeOrder = p.parentProduct?.sizeOrder ?? [];
+                if (sizeOrder.length === 1 && !(p.variants && p.variants.length > 0)) {
+                  addToCart(p, 1, sizeOrder[0]);
                 } else {
-                  addToCart(p, 1);
+                  open(p.id);
                 }
               }}
             />

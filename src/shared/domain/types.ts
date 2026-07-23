@@ -5,6 +5,13 @@ export interface ProductVariant {
   colorCode?: string;   // optional hex code for styling color swatches
 }
 
+export interface ParentProduct {
+  id: string;
+  name: string;
+  sizeOrder: string[]; // canonical size list & display order, e.g. ['S', 'M', 'L', 'XL']
+  stockBySize: Record<string, number>; // keys are exactly the entries in sizeOrder
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -15,10 +22,10 @@ export interface Product {
   category: string;
   subcategory?: string;
   rating: number;
-  stock: number;
-  sizes?: string[]; // e.g. ['S', 'M', 'L', 'XL']
+  parentProductId?: string; // references the ParentProduct that owns this product's sizes & stock
   variants?: ProductVariant[]; // list of design/color variants
   sizeChartId?: string; // references a reusable SizeChart template
+  parentProduct?: ParentProduct; // read-time join attached by the application layer; never persisted on the product doc
 }
 
 export interface SizeChartRow {
@@ -50,6 +57,7 @@ export interface OrderItem {
   image: string;
   selectedSize?: string; // For products with size variants
   selectedVariant?: ProductVariant; // For products with design/color variants
+  parentProductId?: string; // Snapshot of the parent product whose pooled stock this line decremented
 }
 
 export interface Order {
