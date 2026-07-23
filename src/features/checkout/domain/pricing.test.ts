@@ -44,7 +44,7 @@ describe('computeTotal', () => {
 });
 
 describe('generateOrderId', () => {
-  it('generates an order id starting with ord_ and 12 hex chars', () => {
-    expect(generateOrderId()).toMatch(/^ord_[0-9a-f]{12}$/);
+  it('generates an order id starting with ord_ and 20 hex chars', () => {
+    expect(generateOrderId()).toMatch(/^ord_[0-9a-f]{20}$/);
   });
 });

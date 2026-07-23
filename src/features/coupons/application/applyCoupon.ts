@@ -12,7 +12,7 @@ export interface ApplyCouponResult {
 
 export async function applyCoupon(params: {
   code: string;
-  user: User;
+  user: User | null;
   subtotal: number;
   deliveryFee: number;
   districtId?: string;
@@ -24,10 +24,14 @@ export async function applyCoupon(params: {
   const eligibility = validateCouponEligibility(coupon, { subtotal, deliveryFee, districtId });
   if (!eligibility.valid) return { valid: false, reason: eligibility.reason };
 
-  const priorOrders = await fetchOrdersForUser(user.uid);
-  const alreadyUsed = priorOrders.some((o) => o.promoCode === coupon.code);
-  if (alreadyUsed) {
-    return { valid: false, reason: 'You have already used this coupon.' };
+  // Guests have no queryable identity (their orders are only findable by ID, see
+  // firestore.rules), so the "already used" check only applies to signed-in users.
+  if (user) {
+    const priorOrders = await fetchOrdersForUser(user.uid);
+    const alreadyUsed = priorOrders.some((o) => o.promoCode === coupon.code);
+    if (alreadyUsed) {
+      return { valid: false, reason: 'You have already used this coupon.' };
+    }
   }
 
   const discountAmount = computeDiscountAmount(coupon, subtotal, deliveryFee);

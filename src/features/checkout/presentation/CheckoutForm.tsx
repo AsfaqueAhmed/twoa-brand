@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, MapPin, Phone, User as UserIcon, Truck, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, Phone, User as UserIcon, Truck, ShoppingBag, ShieldCheck, LogIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { divisions, districts, thanas, cityCorporations } from '../infrastructure/bangladeshAreas';
 import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { placeOrder, type DeliveryDetails } from '../application/placeOrder';
+import { addGuestOrderId } from '@/features/orders/infrastructure/localStorageGuestOrdersRepository';
 import { computeDeliveryFeeByZone, computeTotal } from '../domain/pricing';
 import type { Coupon } from '@/features/coupons/domain/coupon';
 import { applyCoupon } from '@/features/coupons/application/applyCoupon';
@@ -17,7 +18,7 @@ import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function CheckoutForm() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const { items: cartItems, subtotal, clearCart } = useCart();
   const [isPlacing, setIsPlacing] = useState(false);
   const onBack = () => router.push('/');
@@ -50,10 +51,10 @@ export default function CheckoutForm() {
   const grandTotal = Math.max(0, computeTotal(subtotal, deliveryFee, discountAmount));
 
   const onPlaceOrder = async (deliveryDetails: DeliveryDetails) => {
-    if (!user) return;
     setIsPlacing(true);
     try {
-      await placeOrder({ user, cartItems, deliveryDetails });
+      const orderId = await placeOrder({ user, cartItems, deliveryDetails });
+      if (!user) addGuestOrderId(orderId);
       clearCart();
       router.push('/orders');
     } finally {
@@ -70,7 +71,6 @@ export default function CheckoutForm() {
       setPromoError('Please enter a promo code.');
       return;
     }
-    if (!user) return;
 
     const result = await applyCoupon({
       code: cleanCode,
@@ -189,6 +189,28 @@ export default function CheckoutForm() {
         <span>Return to Shop</span>
       </button>
 
+      {/* Optional sign-in nudge — guest checkout is fully supported, this is just a convenience offer */}
+      {!user && (
+        <div
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-4 mb-8"
+          id="checkout-guest-signin-nudge"
+        >
+          <p className="text-xs text-[#717171] leading-relaxed">
+            Checking out as a guest — your order will be tracked on this device. Want to sync your order history
+            across devices instead?
+          </p>
+          <button
+            type="button"
+            onClick={signIn}
+            className="flex items-center justify-center space-x-1.5 border border-black bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-black hover:bg-black hover:text-white transition-colors shrink-0"
+            id="checkout-guest-signin-btn"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            <span>Sign In (Optional)</span>
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Checkout Form */}
         <div className="lg:col-span-7 space-y-6">
@@ -204,7 +226,7 @@ export default function CheckoutForm() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               {error && (
                 <div
-                  className="rounded-none border border-black bg-white p-4 text-xs font-bold uppercase tracking-wider text-black"
+                  className="rounded-none border border-red-200 bg-red-50 p-4 text-xs font-bold uppercase tracking-wider text-red-800"
                   id="checkout-error"
                 >
                   {error}
@@ -456,6 +478,7 @@ export default function CheckoutForm() {
                         alt={item.product.name}
                         className="h-11 w-11 rounded-none object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
                       />
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-black truncate">

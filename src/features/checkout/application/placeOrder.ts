@@ -18,22 +18,28 @@ export interface DeliveryDetails {
 }
 
 export async function placeOrder(params: {
-  user: User;
+  user: User | null;
   cartItems: CartItem[];
   deliveryDetails: DeliveryDetails;
 }): Promise<string> {
   const { user, cartItems, deliveryDetails } = params;
   const orderId = generateOrderId();
 
-  const orderItemsPayload: OrderItem[] = cartItems.map((item) => ({
-    productId: item.product.id,
-    name: item.product.name,
-    price: item.product.price,
-    quantity: item.quantity,
-    image: item.product.image,
-    selectedSize: item.selectedSize || undefined,
-    selectedVariant: item.selectedVariant || undefined,
-  }));
+  // Firestore rejects any field set to `undefined` (even nested inside array
+  // items), so selectedSize/selectedVariant must be omitted entirely rather than
+  // included as `undefined` when the cart item has neither.
+  const orderItemsPayload: OrderItem[] = cartItems.map((item) => {
+    const orderItem: OrderItem = {
+      productId: item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      image: item.product.image,
+    };
+    if (item.selectedSize) orderItem.selectedSize = item.selectedSize;
+    if (item.selectedVariant) orderItem.selectedVariant = item.selectedVariant;
+    return orderItem;
+  });
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const deliveryFee = computeDeliveryFeeByZone({
@@ -45,9 +51,9 @@ export async function placeOrder(params: {
   const finalTotal = deliveryDetails.finalTotal !== undefined ? deliveryDetails.finalTotal : computedTotal;
 
   const payload: Record<string, any> = {
-    userId: user.uid,
+    userId: user ? user.uid : 'guest',
     userName: deliveryDetails.name,
-    userEmail: user.email || '',
+    userEmail: user?.email || '',
     address: deliveryDetails.address,
     phone: deliveryDetails.phone,
     items: orderItemsPayload,

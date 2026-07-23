@@ -40,6 +40,9 @@ export function computeTotal(subtotal: number, deliveryFee: number, discount = 0
 }
 
 export function generateOrderId(): string {
-  const randomHex = Array.from({ length: 12 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  // Guest orders have no Firebase Auth identity backing them — this ID doubles as
+  // the guest's only access credential (see firestore.rules), so it needs to be
+  // unguessable, not just unique. 20 hex chars = 80 bits of randomness.
+  const randomHex = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   return `ord_${randomHex}`;
 }

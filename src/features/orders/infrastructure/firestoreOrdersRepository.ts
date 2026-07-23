@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, updateDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/shared/infrastructure/firebase/app';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 
@@ -30,6 +30,15 @@ export async function createOrder(orderId: string, payload: Record<string, any>)
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+// Single-document fetch by ID — matches the Firestore `allow get` rule that lets
+// a guest order be read by anyone who knows its (unguessable) ID, without
+// granting `list` access to enumerate the collection.
+export async function fetchOrderById(orderId: string): Promise<Order | null> {
+  const snap = await getDoc(doc(db, 'orders', orderId));
+  if (!snap.exists()) return null;
+  return toOrder(snap.id, snap.data());
 }
 
 export async function fetchOrdersForUser(userId: string): Promise<Order[]> {

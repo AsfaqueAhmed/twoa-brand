@@ -1,29 +1,24 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Clock, CheckCircle2, Truck, PackageCheck, AlertCircle, RefreshCw, ClipboardList, MapPin, Phone, User, ShoppingCart } from 'lucide-react';
+import { Clock, CheckCircle2, Truck, PackageCheck, AlertCircle, RefreshCw, ClipboardList, MapPin, Phone, User, ShoppingCart, LogIn } from 'lucide-react';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { getUserOrders } from '../application/getUserOrders';
+import { getGuestOrders } from '../application/getGuestOrders';
 import { cancelOrder } from '../application/cancelOrder';
-import { updateOrderStatus } from '../application/updateOrderStatus';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 
 export default function OrderTrackingView() {
-  const { user } = useAuth();
+  const { user, authLoading, signIn } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [simulating, setSimulating] = useState<string | null>(null);
 
   const onRefresh = useCallback(async () => {
-    if (!user) {
-      setOrders([]);
-      return;
-    }
     setLoading(true);
     try {
-      setOrders(await getUserOrders(user.uid));
+      setOrders(user ? await getUserOrders(user.uid) : await getGuestOrders());
     } finally {
       setLoading(false);
     }
@@ -32,11 +27,6 @@ export default function OrderTrackingView() {
   useEffect(() => {
     onRefresh();
   }, [onRefresh]);
-
-  const onUpdateStatus = async (orderId: string, status: OrderStatus) => {
-    await updateOrderStatus(orderId, status);
-    await onRefresh();
-  };
 
   const onCancelOrder = async (orderId: string) => {
     await cancelOrder(orderId);
@@ -80,17 +70,6 @@ export default function OrderTrackingView() {
 
   const currentStepIndex = activeOrder ? getStepIndex(activeOrder.status) : -1;
 
-  const handleSimulateStatus = async (orderId: string, nextStatus: OrderStatus) => {
-    setSimulating(nextStatus);
-    try {
-      await onUpdateStatus(orderId, nextStatus);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update order status.');
-    } finally {
-      setSimulating(null);
-    }
-  };
-
   const handleUserCancel = async (orderId: string) => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
       try {
@@ -121,6 +100,28 @@ export default function OrderTrackingView() {
         </button>
       </div>
 
+      {/* Optional sign-in nudge for guests — local tracking works fine without this */}
+      {!authLoading && !user && (
+        <div
+          className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-4"
+          id="orders-guest-signin-nudge"
+        >
+          <p className="text-xs text-[#717171] leading-relaxed">
+            You're tracking orders as a guest — they're saved on this device only. Sign in to sync your order
+            history across devices instead.
+          </p>
+          <button
+            type="button"
+            onClick={signIn}
+            className="flex items-center justify-center space-x-1.5 border border-black bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-black hover:bg-black hover:text-white transition-colors shrink-0"
+            id="orders-guest-signin-btn"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            <span>Sign In (Optional)</span>
+          </button>
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Side: Order list */}
         <div className="lg:col-span-4 space-y-4">
@@ -135,7 +136,9 @@ export default function OrderTrackingView() {
               <ClipboardList className="mx-auto h-8 w-8 text-[#717171]" />
               <h4 className="mt-3 text-xs font-bold uppercase tracking-wider text-black">No Orders Found</h4>
               <p className="mt-2 text-xs text-[#717171] leading-relaxed">
-                You haven't placed any orders yet. Add items to your cart and check out!
+                {user
+                  ? "You haven't placed any orders yet. Add items to your cart and check out!"
+                  : "No guest orders on this device yet. Orders you place without signing in are tracked here, in this browser."}
               </p>
             </div>
           ) : (
@@ -286,54 +289,6 @@ export default function OrderTrackingView() {
                     </button>
                   </div>
                 )}
-              </div>
-
-              {/* DEMO / SELLER SIMULATION MODE */}
-              <div className="rounded-none border border-[#EEEEEE] bg-[#FDFDFD] p-6 sm:p-8 space-y-4">
-                <div className="flex items-start space-x-3 text-black">
-                  <RefreshCw className="h-5 w-5 shrink-0 mt-0.5 text-black" />
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-black">
-                      Seller & Courier Simulator Sandbox
-                    </h4>
-                    <p className="text-xs mt-2 text-[#717171] leading-relaxed">
-                      Standard users do not update shipping status. However, to help you test the live tracking
-                      progress, use these controls to manually advance this order's state!
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 pt-2" id="seller-sim-buttons">
-                  {/* Confirm Order (advance to confirmed) */}
-                  <button
-                    onClick={() => handleSimulateStatus(activeOrder.id, 'confirmed')}
-                    disabled={activeOrder.status !== 'pending' || simulating !== null}
-                    className="rounded-none bg-black border border-black hover:bg-[#333333] text-white font-bold text-[11px] uppercase tracking-wider px-4 py-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    id="sim-confirm-btn"
-                  >
-                    {simulating === 'confirmed' ? 'Processing...' : '1. Confirm Order'}
-                  </button>
-
-                  {/* Out for Delivery */}
-                  <button
-                    onClick={() => handleSimulateStatus(activeOrder.id, 'out_for_delivery')}
-                    disabled={activeOrder.status !== 'confirmed' || simulating !== null}
-                    className="rounded-none bg-black border border-black hover:bg-[#333333] text-white font-bold text-[11px] uppercase tracking-wider px-4 py-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    id="sim-out-for-delivery-btn"
-                  >
-                    {simulating === 'out_for_delivery' ? 'Processing...' : '2. Out for Delivery'}
-                  </button>
-
-                  {/* Delivered */}
-                  <button
-                    onClick={() => handleSimulateStatus(activeOrder.id, 'delivered')}
-                    disabled={activeOrder.status !== 'out_for_delivery' || simulating !== null}
-                    className="rounded-none bg-black border border-black hover:bg-[#333333] text-white font-bold text-[11px] uppercase tracking-wider px-4 py-2.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    id="sim-delivered-btn"
-                  >
-                    {simulating === 'delivered' ? 'Processing...' : '3. Confirm Delivery'}
-                  </button>
-                </div>
               </div>
 
               {/* Shipping Address and Summary */}

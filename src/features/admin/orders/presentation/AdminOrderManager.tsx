@@ -123,6 +123,11 @@ export default function AdminOrderManager() {
                   <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border ${getStatusStyle(ord.status)}`}>
                     {ord.status.replace(/_/g, ' ')}
                   </span>
+                  {ord.userId === 'guest' && (
+                    <span className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border border-[#EEEEEE] bg-[#F5F5F5] text-[#717171]">
+                      Guest Checkout
+                    </span>
+                  )}
                   <span className="text-[10px] text-[#919191] font-mono">{new Date(ord.createdAt).toLocaleString()}</span>
                 </div>
 
@@ -131,7 +136,7 @@ export default function AdminOrderManager() {
                   <div>
                     <span className="text-[#717171] block font-medium">Customer Information:</span>
                     <p className="text-black font-bold uppercase tracking-wide mt-0.5">{ord.userName}</p>
-                    <p className="text-[#717171] font-mono">{ord.userEmail}</p>
+                    <p className="text-[#717171] font-mono">{ord.userEmail || '— (guest, no email)'}</p>
                     <p className="text-[#111111] font-mono font-bold mt-0.5">Phone: {ord.phone}</p>
                   </div>
                   <div>
@@ -152,6 +157,7 @@ export default function AdminOrderManager() {
                             alt={item.name}
                             className="h-7 w-7 object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"
                             referrerPolicy="no-referrer"
+                            loading="lazy"
                           />
                           <div className="min-w-0">
                             <span className="font-bold text-black truncate block max-w-[200px] uppercase tracking-wide">
