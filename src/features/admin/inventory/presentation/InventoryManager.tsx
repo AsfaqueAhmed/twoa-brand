@@ -13,6 +13,8 @@ import {
 } from '../infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
 import { fetchSizes, persistNewSize } from '../infrastructure/firestoreSizesRepository';
+import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
+import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 
@@ -60,6 +62,21 @@ export default function InventoryManager() {
   useEffect(() => {
     loadSizes();
   }, [loadSizes]);
+
+  // Size chart templates (reusable across products, managed on the Size Charts tab)
+  const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
+
+  const loadSizeCharts = useCallback(async () => {
+    try {
+      setSizeCharts(await fetchSizeCharts());
+    } catch (err) {
+      console.error('Error fetching size charts: ', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSizeCharts();
+  }, [loadSizeCharts]);
 
   // Categories collection (persisted independently in Firestore, so category/
   // subcategory names survive even if no product currently uses them)
@@ -119,6 +136,7 @@ export default function InventoryManager() {
       stock: editingProduct.stock,
       sizes: selectedSizes,
       variants: productVariants,
+      sizeChartId: editingProduct.sizeChartId,
     };
     return new TextEncoder().encode(JSON.stringify(payload)).length;
   };
@@ -277,6 +295,7 @@ export default function InventoryManager() {
         stock: Number(stock),
         sizes: selectedSizes,
         variants: productVariants,
+        sizeChartId: editingProduct.sizeChartId || null,
       });
       await refreshProducts();
       setIsEditingProduct(false);
@@ -778,6 +797,30 @@ export default function InventoryManager() {
                   </div>
                 </div>
 
+                {/* Size Chart template picker */}
+                <div className="border-t border-[#EEEEEE] pt-5">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
+                    Size Chart (Optional)
+                  </span>
+                  <select
+                    value={editingProduct.sizeChartId || ''}
+                    onChange={(e) =>
+                      setEditingProduct((prev) => ({ ...prev, sizeChartId: e.target.value || undefined }))
+                    }
+                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                  >
+                    <option value="">None</option>
+                    {sizeCharts.map((chart) => (
+                      <option key={chart.id} value={chart.id}>
+                        {chart.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-[#919191] mt-1.5">
+                    Manage reusable measurement templates on the Size Charts tab.
+                  </p>
+                </div>
+
                 {/* Design/Color Variants list builder */}
                 <div className="border-t border-[#EEEEEE] pt-5">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-3">
@@ -952,6 +995,7 @@ export default function InventoryManager() {
                       alt={p.name}
                       className="h-11 w-11 object-cover bg-[#F5F5F5] border border-[#EEEEEE]"
                       referrerPolicy="no-referrer"
+                      loading="lazy"
                     />
                     <div>
                       <h4 className="font-bold text-black uppercase tracking-wide truncate max-w-[180px]">{p.name}</h4>

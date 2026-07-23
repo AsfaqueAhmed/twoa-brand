@@ -15,6 +15,7 @@ export interface ProductPayload {
   stock: number;
   sizes: string[];
   variants: ProductVariant[];
+  sizeChartId: string | null;
 }
 
 export async function saveProduct(payload: ProductPayload): Promise<void> {

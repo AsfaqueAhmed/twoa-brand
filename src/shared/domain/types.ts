@@ -18,6 +18,19 @@ export interface Product {
   stock: number;
   sizes?: string[]; // e.g. ['S', 'M', 'L', 'XL']
   variants?: ProductVariant[]; // list of design/color variants
+  sizeChartId?: string; // references a reusable SizeChart template
+}
+
+export interface SizeChartRow {
+  size: string; // e.g. 'S', 'M', '42'
+  values: string[]; // one value per SizeChart.columns entry, same order
+}
+
+export interface SizeChart {
+  id: string;
+  name: string; // e.g. "Men's T-Shirt", "Women's Dress"
+  columns: string[]; // measurement labels, e.g. ['Chest', 'Length', 'Shoulder']
+  rows: SizeChartRow[];
 }
 
 export interface CartItem {

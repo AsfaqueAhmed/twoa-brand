@@ -64,7 +64,7 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
       {productId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
-          <div className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-white overflow-hidden shadow-2xl">
+          <div className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-white overflow-y-auto overscroll-contain sm:overflow-hidden shadow-2xl">
             {loading ? (
               <div className="flex justify-center py-32">
                 <Spinner />

@@ -16,6 +16,7 @@ function toProduct(id: string, data: Record<string, any>): Product {
     stock: Number(data.stock) || 0,
     sizes: data.sizes || [],
     variants: data.variants || [],
+    sizeChartId: data.sizeChartId || undefined,
   };
 }
 

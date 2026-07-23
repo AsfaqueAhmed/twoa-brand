@@ -1,12 +1,13 @@
 'use client';
 
 import { Star, ShoppingBag, CheckCircle, X, Ruler } from 'lucide-react';
-import { useState } from 'react';
-import type { Product, ProductVariant } from '@/shared/domain/types';
+import { useState, useEffect } from 'react';
+import type { Product, ProductVariant, SizeChart } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -24,6 +25,20 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] ?? '');
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(product.variants?.[0] ?? null);
   const [showSizeChart, setShowSizeChart] = useState(false);
+  const [sizeChart, setSizeChart] = useState<SizeChart | null>(null);
+
+  useEffect(() => {
+    setSizeChart(null);
+    setShowSizeChart(false);
+    if (!product.sizeChartId) return;
+    let cancelled = false;
+    fetchSizeChartById(product.sizeChartId).then((chart) => {
+      if (!cancelled) setSizeChart(chart);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.sizeChartId]);
 
   const handleAddToCart = () => {
     onAddToCart(product, quantity, selectedSize || undefined, selectedVariant || undefined);
@@ -35,7 +50,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
     <div className="relative w-full flex flex-col md:flex-row" id="product-detail-view">
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-20 rounded-none border border-[#EEEEEE] bg-white/95 backdrop-blur-xs p-2 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-200 shadow-sm"
+        className="fixed sm:absolute top-4 right-4 z-20 rounded-none border border-[#EEEEEE] bg-white/95 backdrop-blur-xs p-2 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-200 shadow-sm"
         id="product-modal-close"
       >
         <X className="h-4 w-4" />
@@ -140,15 +155,17 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
                 </span>
 
                 {/* View Size Chart Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowSizeChart(!showSizeChart)}
-                  className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-black border-b border-black hover:opacity-70 transition-opacity"
-                  id="toggle-size-chart-btn"
-                >
-                  <Ruler className="h-3 w-3" />
-                  <span>{showSizeChart ? 'Hide Size Chart' : 'View Size Chart'}</span>
-                </button>
+                {sizeChart && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeChart(!showSizeChart)}
+                    className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-black border-b border-black hover:opacity-70 transition-opacity"
+                    id="toggle-size-chart-btn"
+                  >
+                    <Ruler className="h-3 w-3" />
+                    <span>{showSizeChart ? 'Hide Size Chart' : 'View Size Chart'}</span>
+                  </button>
+                )}
               </div>
 
               {/* Size pills */}
@@ -171,7 +188,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
 
               {/* Size Chart Table Panel */}
               <AnimatePresence>
-                {showSizeChart && (
+                {showSizeChart && sizeChart && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -180,50 +197,34 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
                     id="size-chart-panel"
                   >
                     <span className="block text-[9px] font-bold uppercase tracking-widest text-[#717171] mb-2">
-                      Standard Fit Guide (inches)
+                      {sizeChart.name}
                     </span>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-[10px] text-left border-collapse">
+                      <table className="w-full table-fixed text-[10px] border-collapse">
                         <thead>
                           <tr className="border-b border-[#EEEEEE] text-[#717171]">
-                            <th className="py-2 font-bold uppercase">Size</th>
-                            <th className="py-2 font-mono font-bold">Chest</th>
-                            <th className="py-2 font-mono font-bold">Length</th>
-                            <th className="py-2 font-mono font-bold">Shoulder</th>
+                            <th className="py-2 text-left font-bold uppercase">Size</th>
+                            {sizeChart.columns.map((col) => (
+                              <th key={col} className="py-2 text-center font-mono font-bold">
+                                {col}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#EEEEEE] text-black">
-                          <tr>
-                            <td className="py-2 font-bold font-mono">S</td>
-                            <td className="py-2 font-mono">36" - 38"</td>
-                            <td className="py-2 font-mono">27"</td>
-                            <td className="py-2 font-mono">17.5"</td>
-                          </tr>
-                          <tr className="bg-white/50">
-                            <td className="py-2 font-bold font-mono">M</td>
-                            <td className="py-2 font-mono">38" - 40"</td>
-                            <td className="py-2 font-mono">28"</td>
-                            <td className="py-2 font-mono">18.0"</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-bold font-mono">L</td>
-                            <td className="py-2 font-mono">40" - 42"</td>
-                            <td className="py-2 font-mono">29"</td>
-                            <td className="py-2 font-mono">18.5"</td>
-                          </tr>
-                          <tr className="bg-white/50">
-                            <td className="py-2 font-bold font-mono">XL</td>
-                            <td className="py-2 font-mono">42" - 44"</td>
-                            <td className="py-2 font-mono">30"</td>
-                            <td className="py-2 font-mono">19.0"</td>
-                          </tr>
+                          {sizeChart.rows.map((row, i) => (
+                            <tr key={`${row.size}-${i}`} className={i % 2 === 1 ? 'bg-white/50' : undefined}>
+                              <td className="py-2 text-left font-bold font-mono">{row.size}</td>
+                              {sizeChart.columns.map((col, ci) => (
+                                <td key={col} className="py-2 text-center font-mono">
+                                  {row.values[ci] ?? ''}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-[8px] text-[#919191] italic mt-3 leading-relaxed">
-                      * Recommended to order your standard size for a boxy drape, or size down for a slimmer athletic
-                      silhouette.
-                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
