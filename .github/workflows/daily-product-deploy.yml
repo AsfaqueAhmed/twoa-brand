@@ -1,0 +1,52 @@
+name: Daily product deploy
+
+on:
+  schedule:
+    # 00:00 Asia/Dhaka (UTC+6) — GitHub Actions cron is always UTC.
+    - cron: '0 18 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for new products
+        id: check
+        run: node scripts/check-new-products.mjs
+
+      - name: Write Firebase service account key
+        if: steps.check.outputs.new_products == 'true'
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/firebase-sa.json"
+
+      - name: Build (regenerates the product feed too)
+        if: steps.check.outputs.new_products == 'true'
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        if: steps.check.outputs.new_products == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+        run: npx firebase-tools deploy --only hosting --project twoa-brand --non-interactive
+
+      - name: Commit updated product snapshot
+        if: steps.check.outputs.new_products == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .deploy-state/known-product-ids.json
+          git commit -m "chore: record deployed product snapshot [skip ci]" || echo "Nothing to commit"
+          git push

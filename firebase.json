@@ -29,6 +29,10 @@
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
       },
       {
+        "source": "/product-feed.csv",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+      },
+      {
         "source": "**/*.@(html|txt)",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
       }
