@@ -34,6 +34,8 @@ jobs:
 
       - name: Build (regenerates the product feed too)
         if: steps.check.outputs.new_products == 'true'
+        env:
+          NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
         run: npm run build
 
       - name: Deploy to Firebase Hosting
