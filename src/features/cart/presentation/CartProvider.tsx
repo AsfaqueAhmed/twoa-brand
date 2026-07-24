@@ -5,6 +5,7 @@ import type { CartItem, Product, ProductVariant } from '@/shared/domain/types';
 import { addItem, updateItemQuantity, removeItem, computeSubtotal, computeCartCount } from '../domain/cart';
 import { loadCart, saveCart } from '../infrastructure/localStorageCartRepository';
 import { resolveAvailableStock } from '@/shared/domain/stock';
+import { pixelAddToCart } from '@/shared/lib/metaPixel';
 
 interface CartContextValue {
   items: CartItem[];
@@ -31,8 +32,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value: CartContextValue = {
     items,
-    addToCart: (product, quantity = 1, selectedSize, selectedVariant) =>
-      setItems((prev) => addItem(prev, product, quantity, selectedSize, selectedVariant)),
+    addToCart: (product, quantity = 1, selectedSize, selectedVariant) => {
+      if (resolveAvailableStock(product, selectedSize) > 0) {
+        pixelAddToCart(product, quantity, selectedSize);
+      }
+      setItems((prev) => addItem(prev, product, quantity, selectedSize, selectedVariant));
+    },
     updateQuantity: (productId, quantity, selectedSize, selectedVariant) =>
       setItems((prev) => {
         const existing = prev.find(

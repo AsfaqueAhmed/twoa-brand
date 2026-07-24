@@ -15,6 +15,7 @@ import { applyCoupon } from '@/features/coupons/application/applyCoupon';
 import { listActiveCoupons } from '@/features/coupons/application/listActiveCoupons';
 import { meetsMinimumSubtotal, meetsDistrictRestriction } from '@/features/coupons/domain/coupon';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { pixelPurchase } from '@/shared/lib/metaPixel';
 
 export default function CheckoutForm() {
   const router = useRouter();
@@ -55,6 +56,7 @@ export default function CheckoutForm() {
     try {
       const orderId = await placeOrder({ user, cartItems, deliveryDetails });
       if (!user) addGuestOrderId(orderId);
+      pixelPurchase({ orderId, value: grandTotal, contentIds: cartItems.map((i) => i.product.id) });
       clearCart();
       router.push('/orders');
     } finally {

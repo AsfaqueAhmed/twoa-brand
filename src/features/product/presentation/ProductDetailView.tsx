@@ -9,6 +9,7 @@ import { useCart } from '@/features/cart/presentation/CartProvider';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
 import { resolveAvailableStock, isProductOutOfStock } from '@/shared/domain/stock';
+import { pixelViewContent } from '@/shared/lib/metaPixel';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -28,6 +29,10 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
   const availableStock = resolveAvailableStock(product, selectedSize);
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [sizeChart, setSizeChart] = useState<SizeChart | null>(null);
+
+  useEffect(() => {
+    pixelViewContent(product);
+  }, [product.id]);
 
   useEffect(() => {
     setSizeChart(null);

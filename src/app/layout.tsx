@@ -4,6 +4,7 @@ import { AuthProvider } from '@/features/auth/presentation/AuthProvider';
 import { CartProvider } from '@/features/cart/presentation/CartProvider';
 import CartDrawer from '@/features/cart/presentation/CartDrawer';
 import { ProductModalProvider } from '@/features/product/presentation/ProductModalProvider';
+import MetaPixelScript from '@/shared/presentation/MetaPixelScript';
 
 export const metadata: Metadata = {
   title: '2A',
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-white text-slate-900 antialiased overflow-x-hidden">
+        <MetaPixelScript />
         <AuthProvider>
           <CartProvider>
             <ProductModalProvider>
