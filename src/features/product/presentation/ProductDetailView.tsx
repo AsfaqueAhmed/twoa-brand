@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, ShoppingBag, CheckCircle, X, Ruler } from 'lucide-react';
+import { ShoppingBag, CheckCircle, X, Ruler } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Product, ProductVariant, SizeChart } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -82,14 +82,7 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
       {/* Info side */}
       <div className="w-full md:w-[55%] lg:w-[50%] flex flex-col p-6 sm:p-8 justify-between md:overflow-y-auto md:max-h-[85vh] bg-[#FDFDFD]">
         <div>
-          {/* Reviews and rating */}
-          <div className="flex items-center space-x-1 text-black">
-            <Star className="h-4 w-4 fill-black text-black" />
-            <span className="text-xs font-bold text-black">{product.rating}</span>
-            <span className="text-[11px] text-[#717171] tracking-wide">(Verified Reviews)</span>
-          </div>
-
-          <h2 className="mt-3 font-sans text-xl font-bold tracking-tight text-[#1A1A1A] uppercase">
+          <h2 className="font-sans text-xl font-bold tracking-tight text-[#1A1A1A] uppercase">
             {product.name}
           </h2>
 

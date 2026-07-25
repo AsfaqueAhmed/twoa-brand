@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Star } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { motion } from 'motion/react';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
@@ -135,12 +134,6 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
 
       {/* Details Container */}
       <div className="flex flex-1 flex-col p-3 sm:p-5">
-        {/* Rating and Reviews */}
-        <div className="flex items-center space-x-1 text-black">
-          <Star className="h-3 w-3 fill-black text-black" />
-          <span className="text-[11px] font-bold text-black">{product.rating}</span>
-          <span className="text-[10px] text-[#717171] font-normal tracking-wide">(Verified)</span>
-        </div>
 
         {/* Title */}
         <h3 className="mt-2 text-[14px] font-bold uppercase tracking-wider text-black line-clamp-1 group-hover:text-[#717171] transition-colors">
