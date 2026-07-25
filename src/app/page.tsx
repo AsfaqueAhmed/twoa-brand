@@ -6,6 +6,7 @@ import { getProducts } from '@/features/catalog/application/getProducts';
 import CatalogGrid from '@/features/catalog/presentation/CatalogGrid';
 import Navbar from '@/features/catalog/presentation/Navbar';
 import Spinner from '@/shared/ui/Spinner';
+import { shuffleArray } from '@/shared/lib/shuffleArray';
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +14,7 @@ export default function HomePage() {
 
   useEffect(() => {
     getProducts()
-      .then(setProducts)
+      .then((fetched) => setProducts(shuffleArray(fetched)))
       .finally(() => setProductsLoading(false));
   }, []);
 
