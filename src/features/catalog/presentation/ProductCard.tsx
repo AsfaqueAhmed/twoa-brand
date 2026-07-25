@@ -167,19 +167,24 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
         )}
 
         {/* Available Sizes Variant */}
-        {product.parentProduct && product.parentProduct.sizeOrder.length > 0 && (
-          <div className="mt-3 mb-4 flex flex-wrap items-center gap-1.5" id={`product-card-sizes-${product.id}`}>
-            <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-[#919191]">Sizes:</span>
-            {product.parentProduct.sizeOrder.map((sz) => (
-              <span
-                key={sz}
-                className="inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center text-[9px] font-bold font-mono text-black border border-[#EEEEEE] bg-[#FAF9F6]"
-              >
-                {sz}
-              </span>
-            ))}
-          </div>
-        )}
+        {product.parentProduct && (() => {
+          const inStockSizes = product.parentProduct.sizeOrder.filter(
+            (sz) => (product.parentProduct!.stockBySize[sz] ?? 0) > 0
+          );
+          return inStockSizes.length > 0 && (
+            <div className="mt-3 mb-4 flex flex-wrap items-center gap-1.5" id={`product-card-sizes-${product.id}`}>
+              <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-[#919191]">Sizes:</span>
+              {inStockSizes.map((sz) => (
+                <span
+                  key={sz}
+                  className="inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center text-[9px] font-bold font-mono text-black border border-[#EEEEEE] bg-[#FAF9F6]"
+                >
+                  {sz}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
 
         <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#EEEEEE]">
           <div>
