@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy } from 'lucide-react';
+import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy, Split } from 'lucide-react';
 import Link from 'next/link';
 import type { Product, ProductVariant, ParentProduct } from '@/shared/domain/types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -305,6 +305,88 @@ export default function InventoryManager() {
     } catch (err) {
       console.error('Error deleting product: ', err);
       alert('Failed to delete product.');
+    }
+  };
+
+  // Splits a product's embedded Design/Color Variants out into their own
+  // standalone product documents (so each design becomes independently
+  // listed/linkable/feedable), instead of one doc with a `variants[]` array.
+  // The original doc is kept and becomes the first design; the rest become
+  // new docs. All split-off products keep the same parentProductId, so sizes
+  // & stock stay pooled together exactly as they were before the split.
+  const [splittingProductId, setSplittingProductId] = useState<string | null>(null);
+
+  const slugify = (str: string) =>
+    str
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'variant';
+
+  const handleSplitVariants = async (p: Product) => {
+    if (!p.variants || p.variants.length === 0) return;
+
+    const designNames = p.variants.map((v) => v.name).join(', ');
+    const confirmed = window.confirm(
+      `Split "${p.name}" into ${p.variants.length} separate products — one per design (${designNames})?\n\n` +
+        `"${p.name}" will keep its current ID and become the "${p.variants[0].name}" design; ` +
+        `${p.variants.length - 1} new product(s) will be created for the remaining designs. ` +
+        `All of them will keep sharing the same Parent Product (sizes & stock).`
+    );
+    if (!confirmed) return;
+
+    setSplittingProductId(p.id);
+    try {
+      const [firstVariant, ...restVariants] = p.variants;
+      const usedIds = new Set(products.map((prod) => prod.id));
+
+      await saveProduct({
+        id: p.id,
+        name: `${p.name} - ${firstVariant.name}`,
+        description: p.description,
+        price: p.price,
+        originalPrice: p.originalPrice ?? null,
+        image: firstVariant.image || p.image,
+        category: p.category,
+        subcategory: p.subcategory || '',
+        rating: p.rating,
+        parentProductId: p.parentProductId || null,
+        variants: [],
+        sizeChartId: p.sizeChartId || null,
+      });
+      usedIds.add(p.id);
+
+      for (const variant of restVariants) {
+        let newId = `${p.id}-${slugify(variant.name)}`;
+        let suffix = 2;
+        while (usedIds.has(newId)) {
+          newId = `${p.id}-${slugify(variant.name)}-${suffix}`;
+          suffix += 1;
+        }
+        usedIds.add(newId);
+
+        await saveProduct({
+          id: newId,
+          name: `${p.name} - ${variant.name}`,
+          description: p.description,
+          price: p.price,
+          originalPrice: p.originalPrice ?? null,
+          image: variant.image || p.image,
+          category: p.category,
+          subcategory: p.subcategory || '',
+          rating: p.rating,
+          parentProductId: p.parentProductId || null,
+          variants: [],
+          sizeChartId: p.sizeChartId || null,
+        });
+      }
+
+      await refreshProducts();
+    } catch (err: any) {
+      console.error('Error splitting product into design variants: ', err);
+      alert(err.message || 'Failed to split product into separate designs.');
+    } finally {
+      setSplittingProductId(null);
     }
   };
 
@@ -1084,6 +1166,21 @@ export default function InventoryManager() {
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
+                    {p.variants && p.variants.length > 0 && (
+                      <button
+                        onClick={() => handleSplitVariants(p)}
+                        disabled={splittingProductId === p.id}
+                        className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Split Design Variants Into Separate Products"
+                        id={`admin-split-prod-btn-${p.id}`}
+                      >
+                        {splittingProductId === p.id ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Split className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteProduct(p.id)}
                       className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
