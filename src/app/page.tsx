@@ -1,28 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Product } from '@/shared/domain/types';
-import { getProducts } from '@/features/catalog/application/getProducts';
+import { useCatalogProducts } from '@/features/catalog/application/useCatalogProducts';
 import CatalogGrid from '@/features/catalog/presentation/CatalogGrid';
 import Navbar from '@/features/catalog/presentation/Navbar';
 import Spinner from '@/shared/ui/Spinner';
-import { shuffleArray } from '@/shared/lib/shuffleArray';
 
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(true);
-
-  useEffect(() => {
-    getProducts()
-      .then((fetched) => setProducts(shuffleArray(fetched)))
-      .finally(() => setProductsLoading(false));
-  }, []);
+  const catalog = useCatalogProducts();
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-black selection:text-white">
       <Navbar />
       <main className="flex-1 w-full pb-24 sm:pb-16">
-        {productsLoading ? (
+        {catalog.loading ? (
           <div className="flex flex-col items-center justify-center py-32">
             <Spinner />
             <span className="mt-4 text-xs font-bold uppercase tracking-widest text-[#717171]">
@@ -30,7 +20,7 @@ export default function HomePage() {
             </span>
           </div>
         ) : (
-          <CatalogGrid initialProducts={products} />
+          <CatalogGrid {...catalog} />
         )}
       </main>
     </div>

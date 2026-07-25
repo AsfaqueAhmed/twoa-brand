@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchesSearch, filterProducts, getCategories, getSubcategories } from './filter';
+import { matchesSearch, filterProducts } from './filter';
 import type { Product } from '@/shared/domain/types';
 
 const products: Product[] = [
@@ -25,13 +25,5 @@ describe('catalog filter domain', () => {
 
   it('filterProducts filters by subcategory', () => {
     expect(filterProducts(products, { category: 'Bags', subcategory: 'Totes' })).toEqual([products[2]]);
-  });
-
-  it('getCategories returns unique categories prefixed with All', () => {
-    expect(getCategories(products)).toEqual(['All', 'Bags', 'Kitchen']);
-  });
-
-  it('getSubcategories returns unique subcategories for a category prefixed with All', () => {
-    expect(getSubcategories(products, 'Bags')).toEqual(['All', 'Backpacks', 'Totes']);
   });
 });

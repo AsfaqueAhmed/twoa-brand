@@ -11,7 +11,7 @@ import {
   persistNewCategory,
   persistNewSubcategory,
   type CategoryDoc,
-} from '../infrastructure/firestoreCategoriesRepository';
+} from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
 import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
@@ -419,6 +419,18 @@ export default function InventoryManager() {
       p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
       p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
       p.id.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  // Client-side pagination — inventory is already loaded in full, this just windows the table.
+  const INVENTORY_PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filteredInventory.length / INVENTORY_PAGE_SIZE));
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productSearch]);
+  const paginatedInventory = filteredInventory.slice(
+    (currentPage - 1) * INVENTORY_PAGE_SIZE,
+    currentPage * INVENTORY_PAGE_SIZE
   );
 
   return (
@@ -1054,7 +1066,7 @@ export default function InventoryManager() {
                 </td>
               </tr>
             ) : (
-              filteredInventory.map((p) => (
+              paginatedInventory.map((p) => (
                 <tr key={p.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
                   {/* Product title/image */}
                   <td className="py-4 px-6 flex items-center space-x-3">
@@ -1196,6 +1208,24 @@ export default function InventoryManager() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center flex-wrap gap-1.5" id="inventory-pagination">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`min-w-[2.25rem] px-3 py-2 text-xs font-bold border transition-colors ${
+                page === currentPage
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white border-[#EEEEEE] text-[#717171] hover:border-black hover:text-black'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+      )}
 
       <ImageCropperModal
         isOpen={isCropperOpen}

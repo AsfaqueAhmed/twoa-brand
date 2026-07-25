@@ -18,20 +18,3 @@ export function filterProducts(
   });
 }
 
-export function getCategories(products: Product[]): string[] {
-  return ['All', ...Array.from(new Set(products.map((p) => p.category)))];
-}
-
-export function getSubcategories(products: Product[], category: string): string[] {
-  return [
-    'All',
-    ...Array.from(
-      new Set(
-        products
-          .filter((p) => p.category === category)
-          .map((p) => p.subcategory)
-          .filter((sub): sub is string => !!sub)
-      )
-    ),
-  ];
-}

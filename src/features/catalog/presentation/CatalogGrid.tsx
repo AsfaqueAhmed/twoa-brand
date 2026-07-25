@@ -1,28 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Search, Sparkles } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
-import { filterProducts, getCategories, getSubcategories } from '../domain/filter';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { useProductModal } from '@/features/product/presentation/ProductModalProvider';
 import ProductCard from './ProductCard';
 import EmptyState from '@/shared/ui/EmptyState';
+import Spinner from '@/shared/ui/Spinner';
 
-export default function CatalogGrid({ initialProducts }: { initialProducts: Product[] }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedSubcategory, setSelectedSubcategory] = useState('All');
+export interface CatalogGridProps {
+  visibleProducts: Product[];
+  categories: string[];
+  subcategories: string[];
+  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
+  selectedSubcategory: string;
+  setSelectedSubcategory: (subcategory: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  resultsLoading: boolean;
+  loadingMore: boolean;
+  loadMore: () => void;
+}
+
+export default function CatalogGrid({
+  visibleProducts,
+  categories,
+  subcategories,
+  selectedCategory,
+  setSelectedCategory,
+  selectedSubcategory,
+  setSelectedSubcategory,
+  searchQuery,
+  setSearchQuery,
+  resultsLoading,
+  loadingMore,
+  loadMore,
+}: CatalogGridProps) {
   const { addToCart } = useCart();
   const { open } = useProductModal();
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const categories = getCategories(initialProducts);
-  const subcategories = selectedCategory === 'All' ? [] : getSubcategories(initialProducts, selectedCategory);
-  const filteredProducts = filterProducts(initialProducts, {
-    search: searchQuery,
-    category: selectedCategory,
-    subcategory: selectedSubcategory,
-  });
+  // Keep a ref to the latest loadMore so the observer (created once) always
+  // triggers current behavior — recreating the observer on every loadMore
+  // identity change caused it to re-observe an already-visible sentinel,
+  // which fires an immediate duplicate intersection callback and led to
+  // runaway duplicate page fetches.
+  const loadMoreRef = useRef(loadMore);
+  loadMoreRef.current = loadMore;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreRef.current();
+      },
+      { rootMargin: '400px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8" id="shop-catalog-section">
@@ -59,10 +99,7 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => {
-                setSelectedCategory(cat);
-                setSelectedSubcategory('All');
-              }}
+              onClick={() => setSelectedCategory(cat)}
               className={`rounded-none px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 border ${
                 selectedCategory === cat
                   ? 'bg-black text-white border-black'
@@ -97,31 +134,40 @@ export default function CatalogGrid({ initialProducts }: { initialProducts: Prod
         </div>
       )}
 
-      {filteredProducts.length === 0 ? (
+      {resultsLoading ? (
+        <div className="flex justify-center py-32">
+          <Spinner />
+        </div>
+      ) : visibleProducts.length === 0 ? (
         <EmptyState
           icon={Search}
           title="No products match your query"
           description="Try adjusting search keywords or clearing department filter."
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" id="product-grid">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onSelect={(p) => open(p.id)}
-              onAddToCart={(p, e) => {
-                e.stopPropagation();
-                const sizeOrder = p.parentProduct?.sizeOrder ?? [];
-                if (sizeOrder.length === 1 && !(p.variants && p.variants.length > 0)) {
-                  addToCart(p, 1, sizeOrder[0]);
-                } else {
-                  open(p.id);
-                }
-              }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" id="product-grid">
+            {visibleProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onSelect={(p) => open(p, visibleProducts)}
+                onAddToCart={(p, e) => {
+                  e.stopPropagation();
+                  const sizeOrder = p.parentProduct?.sizeOrder ?? [];
+                  if (sizeOrder.length === 1 && !(p.variants && p.variants.length > 0)) {
+                    addToCart(p, 1, sizeOrder[0]);
+                  } else {
+                    open(p, visibleProducts);
+                  }
+                }}
+              />
+            ))}
+          </div>
+          <div ref={sentinelRef} className="flex justify-center py-10">
+            {loadingMore && <Spinner />}
+          </div>
+        </>
       )}
     </div>
   );
