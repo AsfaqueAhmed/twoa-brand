@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { PackageX, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { getProductById } from '@/features/product/application/getProductById';
+import { shouldLoadMore } from '@/features/product/domain/paginationTrigger';
 import ProductDetailView from './ProductDetailView';
 import Spinner from '@/shared/ui/Spinner';
 import EmptyState from '@/shared/ui/EmptyState';
@@ -11,6 +12,8 @@ import EmptyState from '@/shared/ui/EmptyState';
 interface ProductModalContextValue {
   open: (product: Product, list?: Product[]) => void;
   close: () => void;
+  syncList: (list: Product[]) => void;
+  registerPagination: (hasMore: boolean, loadMore: () => void) => void;
 }
 
 const ProductModalContext = createContext<ProductModalContextValue | null>(null);
@@ -21,6 +24,7 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
   const [productList, setProductList] = useState<Product[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushedHistory, setPushedHistory] = useState(false);
+  const paginationRef = useRef<{ hasMore: boolean; loadMore: () => void } | null>(null);
 
   const close = () => {
     if (pushedHistory) {
@@ -39,9 +43,21 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
     setProductList(list ?? null);
   };
 
+  const syncList = useCallback((list: Product[]) => {
+    setProductList((prev) => (prev ? list : prev));
+  }, []);
+
+  const registerPagination = useCallback((hasMore: boolean, loadMore: () => void) => {
+    paginationRef.current = { hasMore, loadMore };
+  }, []);
+
   const currentIndex = productList && productId ? productList.findIndex((p) => p.id === productId) : -1;
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex !== -1 && productList !== null && currentIndex < productList.length - 1;
+  const previousProduct = hasPrevious ? productList![currentIndex - 1] : undefined;
+  const nextProduct = hasNext ? productList![currentIndex + 1] : undefined;
+  const positionLabel =
+    productList && currentIndex !== -1 ? { index: currentIndex + 1, total: productList.length } : undefined;
 
   const goToOffset = (offset: number) => {
     if (!productList || currentIndex === -1) return;
@@ -51,6 +67,15 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
     setProduct(next);
     setProductId(next.id);
   };
+
+  useEffect(() => {
+    if (!productList || currentIndex === -1) return;
+    const pagination = paginationRef.current;
+    if (!pagination) return;
+    if (shouldLoadMore(currentIndex, productList.length, pagination.hasMore)) {
+      pagination.loadMore();
+    }
+  }, [currentIndex, productList]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -79,7 +104,7 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
   }, [productId, product]);
 
   return (
-    <ProductModalContext.Provider value={{ open, close }}>
+    <ProductModalContext.Provider value={{ open, close, syncList, registerPagination }}>
       {children}
       {productId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
@@ -110,7 +135,14 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
                 <Spinner />
               </div>
             ) : product ? (
-              <ProductDetailView product={product} onClose={close} />
+              <ProductDetailView
+                product={product}
+                onClose={close}
+                previousProduct={previousProduct}
+                nextProduct={nextProduct}
+                onNavigate={goToOffset}
+                positionLabel={positionLabel}
+              />
             ) : (
               <div className="p-8">
                 <EmptyState
