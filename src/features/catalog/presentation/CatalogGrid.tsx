@@ -20,6 +20,7 @@ export interface CatalogGridProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   resultsLoading: boolean;
+  hasMore: boolean;
   loadingMore: boolean;
   loadMore: () => void;
 }
@@ -35,11 +36,12 @@ export default function CatalogGrid({
   searchQuery,
   setSearchQuery,
   resultsLoading,
+  hasMore,
   loadingMore,
   loadMore,
 }: CatalogGridProps) {
   const { addToCart } = useCart();
-  const { open } = useProductModal();
+  const { open, syncList, registerPagination } = useProductModal();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Keep a ref to the latest loadMore so the observer (created once) always
@@ -63,6 +65,14 @@ export default function CatalogGrid({
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    syncList(visibleProducts);
+  }, [visibleProducts, syncList]);
+
+  useEffect(() => {
+    registerPagination(hasMore, loadMore);
+  }, [hasMore, loadMore, registerPagination]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8" id="shop-catalog-section">
