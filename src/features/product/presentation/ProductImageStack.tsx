@@ -53,7 +53,7 @@ export default function ProductImageStack({
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={navKey}
-          className="absolute inset-2 border border-black/10 bg-[#F5F5F5] shadow-lg"
+          className={`absolute bg-[#F5F5F5] ${onNavigate ? 'inset-2 border border-black/10 shadow-lg' : 'inset-0'}`}
           drag={onNavigate ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.5}
