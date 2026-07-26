@@ -26,4 +26,18 @@ describe('resolveSwipeNavigation', () => {
     expect(resolveSwipeNavigation(-80, 0)).toBe(1);
     expect(resolveSwipeNavigation(0, -500)).toBe(1);
   });
+
+  it('prioritizes distance over conflicting velocity (right drag, left flick)', () => {
+    // offsetX = 90 (right drag, past distance threshold) says -1 (previous)
+    // velocityX = -600 (left flick, past velocity threshold) says 1 (next)
+    // distance wins, so should return -1
+    expect(resolveSwipeNavigation(90, -600)).toBe(-1);
+  });
+
+  it('prioritizes distance over conflicting velocity (left drag, right flick)', () => {
+    // offsetX = -90 (left drag, past distance threshold) says 1 (next)
+    // velocityX = 600 (right flick, past velocity threshold) says -1 (previous)
+    // distance wins, so should return 1
+    expect(resolveSwipeNavigation(-90, 600)).toBe(1);
+  });
 });
