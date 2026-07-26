@@ -10,13 +10,25 @@ import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
 import { resolveAvailableStock, isProductOutOfStock } from '@/shared/domain/stock';
 import { pixelViewContent } from '@/shared/lib/metaPixel';
+import ProductImageStack from './ProductImageStack';
 
 interface ProductDetailViewProps {
   product: Product;
   onClose?: () => void;
+  previousProduct?: Product;
+  nextProduct?: Product;
+  onNavigate?: (offset: 1 | -1) => void;
+  positionLabel?: { index: number; total: number };
 }
 
-export default function ProductDetailView({ product, onClose: onCloseProp }: ProductDetailViewProps) {
+export default function ProductDetailView({
+  product,
+  onClose: onCloseProp,
+  previousProduct,
+  nextProduct,
+  onNavigate,
+  positionLabel,
+}: ProductDetailViewProps) {
   const router = useRouter();
   const { addToCart } = useCart();
   const onClose = onCloseProp ?? (() => router.push('/'));
@@ -68,15 +80,16 @@ export default function ProductDetailView({ product, onClose: onCloseProp }: Pro
         className="relative w-full aspect-square md:w-[45%] lg:w-[50%] bg-[#F5F5F5] shrink-0"
         id="modal-product-image-container"
       >
-        <img
-          src={selectedVariant?.image || product.image}
+        <ProductImageStack
+          image={selectedVariant?.image || product.image}
           alt={product.name}
-          className="h-full w-full object-cover transition-all duration-300"
-          referrerPolicy="no-referrer"
+          category={product.category}
+          previousImage={previousProduct?.image}
+          nextImage={nextProduct?.image}
+          onNavigate={onNavigate}
+          positionLabel={positionLabel}
+          navKey={product.id}
         />
-        <span className="absolute top-4 left-4 bg-black px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white">
-          {product.category}
-        </span>
       </div>
 
       {/* Info side */}
