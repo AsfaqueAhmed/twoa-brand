@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node debug4.mjs)",
+      "Bash(rm -f /private/tmp/claude-501/-Users-asfaque-Downloads-e-commerce-app/9a82df8f-75d7-4bee-9f65-ac4c5c84c035/scratchpad/debug*.mjs /private/tmp/claude-501/-Users-asfaque-Downloads-e-commerce-app/9a82df8f-75d7-4bee-9f65-ac4c5c84c035/scratchpad/verify*.mjs)",
+      "Bash(node final_check.mjs)",
+      "Bash(lsof -ti:3000 -sTCP:LISTEN)",
+      "Bash(git fetch *)",
+      "Bash(git rebase *)",
+      "Bash(curl -sI https://twoa-brand.web.app)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp/claude-501/-Users-asfaque-Downloads-e-commerce-app/9a82df8f-75d7-4bee-9f65-ac4c5c84c035/scratchpad"
+    ]
+  }
+}
