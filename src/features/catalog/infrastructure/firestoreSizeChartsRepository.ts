@@ -1,5 +1,4 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/shared/infrastructure/firebase/app';
+import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { SizeChart } from '@/shared/domain/types';
 
 // Size charts rarely change, and many products share the same chart, so cache
@@ -13,14 +12,10 @@ export async function fetchSizeChartById(id: string): Promise<SizeChart | null> 
     return cached.chart;
   }
 
-  const snap = await getDoc(doc(db, 'sizeCharts', id));
-  const chart: SizeChart | null = snap.exists()
-    ? {
-        id: snap.id,
-        name: snap.data().name || '',
-        columns: Array.isArray(snap.data().columns) ? snap.data().columns : [],
-        rows: Array.isArray(snap.data().rows) ? snap.data().rows : [],
-      }
+  const { data, error } = await supabase.from('size_charts').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  const chart: SizeChart | null = data
+    ? { id: data.id, name: data.name || '', columns: data.columns || [], rows: data.rows || [] }
     : null;
 
   cache.set(id, { chart, fetchedAt: Date.now() });

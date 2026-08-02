@@ -1,19 +1,9 @@
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  query,
-  where,
-  limit,
-  startAfter,
-  type QueryDocumentSnapshot,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '@/shared/infrastructure/firebase/app';
-import type { Product } from '@/shared/domain/types';
+import { supabase } from '@/shared/infrastructure/supabase/client';
+import type { Product, ProductVariant } from '@/shared/domain/types';
 
-export type ProductsPageCursor = QueryDocumentSnapshot<DocumentData> | null;
+// Cursor is the last-seen product id — products are ordered by id for stable
+// keyset pagination (`.gt('id', cursor)` picks up where the previous page left off).
+export type ProductsPageCursor = string | null;
 
 export interface ProductsPage {
   products: Product[];
@@ -21,26 +11,31 @@ export interface ProductsPage {
   hasMore: boolean;
 }
 
-function toProduct(id: string, data: Record<string, any>): Product {
+function toVariant(v: Record<string, any>): ProductVariant {
+  return { id: v.id, name: v.name, image: v.image_url || undefined, colorCode: v.colorCode ?? undefined };
+}
+
+function toProduct(row: Record<string, any>): Product {
   return {
-    id,
-    name: data.name || '',
-    description: data.description || '',
-    price: Number(data.price) || 0,
-    originalPrice: data.originalPrice ? Number(data.originalPrice) : undefined,
-    image: data.image || '',
-    category: data.category || '',
-    subcategory: data.subcategory || '',
-    rating: Number(data.rating) || 5,
-    parentProductId: data.parentProductId || undefined,
-    variants: data.variants || [],
-    sizeChartId: data.sizeChartId || undefined,
+    id: row.id,
+    name: row.name || '',
+    description: row.description || '',
+    price: Number(row.price) || 0,
+    originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
+    image: row.image_url || '',
+    category: row.category || '',
+    subcategory: row.subcategory || '',
+    rating: Number(row.rating) || 5,
+    parentProductId: row.parent_product_id || undefined,
+    variants: Array.isArray(row.variants) ? row.variants.map(toVariant) : [],
+    sizeChartId: row.size_chart_id || undefined,
   };
 }
 
 export async function fetchAllProducts(): Promise<Product[]> {
-  const snapshot = await getDocs(collection(db, 'products'));
-  return snapshot.docs.map((docSnap) => toProduct(docSnap.id, docSnap.data()));
+  const { data, error } = await supabase.from('products').select('*').order('id', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(toProduct);
 }
 
 export async function fetchProductsPage(
@@ -48,21 +43,22 @@ export async function fetchProductsPage(
   category: string | undefined,
   cursor: ProductsPageCursor
 ): Promise<ProductsPage> {
-  const clauses = [];
-  if (category && category !== 'All') clauses.push(where('category', '==', category));
-  if (cursor) clauses.push(startAfter(cursor));
-  clauses.push(limit(pageSize));
+  let q = supabase.from('products').select('*').order('id', { ascending: true }).limit(pageSize);
+  if (category && category !== 'All') q = q.eq('category', category);
+  if (cursor) q = q.gt('id', cursor);
 
-  const snap = await getDocs(query(collection(db, 'products'), ...clauses));
+  const { data, error } = await q;
+  if (error) throw error;
+  const products = (data || []).map(toProduct);
   return {
-    products: snap.docs.map((docSnap) => toProduct(docSnap.id, docSnap.data())),
-    cursor: snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : cursor,
-    hasMore: snap.docs.length === pageSize,
+    products,
+    cursor: products.length > 0 ? products[products.length - 1].id : cursor,
+    hasMore: products.length === pageSize,
   };
 }
 
 export async function fetchProductById(id: string): Promise<Product | null> {
-  const snap = await getDoc(doc(db, 'products', id));
-  if (!snap.exists()) return null;
-  return toProduct(snap.id, snap.data());
+  const { data, error } = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? toProduct(data) : null;
 }

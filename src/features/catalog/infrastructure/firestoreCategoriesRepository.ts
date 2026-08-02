@@ -1,5 +1,4 @@
-import { collection, getDocs, doc, setDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '@/shared/infrastructure/firebase/app';
+import { supabase } from '@/shared/infrastructure/supabase/client';
 
 export interface CategoryDoc {
   id: string;
@@ -12,23 +11,29 @@ export function categorySlug(name: string): string {
 }
 
 export async function fetchCategories(): Promise<CategoryDoc[]> {
-  const snap = await getDocs(collection(db, 'categories'));
-  const fetched: CategoryDoc[] = [];
-  snap.forEach((docSnap) => {
-    const data = docSnap.data();
-    fetched.push({ id: docSnap.id, name: data.name || docSnap.id, subcategories: data.subcategories || [] });
-  });
-  return fetched;
+  const { data, error } = await supabase.from('categories').select('*');
+  if (error) throw error;
+  return (data || []).map((row) => ({ id: row.id, name: row.name || row.id, subcategories: row.subcategories || [] }));
 }
 
 export async function persistNewCategory(name: string): Promise<void> {
   const id = categorySlug(name);
   if (!id) return;
-  await setDoc(doc(db, 'categories', id), { name, subcategories: [] }, { merge: true });
+  const { error } = await supabase.from('categories').upsert({ id, name, subcategories: [] });
+  if (error) throw error;
 }
 
 export async function persistNewSubcategory(categoryName: string, subName: string): Promise<void> {
   const id = categorySlug(categoryName);
   if (!id) return;
-  await setDoc(doc(db, 'categories', id), { name: categoryName, subcategories: arrayUnion(subName) }, { merge: true });
+  const { data: existing, error: fetchError } = await supabase
+    .from('categories')
+    .select('subcategories')
+    .eq('id', id)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+
+  const subcategories = Array.from(new Set([...(existing?.subcategories || []), subName]));
+  const { error } = await supabase.from('categories').upsert({ id, name: categoryName, subcategories });
+  if (error) throw error;
 }

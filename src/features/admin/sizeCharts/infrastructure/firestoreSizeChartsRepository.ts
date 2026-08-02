@@ -1,29 +1,29 @@
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/shared/infrastructure/firebase/app';
+import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { SizeChart } from '@/shared/domain/types';
 
-function toSizeChart(id: string, data: Record<string, any>): SizeChart {
+function toSizeChart(row: Record<string, any>): SizeChart {
   return {
-    id,
-    name: data.name || '',
-    columns: Array.isArray(data.columns) ? data.columns : [],
-    rows: Array.isArray(data.rows) ? data.rows : [],
+    id: row.id,
+    name: row.name || '',
+    columns: Array.isArray(row.columns) ? row.columns : [],
+    rows: Array.isArray(row.rows) ? row.rows : [],
   };
 }
 
 export async function fetchSizeCharts(): Promise<SizeChart[]> {
-  const snap = await getDocs(collection(db, 'sizeCharts'));
-  return snap.docs.map((d) => toSizeChart(d.id, d.data()));
+  const { data, error } = await supabase.from('size_charts').select('*');
+  if (error) throw error;
+  return (data || []).map(toSizeChart);
 }
 
 export async function saveSizeChart(chart: SizeChart): Promise<void> {
-  await setDoc(doc(db, 'sizeCharts', chart.id), {
-    name: chart.name,
-    columns: chart.columns,
-    rows: chart.rows,
-  });
+  const { error } = await supabase
+    .from('size_charts')
+    .upsert({ id: chart.id, name: chart.name, columns: chart.columns, rows: chart.rows });
+  if (error) throw error;
 }
 
 export async function deleteSizeChart(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'sizeCharts', id));
+  const { error } = await supabase.from('size_charts').delete().eq('id', id);
+  if (error) throw error;
 }
