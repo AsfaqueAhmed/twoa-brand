@@ -29,7 +29,7 @@ export default function OrderTrackingView() {
   }, [onRefresh]);
 
   const onCancelOrder = async (orderId: string) => {
-    await cancelOrder(orderId);
+    await cancelOrder(orderId, user ? user.uid : 'guest');
     await onRefresh();
   };
 

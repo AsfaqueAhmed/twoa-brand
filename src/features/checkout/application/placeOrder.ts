@@ -1,8 +1,7 @@
 import type { User } from 'firebase/auth';
-import type { CartItem, OrderItem, OrderStatus } from '@/shared/domain/types';
+import type { CartItem } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
-import { reserveStockForOrder } from '../infrastructure/reserveParentStock';
-import { incrementCouponUsage } from '@/features/coupons/infrastructure/firestoreCouponsRepository';
+import { buildStockLines } from '../infrastructure/reserveParentStock';
 import { computeDeliveryFeeByZone, computeTotal, generateOrderId } from '../domain/pricing';
 
 export interface DeliveryDetails {
@@ -25,19 +24,23 @@ export async function placeOrder(params: {
   const { user, cartItems, deliveryDetails } = params;
   const orderId = generateOrderId();
 
-  // Firestore rejects any field set to `undefined` (even nested inside array
-  // items), so selectedSize/selectedVariant must be omitted entirely rather than
-  // included as `undefined` when the cart item has neither.
-  const orderItemsPayload: OrderItem[] = cartItems.map((item) => {
-    const orderItem: OrderItem = {
+  const orderItemsPayload = cartItems.map((item) => {
+    const orderItem: Record<string, any> = {
       productId: item.product.id,
       name: item.product.name,
       price: item.product.price,
       quantity: item.quantity,
-      image: item.product.image,
+      image_url: item.product.image,
     };
     if (item.selectedSize) orderItem.selectedSize = item.selectedSize;
-    if (item.selectedVariant) orderItem.selectedVariant = item.selectedVariant;
+    if (item.selectedVariant) {
+      orderItem.selectedVariant = {
+        id: item.selectedVariant.id,
+        name: item.selectedVariant.name,
+        colorCode: item.selectedVariant.colorCode ?? null,
+        image_url: item.selectedVariant.image ?? null,
+      };
+    }
     if (item.product.parentProductId) orderItem.parentProductId = item.product.parentProductId;
     return orderItem;
   });
@@ -51,7 +54,9 @@ export async function placeOrder(params: {
   const computedTotal = computeTotal(subtotal, deliveryFee, deliveryDetails.discount ?? 0);
   const finalTotal = deliveryDetails.finalTotal !== undefined ? deliveryDetails.finalTotal : computedTotal;
 
-  const payload: Record<string, any> = {
+  const cartLines = buildStockLines(cartItems);
+
+  await createOrder(orderId, {
     userId: user ? user.uid : 'guest',
     userName: deliveryDetails.name,
     userEmail: user?.email || '',
@@ -59,19 +64,10 @@ export async function placeOrder(params: {
     phone: deliveryDetails.phone,
     items: orderItemsPayload,
     totalAmount: finalTotal,
-    status: 'pending' as OrderStatus,
-    paymentMethod: 'cash_on_delivery' as const,
-  };
-  if (deliveryDetails.promoCode) payload.promoCode = deliveryDetails.promoCode;
-  if (deliveryDetails.discount !== undefined) payload.discount = deliveryDetails.discount;
-
-  await reserveStockForOrder(cartItems);
-
-  await createOrder(orderId, payload);
-
-  if (deliveryDetails.promoCode) {
-    await incrementCouponUsage(deliveryDetails.promoCode);
-  }
+    promoCode: deliveryDetails.promoCode,
+    discount: deliveryDetails.discount,
+    cartLines,
+  });
 
   return orderId;
 }
