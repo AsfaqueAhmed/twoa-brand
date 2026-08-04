@@ -13,4 +13,3 @@ coverage/
 
 # Generated at build time by scripts/generate-product-feed.mjs (see package.json "prebuild")
 /public/product-feed.csv
-/public/product-images/
