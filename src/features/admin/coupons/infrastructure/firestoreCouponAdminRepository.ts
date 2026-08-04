@@ -1,5 +1,4 @@
-import { collection, getDocs, doc, setDoc, deleteDoc, deleteField, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/shared/infrastructure/firebase/app';
+import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { Coupon, DiscountType } from '@/features/coupons/domain/coupon';
 
 export interface CouponFormPayload {
@@ -13,59 +12,60 @@ export interface CouponFormPayload {
   isActive: boolean;
 }
 
-function toCoupon(id: string, data: Record<string, any>): Coupon {
+function toCoupon(row: Record<string, any>): Coupon {
   return {
-    code: id,
-    discountType: data.discountType,
-    value: Number(data.value) || 0,
-    minOrderSubtotal: data.minOrderSubtotal !== undefined ? Number(data.minOrderSubtotal) : undefined,
-    districtRestriction: data.districtRestriction || undefined,
-    expiresAt: data.expiresAt || undefined,
-    usageLimit: data.usageLimit !== undefined ? Number(data.usageLimit) : undefined,
-    usageCount: Number(data.usageCount) || 0,
-    isActive: !!data.isActive,
-    createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || '',
-    updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || '',
+    code: row.code,
+    discountType: row.discount_type,
+    value: Number(row.value) || 0,
+    minOrderSubtotal: row.min_order_subtotal != null ? Number(row.min_order_subtotal) : undefined,
+    districtRestriction: row.district_restriction ?? undefined,
+    expiresAt: row.expires_at ?? undefined,
+    usageLimit: row.usage_limit != null ? Number(row.usage_limit) : undefined,
+    usageCount: Number(row.usage_count) || 0,
+    isActive: !!row.is_active,
+    createdAt: row.created_at || '',
+    updatedAt: row.updated_at || '',
   };
 }
 
-// Firestore rejects `undefined` field values outright. Optional coupon fields
-// (minOrderSubtotal, districtRestriction, expiresAt, usageLimit) are `undefined`
-// whenever the admin leaves them blank, so every write must sanitize them first.
-function omitUndefined(payload: Record<string, any>): Record<string, any> {
-  return Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== undefined));
-}
-
-// For merge-updates, an undefined field means "the admin cleared this" and must
-// actively delete the key in Firestore, not just be omitted from the write.
-function undefinedToDeleteField(payload: Record<string, any>): Record<string, any> {
-  return Object.fromEntries(Object.entries(payload).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
+// Only maps keys actually present in payload (via `in`, not `!== undefined`),
+// so a partial update like `{ isActive: false }` leaves every other column
+// untouched — Postgres UPDATE only ever SETs the columns you give it, unlike
+// Firestore's setDoc(merge: true) which needed deleteField() tricks to
+// distinguish "not provided" from "explicitly cleared".
+function toRow(payload: Partial<CouponFormPayload>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if ('discountType' in payload) row.discount_type = payload.discountType;
+  if ('value' in payload) row.value = payload.value;
+  if ('minOrderSubtotal' in payload) row.min_order_subtotal = payload.minOrderSubtotal ?? null;
+  if ('districtRestriction' in payload) row.district_restriction = payload.districtRestriction ?? null;
+  if ('expiresAt' in payload) row.expires_at = payload.expiresAt ?? null;
+  if ('usageLimit' in payload) row.usage_limit = payload.usageLimit ?? null;
+  if ('isActive' in payload) row.is_active = payload.isActive;
+  return row;
 }
 
 export async function listAllCoupons(): Promise<Coupon[]> {
-  const snap = await getDocs(collection(db, 'coupons'));
-  return snap.docs.map((d) => toCoupon(d.id, d.data()));
+  const { data, error } = await supabase.from('coupons').select('*');
+  if (error) throw error;
+  return (data || []).map(toCoupon);
 }
 
 export async function createCoupon(payload: CouponFormPayload): Promise<void> {
   const id = payload.code.trim().toUpperCase();
-  await setDoc(doc(db, 'coupons', id), {
-    ...omitUndefined(payload),
-    code: id,
-    usageCount: 0,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const { error } = await supabase.from('coupons').insert({ code: id, ...toRow(payload), usage_count: 0 });
+  if (error) throw error;
 }
 
 export async function updateCoupon(code: string, payload: Partial<CouponFormPayload>): Promise<void> {
-  await setDoc(
-    doc(db, 'coupons', code.toUpperCase()),
-    { ...undefinedToDeleteField(payload), updatedAt: serverTimestamp() },
-    { merge: true }
-  );
+  const { error } = await supabase
+    .from('coupons')
+    .update({ ...toRow(payload), updated_at: new Date().toISOString() })
+    .eq('code', code.toUpperCase());
+  if (error) throw error;
 }
 
 export async function deleteCoupon(code: string): Promise<void> {
-  await deleteDoc(doc(db, 'coupons', code.toUpperCase()));
+  const { error } = await supabase.from('coupons').delete().eq('code', code.toUpperCase());
+  if (error) throw error;
 }

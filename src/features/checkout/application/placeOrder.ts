@@ -1,4 +1,4 @@
-import type { User } from 'firebase/auth';
+import type { User } from '@/features/auth/infrastructure/authListener';
 import type { CartItem } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { buildStockLines } from '../infrastructure/reserveParentStock';

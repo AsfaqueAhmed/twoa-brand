@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
-import { subscribeToAuthChanges, signInWithGoogle, signOutUser } from '../infrastructure/authListener';
+import { subscribeToAuthChanges, signInWithGoogle, signOutUser, type User } from '../infrastructure/authListener';
 import { isAdminEmail } from '../domain/adminEmail';
 
 interface AuthContextValue {
