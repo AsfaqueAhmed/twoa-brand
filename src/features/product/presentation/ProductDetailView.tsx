@@ -119,7 +119,7 @@ export default function ProductDetailView({
 
           <div className="mt-6">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#717171]">Description</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[#717171]">{product.description}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#717171]">{product.description}</p>
           </div>
 
           {/* Color / Design Variant Selector */}

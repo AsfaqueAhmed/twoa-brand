@@ -13,6 +13,7 @@ import {
   type CategoryDoc,
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
+import { uploadProductImage } from '../infrastructure/productImageUpload';
 import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
 import type { SizeChart } from '@/shared/domain/types';
@@ -75,7 +76,7 @@ export default function InventoryManager() {
     loadSizeCharts();
   }, [loadSizeCharts]);
 
-  // Categories collection (persisted independently in Firestore, so category/
+  // Categories table (persisted independently, so category/
   // subcategory names survive even if no product currently uses them)
   const [categoryDocs, setCategoryDocs] = useState<CategoryDoc[]>([]);
 
@@ -107,35 +108,7 @@ export default function InventoryManager() {
   // Image Cropper States
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [cropperTarget, setCropperTarget] = useState<'primary' | 'variant' | null>(null);
-
-  // Firestore per-document hard limit is 1 MiB; block new image uploads at 90% of that.
-  const MAX_DOC_BYTES = 1048576;
-  const UPLOAD_BLOCK_RATIO = 0.9;
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  const estimateDocSizeBytes = () => {
-    if (!editingProduct) return 0;
-    const payload = {
-      id: editingProduct.id,
-      name: editingProduct.name,
-      description: editingProduct.description,
-      price: editingProduct.price,
-      originalPrice: editingProduct.originalPrice,
-      image: editingProduct.image,
-      category: editingProduct.category,
-      subcategory: editingProduct.subcategory,
-      rating: editingProduct.rating,
-      parentProductId: editingProduct.parentProductId,
-      variants: productVariants,
-      sizeChartId: editingProduct.sizeChartId,
-    };
-    return new TextEncoder().encode(JSON.stringify(payload)).length;
-  };
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Product form handlers
   const handleOpenCreateProduct = () => {
@@ -206,21 +179,26 @@ export default function InventoryManager() {
   };
 
   const handleTriggerCrop = (target: 'primary' | 'variant') => {
-    if (estimateDocSizeBytes() / MAX_DOC_BYTES >= UPLOAD_BLOCK_RATIO) {
-      setEditorError(
-        'Document size has reached 90% of the Firestore 1 MiB limit. Remove an image or paste an external URL instead of uploading another.'
-      );
-      return;
-    }
     setCropperTarget(target);
     setIsCropperOpen(true);
   };
 
-  const handleCropComplete = (compressedDataUrl: string) => {
-    if (cropperTarget === 'primary') {
-      setEditingProduct((prev) => (prev ? { ...prev, image: compressedDataUrl } : null));
-    } else if (cropperTarget === 'variant') {
-      setNewVariantImage(compressedDataUrl);
+  const handleCropComplete = async (compressedDataUrl: string) => {
+    const productId = editingProduct?.id || `prod-${Date.now()}`;
+    setIsUploadingImage(true);
+    setEditorError('');
+    try {
+      if (cropperTarget === 'primary') {
+        const url = await uploadProductImage(`products/${productId}/main`, compressedDataUrl);
+        setEditingProduct((prev) => (prev ? { ...prev, image: url } : null));
+      } else if (cropperTarget === 'variant') {
+        const url = await uploadProductImage(`products/${productId}/variants/${Date.now()}`, compressedDataUrl);
+        setNewVariantImage(url);
+      }
+    } catch (err: any) {
+      setEditorError(err.message || 'Failed to upload image.');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -291,14 +269,14 @@ export default function InventoryManager() {
       setEditingProduct(null);
     } catch (err: any) {
       console.error('Error saving product: ', err);
-      setEditorError(err.message || 'Failed to save product in Firestore.');
+      setEditorError(err.message || 'Failed to save product.');
     } finally {
       setIsSavingProduct(false);
     }
   };
 
   const handleDeleteProduct = async (prodId: string) => {
-    if (!window.confirm('Are you sure you want to delete this product from your Firestore Catalog?')) return;
+    if (!window.confirm('Are you sure you want to delete this product from your catalog?')) return;
     try {
       await deleteProduct(prodId);
       await refreshProducts();
@@ -407,11 +385,6 @@ export default function InventoryManager() {
     ])
   ).sort();
 
-  // Live Firestore document size estimate for the product currently being edited
-  const currentDocBytes = estimateDocSizeBytes();
-  const currentDocPercent = (currentDocBytes / MAX_DOC_BYTES) * 100;
-  const isUploadBlocked = currentDocPercent >= UPLOAD_BLOCK_RATIO * 100;
-
   // Search/Filters logic
   const [productSearch, setProductSearch] = useState('');
   const filteredInventory = products.filter(
@@ -505,31 +478,6 @@ export default function InventoryManager() {
                   {editorError}
                 </div>
               )}
-
-              {/* Live Firestore Document Size Monitor */}
-              <div
-                className={`border p-4 mb-6 ${isUploadBlocked ? 'bg-red-50 border-red-200' : 'bg-[#FAF9F6] border-[#EEEEEE]'}`}
-                id="doc-size-monitor"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#717171]">Firestore Document Size</span>
-                  <span className={`text-[10px] font-mono font-bold ${isUploadBlocked ? 'text-red-700' : 'text-black'}`}>
-                    {formatBytes(currentDocBytes)} / {formatBytes(MAX_DOC_BYTES)} ({currentDocPercent.toFixed(1)}%)
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-[#EEEEEE] overflow-hidden">
-                  <div
-                    className={`h-full transition-all ${isUploadBlocked ? 'bg-red-600' : 'bg-black'}`}
-                    style={{ width: `${Math.min(currentDocPercent, 100)}%` }}
-                  />
-                </div>
-                {isUploadBlocked && (
-                  <p className="text-[10px] text-red-700 font-semibold mt-2">
-                    90% of the Firestore 1 MiB per-document limit reached. New image uploads are disabled — remove an
-                    image or use an external URL instead.
-                  </p>
-                )}
-              </div>
 
               <form onSubmit={handleSaveProduct} className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -759,12 +707,15 @@ export default function InventoryManager() {
                     <button
                       type="button"
                       onClick={() => handleTriggerCrop('primary')}
-                      disabled={isUploadBlocked}
-                      title={isUploadBlocked ? 'Document is at 90% of the Firestore size limit' : undefined}
+                      disabled={isUploadingImage}
                       className="bg-black hover:bg-[#333333] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 transition-colors flex items-center justify-center space-x-1.5 shrink-0 disabled:bg-[#717171] disabled:cursor-not-allowed disabled:hover:bg-[#717171]"
                     >
-                      <Upload className="h-3.5 w-3.5" />
-                      <span>Upload & Crop</span>
+                      {isUploadingImage && cropperTarget === 'primary' ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isUploadingImage && cropperTarget === 'primary' ? 'Uploading…' : 'Upload & Crop'}</span>
                     </button>
                   </div>
 
@@ -972,12 +923,15 @@ export default function InventoryManager() {
                         <button
                           type="button"
                           onClick={() => handleTriggerCrop('variant')}
-                          disabled={isUploadBlocked}
-                          title={isUploadBlocked ? 'Document is at 90% of the Firestore size limit' : undefined}
+                          disabled={isUploadingImage}
                           className="border border-black hover:bg-[#FAF9F6] text-black text-xs font-bold uppercase tracking-widest px-4 py-2 transition-colors flex items-center justify-center space-x-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
                         >
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>Upload & Crop</span>
+                          {isUploadingImage && cropperTarget === 'variant' ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          <span>{isUploadingImage && cropperTarget === 'variant' ? 'Uploading…' : 'Upload & Crop'}</span>
                         </button>
                         <button
                           type="button"
@@ -1062,7 +1016,7 @@ export default function InventoryManager() {
             {filteredInventory.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-[#717171] font-semibold">
-                  No products found in Firestore matches. Please check search or add new!
+                  No products found matching your search. Please check search or add new!
                 </td>
               </tr>
             ) : (

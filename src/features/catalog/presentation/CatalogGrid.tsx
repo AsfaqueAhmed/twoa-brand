@@ -6,8 +6,11 @@ import type { Product } from '@/shared/domain/types';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { useProductModal } from '@/features/product/presentation/ProductModalProvider';
 import ProductCard from './ProductCard';
+import ProductCardSkeleton from './ProductCardSkeleton';
 import EmptyState from '@/shared/ui/EmptyState';
 import Spinner from '@/shared/ui/Spinner';
+
+const SKELETON_CARD_COUNT = 8;
 
 export interface CatalogGridProps {
   visibleProducts: Product[];
@@ -145,8 +148,10 @@ export default function CatalogGrid({
       )}
 
       {resultsLoading ? (
-        <div className="flex justify-center py-32">
-          <Spinner />
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
         </div>
       ) : visibleProducts.length === 0 ? (
         <EmptyState

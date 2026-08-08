@@ -1,5 +1,5 @@
-import { updateOrderStatus } from '../infrastructure/firestoreOrdersRepository';
+import { cancelOrderAsCustomer } from '../infrastructure/firestoreOrdersRepository';
 
-export async function cancelOrder(orderId: string): Promise<void> {
-  await updateOrderStatus(orderId, 'cancelled');
+export async function cancelOrder(orderId: string, userId: string): Promise<void> {
+  await cancelOrderAsCustomer(orderId, userId);
 }

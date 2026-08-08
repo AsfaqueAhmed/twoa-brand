@@ -1,4 +1,4 @@
-import type { User } from 'firebase/auth';
+import type { User } from '@/features/auth/infrastructure/authListener';
 import { fetchCouponByCode } from '../infrastructure/firestoreCouponsRepository';
 import { fetchOrdersForUser } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { validateCouponEligibility, computeDiscountAmount, type Coupon } from '../domain/coupon';
@@ -24,8 +24,8 @@ export async function applyCoupon(params: {
   const eligibility = validateCouponEligibility(coupon, { subtotal, deliveryFee, districtId });
   if (!eligibility.valid) return { valid: false, reason: eligibility.reason };
 
-  // Guests have no queryable identity (their orders are only findable by ID, see
-  // firestore.rules), so the "already used" check only applies to signed-in users.
+  // Guests have no queryable identity (their orders are only findable by ID, via
+  // get_guest_order), so the "already used" check only applies to signed-in users.
   if (user) {
     const priorOrders = await fetchOrdersForUser(user.uid);
     const alreadyUsed = priorOrders.some((o) => o.promoCode === coupon.code);
