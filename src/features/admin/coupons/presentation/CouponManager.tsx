@@ -29,6 +29,7 @@ const emptyForm: CouponFormPayload = {
   expiresAt: undefined,
   usageLimit: undefined,
   isActive: true,
+  isPublic: true,
 };
 
 export default function CouponManager() {
@@ -70,6 +71,7 @@ export default function CouponManager() {
       expiresAt: coupon.expiresAt,
       usageLimit: coupon.usageLimit,
       isActive: coupon.isActive,
+      isPublic: coupon.isPublic,
     });
     setIsEditingExistingCode(coupon.code);
     setError('');
@@ -115,6 +117,11 @@ export default function CouponManager() {
 
   const handleToggleActive = async (coupon: Coupon) => {
     await updateCoupon(coupon.code, { isActive: !coupon.isActive });
+    await refresh();
+  };
+
+  const handleToggleVisibility = async (coupon: Coupon) => {
+    await updateCoupon(coupon.code, { isPublic: !coupon.isPublic });
     await refresh();
   };
 
@@ -277,14 +284,29 @@ export default function CouponManager() {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-black">
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-                  />
-                  <span>Active</span>
-                </label>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-black">
+                    <input
+                      type="checkbox"
+                      checked={form.isActive}
+                      onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                    />
+                    <span>Active</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-black">
+                    <input
+                      type="checkbox"
+                      checked={form.isPublic}
+                      onChange={(e) => setForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
+                    />
+                    <span>Public</span>
+                  </label>
+                </div>
+                <p className="text-[10px] text-[#717171] -mt-2">
+                  {form.isPublic
+                    ? 'Shown in the "Active Promotions" list at checkout.'
+                    : 'Private — hidden from checkout; only works if a customer enters the exact code.'}
+                </p>
 
                 <div className="border-t border-[#EEEEEE] pt-6 flex justify-end space-x-3">
                   <button
@@ -317,19 +339,20 @@ export default function CouponManager() {
               <th className="py-4 px-6">Conditions</th>
               <th className="py-4 px-6">Usage</th>
               <th className="py-4 px-6">Status</th>
+              <th className="py-4 px-6">Visibility</th>
               <th className="py-4 px-6 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-[#717171] font-semibold">
+                <td colSpan={7} className="py-12 text-center text-[#717171] font-semibold">
                   Loading coupons...
                 </td>
               </tr>
             ) : coupons.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-[#717171] font-semibold">
+                <td colSpan={7} className="py-12 text-center text-[#717171] font-semibold">
                   No coupons yet. Add one to get started.
                 </td>
               </tr>
@@ -363,6 +386,17 @@ export default function CouponManager() {
                       }`}
                     >
                       {c.isActive ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="py-4 px-6">
+                    <button
+                      onClick={() => handleToggleVisibility(c)}
+                      className={`px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${
+                        c.isPublic ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-[#F5F5F5] text-[#717171] border-[#EEEEEE]'
+                      }`}
+                      title={c.isPublic ? 'Shown at checkout' : 'Hidden — code entry only'}
+                    >
+                      {c.isPublic ? 'Public' : 'Private'}
                     </button>
                   </td>
                   <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">

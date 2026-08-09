@@ -12,6 +12,7 @@ export interface Coupon {
   usageLimit?: number;
   usageCount: number;
   isActive: boolean;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }

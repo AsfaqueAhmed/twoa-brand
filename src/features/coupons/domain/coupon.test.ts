@@ -16,6 +16,7 @@ function makeCoupon(overrides: Partial<Coupon> = {}): Coupon {
     value: 10,
     usageCount: 0,
     isActive: true,
+    isPublic: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

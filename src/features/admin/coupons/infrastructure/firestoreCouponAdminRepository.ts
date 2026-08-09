@@ -10,6 +10,7 @@ export interface CouponFormPayload {
   expiresAt?: string;
   usageLimit?: number;
   isActive: boolean;
+  isPublic: boolean;
 }
 
 function toCoupon(row: Record<string, any>): Coupon {
@@ -23,6 +24,7 @@ function toCoupon(row: Record<string, any>): Coupon {
     usageLimit: row.usage_limit != null ? Number(row.usage_limit) : undefined,
     usageCount: Number(row.usage_count) || 0,
     isActive: !!row.is_active,
+    isPublic: !!row.is_public,
     createdAt: row.created_at || '',
     updatedAt: row.updated_at || '',
   };
@@ -42,6 +44,7 @@ function toRow(payload: Partial<CouponFormPayload>): Record<string, any> {
   if ('expiresAt' in payload) row.expires_at = payload.expiresAt ?? null;
   if ('usageLimit' in payload) row.usage_limit = payload.usageLimit ?? null;
   if ('isActive' in payload) row.is_active = payload.isActive;
+  if ('isPublic' in payload) row.is_public = payload.isPublic;
   return row;
 }
 
