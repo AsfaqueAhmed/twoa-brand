@@ -41,10 +41,12 @@ export async function fetchAllProducts(): Promise<Product[]> {
 export async function fetchProductsPage(
   pageSize: number,
   category: string | undefined,
+  subcategory: string | undefined,
   cursor: ProductsPageCursor
 ): Promise<ProductsPage> {
   let q = supabase.from('products').select('*').order('id', { ascending: true }).limit(pageSize);
   if (category && category !== 'All') q = q.eq('category', category);
+  if (subcategory && subcategory !== 'All') q = q.eq('subcategory', subcategory);
   if (cursor) q = q.gt('id', cursor);
 
   const { data, error } = await q;

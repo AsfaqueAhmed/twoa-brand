@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Search, Sparkles } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { useCart } from '@/features/cart/presentation/CartProvider';
@@ -45,28 +45,28 @@ export default function CatalogGrid({
 }: CatalogGridProps) {
   const { addToCart } = useCart();
   const { open, syncList, registerPagination } = useProductModal();
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Keep a ref to the latest loadMore so the observer (created once) always
-  // triggers current behavior — recreating the observer on every loadMore
-  // identity change caused it to re-observe an already-visible sentinel,
-  // which fires an immediate duplicate intersection callback and led to
-  // runaway duplicate page fetches.
+  // Keep a ref to the latest loadMore so the observer always triggers current
+  // behavior without needing to be recreated when loadMore's identity changes.
   const loadMoreRef = useRef(loadMore);
   loadMoreRef.current = loadMore;
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
+  // The sentinel node is unmounted/remounted every time resultsLoading toggles
+  // (e.g. switching category/subcategory swaps the spinner branch back in),
+  // so a mount-once effect would end up watching a detached node forever. A
+  // callback ref re-attaches the observer to the fresh node every time.
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (!node) return;
+    observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) loadMoreRef.current();
       },
       { rootMargin: '400px' }
     );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    observerRef.current.observe(node);
   }, []);
 
   useEffect(() => {
