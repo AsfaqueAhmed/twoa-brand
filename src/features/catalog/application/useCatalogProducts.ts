@@ -47,7 +47,7 @@ export function useCatalogProducts() {
     setPagedProducts([]);
     setCursor(null);
     setHasMore(true);
-    fetchProductsPage(PAGE_SIZE, selectedCategory, null).then((page) => {
+    fetchProductsPage(PAGE_SIZE, selectedCategory, selectedSubcategory, null).then((page) => {
       if (cancelled) return;
       setPagedProducts(page.products);
       setCursor(page.cursor);
@@ -58,18 +58,18 @@ export function useCatalogProducts() {
     return () => {
       cancelled = true;
     };
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubcategory]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || pageLoading || !hasMore) return;
     setLoadingMore(true);
-    fetchProductsPage(PAGE_SIZE, selectedCategory, cursor).then((page) => {
+    fetchProductsPage(PAGE_SIZE, selectedCategory, selectedSubcategory, cursor).then((page) => {
       setPagedProducts((prev) => [...prev, ...page.products]);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
       setLoadingMore(false);
     });
-  }, [selectedCategory, cursor, loadingMore, pageLoading, hasMore]);
+  }, [selectedCategory, selectedSubcategory, cursor, loadingMore, pageLoading, hasMore]);
 
   const isSearching = searchQuery.trim().length > 0;
 
