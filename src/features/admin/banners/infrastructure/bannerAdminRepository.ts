@@ -58,9 +58,17 @@ export async function deleteBanner(banner: HomeBanner): Promise<void> {
   await Promise.allSettled([removeStoredImage(banner.desktopImageUrl), removeStoredImage(banner.mobileImageUrl)]);
 }
 
-// Same storage path is reused on re-upload (upsert), so a version query
-// string busts the CDN/browser cache for the replaced image.
+// Best-effort removal of a previously stored banner image.
+export async function removeBannerImage(url?: string): Promise<void> {
+  try {
+    await removeStoredImage(url);
+  } catch {
+    // orphaned files are harmless
+  }
+}
+
+// Each upload gets a unique path so replacing an image never overwrites the
+// file a live banner still points to.
 export async function uploadBannerImage(id: string, kind: 'desktop' | 'mobile', dataUrl: string): Promise<string> {
-  const url = await uploadProductImage(`banners/${id}-${kind}`, dataUrl);
-  return `${url}?v=${Date.now()}`;
+  return uploadProductImage(`banners/${id}-${kind}-${Date.now()}`, dataUrl);
 }

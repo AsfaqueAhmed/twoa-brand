@@ -223,7 +223,7 @@ export default function ImageCropperModal({
             {/* Header */}
             <div className="px-6 py-4 border-b border-[#EEEEEE] flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-widest text-black">{title}</h3>
-              <button onClick={onClose} className="text-[#717171] hover:text-black transition-colors">
+              <button type="button" aria-label="Close" onClick={onClose} className="text-[#717171] hover:text-black transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>

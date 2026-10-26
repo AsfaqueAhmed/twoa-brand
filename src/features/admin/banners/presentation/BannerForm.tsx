@@ -5,7 +5,7 @@ import { ImagePlus } from 'lucide-react';
 import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 import HeroCarousel from '@/features/catalog/presentation/HeroCarousel';
 import { isSafeCtaHref, type HomeBanner } from '@/features/catalog/domain/banner';
-import { createBanner, updateBanner, uploadBannerImage } from '../infrastructure/bannerAdminRepository';
+import { createBanner, removeBannerImage, updateBanner, uploadBannerImage } from '../infrastructure/bannerAdminRepository';
 
 interface BannerFormProps {
   initial?: HomeBanner;
@@ -33,6 +33,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   const [cropTarget, setCropTarget] = useState<Target | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const fid = `banner-${id}`;
 
   const preview: HomeBanner = useMemo(
     () => ({
@@ -91,7 +92,16 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       ctaHref: ctaHref.trim(),
     };
     try {
-      if (initial) await updateBanner(id, payload);
+      if (initial) {
+        await updateBanner(id, payload);
+        // Best-effort cleanup of images that were replaced or removed.
+        if (initial.desktopImageUrl && initial.desktopImageUrl !== desktopImageUrl) {
+          void removeBannerImage(initial.desktopImageUrl);
+        }
+        if (initial.mobileImageUrl && initial.mobileImageUrl !== mobileImageUrl) {
+          void removeBannerImage(initial.mobileImageUrl);
+        }
+      }
       else await createBanner(id, payload, nextPosition);
       onSaved();
     } catch (err: any) {
@@ -106,6 +116,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       <span className={labelClass}>{label}</span>
       <button
         type="button"
+        aria-label={`${target === 'desktop' ? 'Desktop' : 'Mobile'} image: ${url ? 'replace' : 'upload'}`}
         onClick={() => setCropTarget(target)}
         disabled={busy}
         className="flex w-full items-center gap-3 border border-dashed border-[#CFCFCF] p-3 text-left hover:border-black disabled:opacity-50"
@@ -118,6 +129,16 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         )}
         <span className="text-xs text-[#717171]">{url ? 'Replace image' : 'Upload image'} · {hint}</span>
       </button>
+      {target === 'mobile' && url && (
+        <button
+          type="button"
+          onClick={() => setMobileImageUrl('')}
+          disabled={busy}
+          className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#717171] hover:text-red-600 disabled:opacity-50"
+        >
+          Remove mobile image
+        </button>
+      )}
     </div>
   );
 
@@ -127,25 +148,26 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         {imageField('Desktop image', 'desktop', desktopImageUrl, '16:6')}
         {imageField('Mobile image (optional)', 'mobile', mobileImageUrl, '4:5')}
         <div>
-          <label className={labelClass}>Eyebrow</label>
-          <input className={inputClass} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} />
+          <label htmlFor={`${fid}-eyebrow`} className={labelClass}>Eyebrow</label>
+          <input id={`${fid}-eyebrow`} className={inputClass} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>Headline</label>
-          <input className={inputClass} value={headline} onChange={(e) => setHeadline(e.target.value)} />
+          <label htmlFor={`${fid}-headline`} className={labelClass}>Headline</label>
+          <input id={`${fid}-headline`} className={inputClass} value={headline} onChange={(e) => setHeadline(e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>Subtext</label>
-          <textarea className={inputClass} rows={2} value={subtext} onChange={(e) => setSubtext(e.target.value)} />
+          <label htmlFor={`${fid}-subtext`} className={labelClass}>Subtext</label>
+          <textarea id={`${fid}-subtext`} className={inputClass} rows={2} value={subtext} onChange={(e) => setSubtext(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelClass}>Button label</label>
-            <input className={inputClass} value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} />
+            <label htmlFor={`${fid}-cta-label`} className={labelClass}>Button label</label>
+            <input id={`${fid}-cta-label`} className={inputClass} value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} />
           </div>
           <div>
-            <label className={labelClass}>Button link</label>
+            <label htmlFor={`${fid}-cta-href`} className={labelClass}>Button link</label>
             <input
+              id={`${fid}-cta-href`}
               className={inputClass}
               placeholder="/ or https://…"
               value={ctaHref}
@@ -153,7 +175,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
             />
           </div>
         </div>
-        {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-xs font-semibold text-red-600">{error}</p>}
         <div className="flex gap-3">
           <button
             type="submit"
@@ -165,7 +187,8 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
           <button
             type="button"
             onClick={onCancel}
-            className="h-10 border border-[#EEEEEE] px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-[#717171] hover:text-black"
+            disabled={busy}
+            className="h-10 border border-[#EEEEEE] px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-[#717171] hover:text-black disabled:opacity-50"
           >
             Cancel
           </button>
