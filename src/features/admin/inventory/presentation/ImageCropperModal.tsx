@@ -9,6 +9,7 @@ interface ImageCropperModalProps {
   onClose: () => void;
   onCropComplete: (compressedDataUrl: string) => void;
   title?: string;
+  aspect?: number;
 }
 
 export default function ImageCropperModal({
@@ -16,6 +17,7 @@ export default function ImageCropperModal({
   onClose,
   onCropComplete,
   title = 'Crop & Optimize Image',
+  aspect = 1,
 }: ImageCropperModalProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(1.0);
@@ -26,7 +28,9 @@ export default function ImageCropperModal({
   const [dragPanStart, setDragPanStart] = useState({ x: 0, y: 0 });
   const [dragOver, setDragOver] = useState(false);
 
-  const cropSize = 300; // Size of the crop window in UI
+  // Size of the crop window in UI (aspect = width / height)
+  const cropW = aspect > 1 ? 600 : 300 * aspect;
+  const cropH = aspect > 1 ? 600 / aspect : 300;
   const imageRef = useRef<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -88,27 +92,27 @@ export default function ImageCropperModal({
 
   // Calculate scaling factors
   const baseScale = naturalDimensions.width && naturalDimensions.height
-    ? Math.max(cropSize / naturalDimensions.width, cropSize / naturalDimensions.height)
+    ? Math.max(cropW / naturalDimensions.width, cropH / naturalDimensions.height)
     : 1;
 
   const currentScale = baseScale * zoom;
   const displayWidth = naturalDimensions.width * currentScale;
   const displayHeight = naturalDimensions.height * currentScale;
 
-  const centerX = (cropSize - displayWidth) / 2;
-  const centerY = (cropSize - displayHeight) / 2;
+  const centerX = (cropW - displayWidth) / 2;
+  const centerY = (cropH - displayHeight) / 2;
 
   // Clamping Pan values to keep the image covering the 1:1 box
   const getClampedPan = (pX: number, pY: number, currentZoom: number) => {
     const cScale = baseScale * currentZoom;
     const dWidth = naturalDimensions.width * cScale;
     const dHeight = naturalDimensions.height * cScale;
-    const cX = (cropSize - dWidth) / 2;
-    const cY = (cropSize - dHeight) / 2;
+    const cX = (cropW - dWidth) / 2;
+    const cY = (cropH - dHeight) / 2;
 
-    const minPanX = cropSize - cX - dWidth;
+    const minPanX = cropW - cX - dWidth;
     const maxPanX = -cX;
-    const minPanY = cropSize - cY - dHeight;
+    const minPanY = cropH - cY - dHeight;
     const maxPanY = -cY;
 
     return {
@@ -181,13 +185,15 @@ export default function ImageCropperModal({
     // Convert crop box offset back to original image space
     const sourceX = -leftOffset / currentScale;
     const sourceY = -topOffset / currentScale;
-    const sourceWidth = cropSize / currentScale;
-    const sourceHeight = cropSize / currentScale;
+    const sourceWidth = cropW / currentScale;
+    const sourceHeight = cropH / currentScale;
 
-    // Create a 800x800 Canvas for high quality compressed JPEG output
+    // Default (aspect 1): 800x800. Otherwise 1920 wide (landscape) or 1080 wide (portrait).
+    const outW = aspect === 1 ? 800 : aspect > 1 ? 1920 : 1080;
+    const outH = aspect === 1 ? 800 : outW / aspect;
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 800;
+    canvas.width = outW;
+    canvas.height = outH;
     const ctx = canvas.getContext('2d');
 
     if (ctx) {
@@ -195,7 +201,7 @@ export default function ImageCropperModal({
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 800, 800);
+      ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, outW, outH);
 
       // Compress to JPEG with 0.82 quality to dramatically reduce size without quality loss
       const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
@@ -212,7 +218,7 @@ export default function ImageCropperModal({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-none border border-black max-w-lg w-full flex flex-col overflow-hidden max-h-[90vh]"
+            className={`bg-white rounded-none border border-black ${aspect > 1 ? 'max-w-3xl' : 'max-w-lg'} w-full flex flex-col overflow-hidden max-h-[90vh]`}
           >
             {/* Header */}
             <div className="px-6 py-4 border-b border-[#EEEEEE] flex items-center justify-between">
@@ -223,7 +229,7 @@ export default function ImageCropperModal({
             </div>
 
             {/* Content Area */}
-            <div className="p-6 flex-1 flex flex-col items-center justify-center overflow-y-auto">
+            <div className="p-6 flex-1 flex flex-col items-center justify-center overflow-auto">
               {!imageSrc ? (
                 /* Drag & Drop Zone */
                 <div
@@ -247,7 +253,7 @@ export default function ImageCropperModal({
                   {/* Cropping Frame */}
                   <div
                     className="relative border border-black select-none cursor-move overflow-hidden bg-[#FAF9F6]"
-                    style={{ width: `${cropSize}px`, height: `${cropSize}px` }}
+                    style={{ width: `${cropW}px`, height: `${cropH}px` }}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUpOrLeave}
