@@ -9,7 +9,24 @@ export interface HomeBanner {
   subtext: string;
   ctaLabel: string;
   ctaHref: string;
+  desktopAspect: number;
   createdAt: string;
+}
+
+export const MIN_DESKTOP_ASPECT = 1;
+export const MAX_DESKTOP_ASPECT = 6;
+export const DEFAULT_DESKTOP_ASPECT = 16 / 6;
+
+export const DESKTOP_ASPECT_PRESETS: { label: string; value: number }[] = [
+  { label: '18:4', value: 4.5 },
+  { label: '3:1', value: 3 },
+  { label: '16:6', value: 16 / 6 },
+  { label: '16:9', value: 16 / 9 },
+  { label: '21:9', value: 21 / 9 },
+];
+
+export function isValidDesktopAspect(n: number): boolean {
+  return typeof n === 'number' && Number.isFinite(n) && n >= MIN_DESKTOP_ASPECT && n <= MAX_DESKTOP_ASPECT;
 }
 
 // CTA links come from admin input, so only same-site paths and https URLs

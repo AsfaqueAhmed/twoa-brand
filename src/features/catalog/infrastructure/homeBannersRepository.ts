@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
-import type { HomeBanner } from '../domain/banner';
+import { DEFAULT_DESKTOP_ASPECT, isValidDesktopAspect, type HomeBanner } from '../domain/banner';
 
 export function toBanner(row: Record<string, any>): HomeBanner {
   return {
@@ -13,6 +13,9 @@ export function toBanner(row: Record<string, any>): HomeBanner {
     subtext: row.subtext ?? '',
     ctaLabel: row.cta_label ?? '',
     ctaHref: row.cta_href ?? '',
+    desktopAspect: isValidDesktopAspect(Number(row.desktop_aspect))
+      ? Number(row.desktop_aspect)
+      : DEFAULT_DESKTOP_ASPECT,
     createdAt: row.created_at ?? '',
   };
 }

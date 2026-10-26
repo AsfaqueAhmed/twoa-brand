@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSafeCtaHref, renumberBanners, reorderBanners, nextBannerPosition, type HomeBanner } from './banner';
+import { isSafeCtaHref, isValidDesktopAspect,renumberBanners, reorderBanners, nextBannerPosition, type HomeBanner } from './banner';
 
 const make = (id: string, position: number): HomeBanner => ({
   id,
@@ -11,7 +11,18 @@ const make = (id: string, position: number): HomeBanner => ({
   subtext: '',
   ctaLabel: '',
   ctaHref: '',
+  desktopAspect: 16 / 6,
   createdAt: '',
+});
+
+describe('isValidDesktopAspect', () => {
+  it('accepts values within 1..6', () => {
+    for (const n of [1, 2.6667, 4.5, 6]) expect(isValidDesktopAspect(n)).toBe(true);
+  });
+
+  it('rejects out-of-range and non-finite values', () => {
+    for (const n of [0.5, 6.1, NaN, Infinity, 0, -2]) expect(isValidDesktopAspect(n)).toBe(false);
+  });
 });
 
 describe('isSafeCtaHref', () => {

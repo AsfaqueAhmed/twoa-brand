@@ -4,7 +4,13 @@ import { useMemo, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
 import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 import HeroCarousel from '@/features/catalog/presentation/HeroCarousel';
-import { isSafeCtaHref, type HomeBanner } from '@/features/catalog/domain/banner';
+import {
+  DEFAULT_DESKTOP_ASPECT,
+  DESKTOP_ASPECT_PRESETS,
+  isSafeCtaHref,
+  isValidDesktopAspect,
+  type HomeBanner,
+} from '@/features/catalog/domain/banner';
 import { createBanner, removeBannerImage, updateBanner, uploadBannerImage } from '../infrastructure/bannerAdminRepository';
 
 interface BannerFormProps {
@@ -43,6 +49,12 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   const [subtext, setSubtext] = useState(initial?.subtext ?? '');
   const [ctaLabel, setCtaLabel] = useState(initial?.ctaLabel ?? '');
   const [ctaHref, setCtaHref] = useState(initial?.ctaHref ?? '');
+  const [desktopAspect, setDesktopAspect] = useState<number>(initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT);
+  const [customShape, setCustomShape] = useState(
+    () => !DESKTOP_ASPECT_PRESETS.some((p) => p.value === (initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT))
+  );
+  const [customW, setCustomW] = useState(() => String(Number((initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT).toFixed(2))));
+  const [customH, setCustomH] = useState('1');
   const [cropTarget, setCropTarget] = useState<Target | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -60,10 +72,25 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       subtext,
       ctaLabel,
       ctaHref,
+      desktopAspect: isValidDesktopAspect(desktopAspect) ? desktopAspect : DEFAULT_DESKTOP_ASPECT,
       createdAt: '',
     }),
-    [id, desktopImageUrl, mobileImageUrl, eyebrow, headline, subtext, ctaLabel, ctaHref]
+    [id, desktopImageUrl, mobileImageUrl, eyebrow, headline, subtext, ctaLabel, ctaHref, desktopAspect]
   );
+
+  const presetMatch = DESKTOP_ASPECT_PRESETS.find((p) => p.value === desktopAspect);
+  const aspectLabel = presetMatch
+    ? presetMatch.label
+    : customShape
+      ? `${customW}:${customH}`
+      : String(Number(desktopAspect.toFixed(2)));
+
+  const updateCustom = (w: string, h: string) => {
+    setCustomW(w);
+    setCustomH(h);
+    const ratio = Number(w) / Number(h);
+    setDesktopAspect(Number.isFinite(ratio) && Number(h) > 0 ? ratio : NaN);
+  };
 
   const handleCropped = async (dataUrl: string) => {
     const target = cropTarget;
@@ -88,14 +115,12 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       setError('A desktop image is required.');
       return;
     }
-    const hasLabel = !!ctaLabel.trim();
-    const hasLink = !!ctaHref.trim();
-    if (hasLabel !== hasLink) {
-      setError('Provide both a button label and link, or neither.');
+    if (!isValidDesktopAspect(desktopAspect)) {
+      setError('Desktop shape must be between 1:1 and 6:1.');
       return;
     }
-    if (hasLink && !isSafeCtaHref(ctaHref)) {
-      setError('Button link must start with / or https://');
+    if (!ctaHref.trim() || !isSafeCtaHref(ctaHref)) {
+      setError('Banner link is required and must start with / or https://');
       return;
     }
     setBusy(true);
@@ -108,6 +133,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       subtext: subtext.trim(),
       ctaLabel: ctaLabel.trim(),
       ctaHref: ctaHref.trim(),
+      desktopAspect,
     };
     try {
       if (initial) {
@@ -163,7 +189,60 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   return (
     <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-2 border border-[#EEEEEE] p-4 sm:p-6 mb-8" id="banner-form">
       <div className="space-y-4">
-        {imageField('Desktop image', 'desktop', desktopImageUrl, '16:6')}
+        <div>
+          <label htmlFor={`${fid}-shape`} className={labelClass}>Desktop shape</label>
+          <select
+            id={`${fid}-shape`}
+            className={inputClass}
+            value={customShape ? 'custom' : String(DESKTOP_ASPECT_PRESETS.findIndex((p) => p.value === desktopAspect))}
+            onChange={(e) => {
+              if (e.target.value === 'custom') {
+                setCustomShape(true);
+                updateCustom(customW, customH);
+              } else {
+                setCustomShape(false);
+                setDesktopAspect(DESKTOP_ASPECT_PRESETS[Number(e.target.value)].value);
+              }
+            }}
+          >
+            {DESKTOP_ASPECT_PRESETS.map((p, i) => (
+              <option key={p.label} value={String(i)}>{p.label}</option>
+            ))}
+            <option value="custom">Custom…</option>
+          </select>
+          {customShape && (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor={`${fid}-shape-w`} className={labelClass}>Width</label>
+                <input
+                  id={`${fid}-shape-w`}
+                  type="number"
+                  min="0"
+                  step="any"
+                  className={inputClass}
+                  value={customW}
+                  onChange={(e) => updateCustom(e.target.value, customH)}
+                />
+              </div>
+              <div>
+                <label htmlFor={`${fid}-shape-h`} className={labelClass}>Height</label>
+                <input
+                  id={`${fid}-shape-h`}
+                  type="number"
+                  min="0"
+                  step="any"
+                  className={inputClass}
+                  value={customH}
+                  onChange={(e) => updateCustom(customW, e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <p className="mt-1.5 text-[11px] text-[#717171]">
+            The carousel uses the first banner&apos;s shape; other banners are cropped to fit.
+          </p>
+        </div>
+        {imageField('Desktop image', 'desktop', desktopImageUrl, aspectLabel)}
         {imageField('Mobile image (optional)', 'mobile', mobileImageUrl, '4:5')}
         <div>
           <label htmlFor={`${fid}-eyebrow`} className={labelClass}>Eyebrow</label>
@@ -179,11 +258,11 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${fid}-cta-label`} className={labelClass}>Button label</label>
+            <label htmlFor={`${fid}-cta-label`} className={labelClass}>Button label (optional)</label>
             <input id={`${fid}-cta-label`} className={inputClass} value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} />
           </div>
           <div>
-            <label htmlFor={`${fid}-cta-href`} className={labelClass}>Button link</label>
+            <label htmlFor={`${fid}-cta-href`} className={labelClass}>Banner link</label>
             <input
               id={`${fid}-cta-href`}
               className={inputClass}
@@ -230,8 +309,8 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         isOpen={cropTarget !== null}
         onClose={() => setCropTarget(null)}
         onCropComplete={handleCropped}
-        title={cropTarget === 'mobile' ? 'Crop mobile banner (4:5)' : 'Crop desktop banner (16:6)'}
-        aspect={cropTarget === 'mobile' ? 4 / 5 : 16 / 6}
+        title={cropTarget === 'mobile' ? 'Crop mobile banner (4:5)' : `Crop desktop banner (${aspectLabel})`}
+        aspect={cropTarget === 'mobile' ? 4 / 5 : isValidDesktopAspect(desktopAspect) ? desktopAspect : DEFAULT_DESKTOP_ASPECT}
       />
     </form>
   );

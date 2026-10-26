@@ -69,10 +69,14 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
         if (Math.abs(delta) >= SWIPE_THRESHOLD_PX) go(safeIndex + (delta < 0 ? 1 : -1));
       }}
     >
-      <div className="relative aspect-[4/5] sm:aspect-[16/6] w-full">
+      <div
+        className="relative aspect-[4/5] sm:aspect-[var(--hero-aspect)] w-full"
+        style={{ '--hero-aspect': String(banners[0].desktopAspect) } as React.CSSProperties}
+      >
         {banners.map((banner, i) => {
           const active = i === safeIndex;
-          const showCta = !!banner.ctaLabel.trim() && isSafeCtaHref(banner.ctaHref);
+          const linked = isSafeCtaHref(banner.ctaHref);
+          const showCta = linked && !!banner.ctaLabel.trim();
           return (
             <div
               key={banner.id}
@@ -95,7 +99,7 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
               </picture>
 
               {(banner.eyebrow || banner.headline || banner.subtext || showCta) && (
-                <div className="absolute inset-0 flex items-end sm:items-center">
+                <div className="pointer-events-none absolute inset-0 flex items-end sm:items-center">
                   <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-10 sm:pb-0">
                     <div className="max-w-xl space-y-3">
                       {banner.eyebrow && (
@@ -112,17 +116,22 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
                         <p className="text-sm sm:text-base text-black/80 leading-relaxed">{banner.subtext}</p>
                       )}
                       {showCta && (
-                        <a
-                          href={banner.ctaHref}
-                          tabIndex={active ? 0 : -1}
-                          className="inline-flex h-11 items-center bg-black px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#333333]"
-                        >
+                        <span className="inline-flex h-11 items-center bg-black px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#333333]">
                           {banner.ctaLabel}
-                        </a>
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
+              )}
+
+              {linked && (
+                <a
+                  href={banner.ctaHref}
+                  className="absolute inset-0 z-20"
+                  aria-label={banner.headline || banner.ctaLabel || 'Banner'}
+                  tabIndex={active ? 0 : -1}
+                />
               )}
             </div>
           );
