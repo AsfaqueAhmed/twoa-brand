@@ -42,8 +42,16 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
       id="hero-carousel"
       aria-roledescription="carousel"
       aria-label="Featured banners"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onPointerEnter={(e) => {
+        if (e.pointerType === 'mouse') setHovered(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType === 'mouse') setHovered(false);
+      }}
+      onTouchCancel={() => {
+        touchStartX.current = null;
+        setTouching(false);
+      }}
       onFocus={() => setFocused(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
@@ -69,8 +77,9 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
             <div
               key={banner.id}
               aria-hidden={!active}
+              role="group"
               aria-roledescription="slide"
-              className={`absolute inset-0 transition-opacity duration-700 ${
+              className={`absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${
                 active ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'
               }`}
             >

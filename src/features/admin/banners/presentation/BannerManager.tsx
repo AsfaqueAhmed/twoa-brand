@@ -120,6 +120,7 @@ export default function BannerManager() {
     setBusyId(banner.id);
     try {
       await deleteBanner(banner);
+      if (editing !== null && editing !== 'new' && editing.id === banner.id) setEditing(null);
       await refresh();
     } catch (err: any) {
       setError(err.message || 'Failed to delete banner.');

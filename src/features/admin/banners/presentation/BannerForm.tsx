@@ -20,9 +20,22 @@ const inputClass =
   'w-full border border-[#EEEEEE] bg-white px-3 py-2.5 text-sm text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none';
 const labelClass = 'block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5';
 
+// crypto.randomUUID is unavailable outside secure contexts (plain http).
+function newUuid(): string {
+  const c: Partial<Crypto> | undefined = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (c?.getRandomValues) c.getRandomValues(bytes);
+  else for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export default function BannerForm({ initial, nextPosition, onSaved, onCancel }: BannerFormProps) {
   // A new banner needs its id up front so images can be uploaded to banners/<id>-*.
-  const [id] = useState(() => initial?.id ?? crypto.randomUUID());
+  const [id] = useState(() => initial?.id ?? newUuid());
   const [desktopImageUrl, setDesktopImageUrl] = useState(initial?.desktopImageUrl ?? '');
   const [mobileImageUrl, setMobileImageUrl] = useState(initial?.mobileImageUrl ?? '');
   const [eyebrow, setEyebrow] = useState(initial?.eyebrow ?? '');
@@ -75,14 +88,19 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       setError('A desktop image is required.');
       return;
     }
-    if (ctaHref.trim() && !isSafeCtaHref(ctaHref)) {
+    const hasLabel = !!ctaLabel.trim();
+    const hasLink = !!ctaHref.trim();
+    if (hasLabel !== hasLink) {
+      setError('Provide both a button label and link, or neither.');
+      return;
+    }
+    if (hasLink && !isSafeCtaHref(ctaHref)) {
       setError('Button link must start with / or https://');
       return;
     }
     setBusy(true);
     setError('');
     const payload = {
-      isActive: initial?.isActive ?? true,
       desktopImageUrl,
       mobileImageUrl: mobileImageUrl || undefined,
       eyebrow: eyebrow.trim(),
@@ -102,7 +120,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
           void removeBannerImage(initial.mobileImageUrl);
         }
       }
-      else await createBanner(id, payload, nextPosition);
+      else await createBanner(id, { ...payload, isActive: true }, nextPosition);
       onSaved();
     } catch (err: any) {
       setError(err.message || 'Failed to save banner.');
