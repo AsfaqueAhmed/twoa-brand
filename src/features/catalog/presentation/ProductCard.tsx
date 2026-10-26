@@ -47,7 +47,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
     return () => clearInterval(timer);
   }, [hasVariants, isHovered, userPickedVariant, variants.length]);
 
-  const activeVariant: ProductVariant | undefined = hasVariants ? variants[activeVariantIndex] : undefined;
+  const activeVariant: ProductVariant | undefined = hasVariants ? variants[Math.min(activeVariantIndex, variants.length - 1)] : undefined;
   const displayedImage = activeVariant?.image || product.image;
 
   return (

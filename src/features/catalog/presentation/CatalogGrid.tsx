@@ -122,7 +122,7 @@ export default function CatalogGrid({
         <EmptyState
           icon={Search}
           title="No products match your query"
-          description="Try adjusting search keywords or clearing department filter."
+          description="Try a different category."
         />
       ) : (
         <>
