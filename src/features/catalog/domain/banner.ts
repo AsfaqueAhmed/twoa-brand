@@ -16,8 +16,12 @@ export interface HomeBanner {
 // are allowed (blocks javascript:, data:, protocol-relative and plain http).
 export function isSafeCtaHref(href: string): boolean {
   const value = href.trim();
-  if (!value || value.startsWith('//')) return false;
-  return value.startsWith('/') || value.startsWith('https://');
+  if (!value) return false;
+  // Browsers strip tabs/newlines and treat "\" like "/", so "/\evil.com" and
+  // "/<tab>/evil.com" resolve to "//evil.com". Reject those characters outright.
+  if (/[\\\u0000-\u001f\u007f]/.test(value)) return false;
+  if (value.startsWith('/')) return value[1] !== '/';
+  return value.startsWith('https://');
 }
 
 export function renumberBanners(banners: HomeBanner[]): HomeBanner[] {

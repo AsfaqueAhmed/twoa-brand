@@ -28,6 +28,9 @@ describe('isSafeCtaHref', () => {
     expect(isSafeCtaHref('http://example.com')).toBe(false);
     expect(isSafeCtaHref('')).toBe(false);
     expect(isSafeCtaHref('   ')).toBe(false);
+    expect(isSafeCtaHref('/\\evil.com')).toBe(false);
+    expect(isSafeCtaHref('/\t/evil.com')).toBe(false);
+    expect(isSafeCtaHref('/\n/evil.com')).toBe(false);
   });
 });
 
