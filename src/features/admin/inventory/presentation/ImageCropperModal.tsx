@@ -190,7 +190,7 @@ export default function ImageCropperModal({
 
     // Default (aspect 1): 800x800. Otherwise 1920 wide (landscape) or 1080 wide (portrait).
     const outW = aspect === 1 ? 800 : aspect > 1 ? 1920 : 1080;
-    const outH = aspect === 1 ? 800 : outW / aspect;
+    const outH = aspect === 1 ? 800 : Math.round(outW / aspect);
     const canvas = document.createElement('canvas');
     canvas.width = outW;
     canvas.height = outH;
