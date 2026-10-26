@@ -10,26 +10,29 @@ Sub-project 1 of 2. Frontend-only restyle of the home page plus selectable varia
 
 **In scope**
 - Cream/black theme on the home page and navbar.
-- Split hero (`HeroBanner`) with fixed default content.
 - Trust strip (`TrustStrip`): Cash on Delivery, 100% Risk-Free, Nationwide Delivery.
-- Pill-style category and subcategory filters; search box beside them.
-- Navbar: "AUTHENTIC & AESTHETIC" tagline next to logo, cart count badge.
+- Pill-style category and subcategory filters.
+- Navbar: brand logo-with-text image (`public/branding/logo-wordmark.png`), cart count badge.
 - Product card redesign with selectable color variant and size, and Add to Cart straight from the grid.
 
-**Out of scope**
-- Backend-managed hero / drag-and-drop home editor (sub-project 2, separate spec). No new tables, no admin pages, no storage changes here.
-- Wishlist hearts, Merchant Hub nav link.
+**Removed from the current page / not built**
+- No hero section. The old black hero box is deleted and nothing replaces it.
+- No search box. The search input is removed from the home page.
+
+**Follow-ups (separate specs and branches, after this one)**
+1. Backend-managed hero banner and drag-and-drop home editor.
+2. Wishlist hearts.
+3. Merchant Hub nav link.
 
 ## Design
 
 ### Section components
-Each home section is a standalone component under `src/features/catalog/presentation/` taking plain props (no data fetching of its own), so sub-project 2 can later feed them from stored block JSON without a rewrite.
+Each home section is a standalone component under `src/features/catalog/presentation/` taking plain props (no data fetching of its own), so the later home editor can feed them from stored block data without a rewrite.
 
-- `HeroBanner` — props: `eyebrow`, `headline`, `subtext`, `primaryCta`, `secondaryCta`, optional `imageUrl`. Two columns on desktop, stacked on mobile. Without `imageUrl` it renders a cream hero with text only. Defaults come from a `homeContent.ts` constants file; `imageUrl` is unset until sub-project 2 (a file dropped at `public/branding/hero.jpg` is not auto-detected).
 - `TrustStrip` — three static items with lucide icons.
-- `CatalogGrid` — drops the black hero box; hosts search, pill filters and the grid. Filtering logic in `domain/filter.ts` is unchanged.
-- `Navbar` — tagline and cart badge only.
-- `app/page.tsx` — composes `HeroBanner`, `TrustStrip`, `CatalogGrid`; skeleton loading state preserved.
+- `CatalogGrid` — drops the black hero box and the search input; hosts the pill filters and the grid. Filtering logic in `domain/filter.ts` is unchanged. Search state stays in `useCatalogProducts` untouched (unused by the home UI) to keep this change small.
+- `Navbar` — replaces the current logo with the logo-with-text image; adds the cart badge.
+- `app/page.tsx` — composes `TrustStrip` and `CatalogGrid`; skeleton loading state preserved.
 
 ### Product card
 - Image area: category tag, discount badge, variant thumbnails (existing behavior), out-of-stock overlay.
@@ -47,7 +50,7 @@ Use existing `#FAF9F6` as the page background, black for primary actions, `#EEEE
 
 ## Testing
 - Vitest: `getDefaultSize` (first in-stock size, none in stock, no parent product).
-- Manual: dev server at desktop and mobile widths compared to the mockup; filter, search, variant/size selection, add to cart from grid, modal open on card click, loading skeleton, empty state.
+- Manual: dev server at desktop and mobile widths compared to the mockup; filter, variant/size selection, add to cart from grid, modal open on card click, loading skeleton, empty state.
 - `npm run lint` (tsc) and `npm test` pass.
 
 ## Risks
