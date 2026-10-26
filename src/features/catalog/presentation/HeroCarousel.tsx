@@ -9,10 +9,14 @@ const SWIPE_THRESHOLD_PX = 40;
 
 export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [touching, setTouching] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const count = banners.length;
+  const safeIndex = index < count ? index : 0;
+  const paused = hovered || focused || touching;
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -21,11 +25,6 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
   }, []);
-
-  // Keep the index valid when banners are added/removed (admin live preview).
-  useEffect(() => {
-    if (index >= count) setIndex(0);
-  }, [count, index]);
 
   useEffect(() => {
     if (count < 2 || paused || reducedMotion) return;
@@ -43,26 +42,28 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
       id="hero-carousel"
       aria-roledescription="carousel"
       aria-label="Featured banners"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+      }}
       onTouchStart={(e) => {
-        setPaused(true);
+        setTouching(true);
         touchStartX.current = e.touches[0].clientX;
       }}
       onTouchEnd={(e) => {
         const start = touchStartX.current;
         touchStartX.current = null;
-        setPaused(false);
+        setTouching(false);
         if (start === null || count < 2) return;
         const delta = e.changedTouches[0].clientX - start;
-        if (Math.abs(delta) >= SWIPE_THRESHOLD_PX) go(index + (delta < 0 ? 1 : -1));
+        if (Math.abs(delta) >= SWIPE_THRESHOLD_PX) go(safeIndex + (delta < 0 ? 1 : -1));
       }}
     >
       <div className="relative aspect-[4/5] sm:aspect-[16/6] w-full">
         {banners.map((banner, i) => {
-          const active = i === index;
+          const active = i === safeIndex;
           const showCta = !!banner.ctaLabel.trim() && isSafeCtaHref(banner.ctaHref);
           return (
             <div
@@ -77,7 +78,7 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
                 {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
                 <img
                   src={banner.desktopImageUrl}
-                  alt={banner.headline || 'Banner'}
+                  alt={banner.headline ? '' : 'Banner'}
                   className="h-full w-full object-cover"
                   loading={i === 0 ? 'eager' : 'lazy'}
                   referrerPolicy="no-referrer"
@@ -126,9 +127,9 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
               key={banner.id}
               type="button"
               aria-label={`Go to banner ${i + 1}`}
-              aria-current={i === index}
+              aria-current={i === safeIndex ? 'true' : undefined}
               onClick={() => go(i)}
-              className={`h-2 rounded-full transition-all ${i === index ? 'w-6 bg-black' : 'w-2 bg-black/30'}`}
+              className={`h-2 rounded-full transition-all ${i === safeIndex ? 'w-6 bg-black' : 'w-2 bg-black/30'}`}
             />
           ))}
         </div>
