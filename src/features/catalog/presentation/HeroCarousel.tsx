@@ -70,8 +70,13 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
       }}
     >
       <div
-        className="relative aspect-[4/5] sm:aspect-[var(--hero-aspect)] w-full"
-        style={{ '--hero-aspect': String(banners[0].desktopAspect) } as React.CSSProperties}
+        className="relative aspect-[var(--hero-aspect-mobile)] sm:aspect-[var(--hero-aspect)] w-full"
+        style={
+          {
+            '--hero-aspect': String(banners[0].desktopAspect),
+            '--hero-aspect-mobile': String(banners[0].mobileAspect),
+          } as React.CSSProperties
+        }
       >
         {banners.map((banner, i) => {
           const active = i === safeIndex;
@@ -116,7 +121,7 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
                         <p className="text-sm sm:text-base text-black/80 leading-relaxed">{banner.subtext}</p>
                       )}
                       {showCta && (
-                        <span className="inline-flex h-11 items-center bg-black px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#333333]">
+                        <span className="inline-flex h-11 items-center bg-black px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white">
                           {banner.ctaLabel}
                         </span>
                       )}
@@ -139,7 +144,7 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
       </div>
 
       {count > 1 && (
-        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+        <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
           {banners.map((banner, i) => (
             <button
               key={banner.id}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSafeCtaHref, isValidDesktopAspect,renumberBanners, reorderBanners, nextBannerPosition, type HomeBanner } from './banner';
+import { isSafeCtaHref, isValidDesktopAspect, isValidMobileAspect, findAspectPreset, DESKTOP_ASPECT_PRESETS, MOBILE_ASPECT_PRESETS, renumberBanners, reorderBanners, nextBannerPosition, type HomeBanner } from './banner';
 
 const make = (id: string, position: number): HomeBanner => ({
   id,
@@ -12,6 +12,7 @@ const make = (id: string, position: number): HomeBanner => ({
   ctaLabel: '',
   ctaHref: '',
   desktopAspect: 16 / 6,
+  mobileAspect: 0.8,
   createdAt: '',
 });
 
@@ -22,6 +23,27 @@ describe('isValidDesktopAspect', () => {
 
   it('rejects out-of-range and non-finite values', () => {
     for (const n of [0.5, 6.1, NaN, Infinity, 0, -2]) expect(isValidDesktopAspect(n)).toBe(false);
+  });
+});
+
+describe('isValidMobileAspect', () => {
+  it('accepts values within 0.5..2', () => {
+    for (const n of [0.5, 0.8, 1, 2]) expect(isValidMobileAspect(n)).toBe(true);
+  });
+
+  it('rejects out-of-range and non-finite values', () => {
+    for (const n of [0.4, 2.1, NaN, Infinity, 0, -1]) expect(isValidMobileAspect(n)).toBe(false);
+  });
+});
+
+describe('findAspectPreset', () => {
+  it('matches rounded values within tolerance', () => {
+    expect(findAspectPreset(DESKTOP_ASPECT_PRESETS, 2.6667)?.label).toBe('16:6');
+    expect(findAspectPreset(MOBILE_ASPECT_PRESETS, 0.8)?.label).toBe('4:5');
+  });
+
+  it('returns undefined when nothing matches', () => {
+    expect(findAspectPreset(DESKTOP_ASPECT_PRESETS, 2.5)).toBeUndefined();
   });
 });
 

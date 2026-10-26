@@ -10,6 +10,7 @@ export interface HomeBanner {
   ctaLabel: string;
   ctaHref: string;
   desktopAspect: number;
+  mobileAspect: number;
   createdAt: string;
 }
 
@@ -24,6 +25,31 @@ export const DESKTOP_ASPECT_PRESETS: { label: string; value: number }[] = [
   { label: '16:9', value: 16 / 9 },
   { label: '21:9', value: 21 / 9 },
 ];
+
+export const MIN_MOBILE_ASPECT = 0.5;
+export const MAX_MOBILE_ASPECT = 2;
+export const DEFAULT_MOBILE_ASPECT = 4 / 5;
+
+export const MOBILE_ASPECT_PRESETS: { label: string; value: number }[] = [
+  { label: '4:5', value: 4 / 5 },
+  { label: '1:1', value: 1 },
+  { label: '3:4', value: 3 / 4 },
+  { label: '2:3', value: 2 / 3 },
+  { label: '9:16', value: 9 / 16 },
+];
+
+export function isValidMobileAspect(n: number): boolean {
+  return typeof n === 'number' && Number.isFinite(n) && n >= MIN_MOBILE_ASPECT && n <= MAX_MOBILE_ASPECT;
+}
+
+// Saved ratios are rounded by the DB, so compare with a tolerance.
+export function findAspectPreset(
+  presets: { label: string; value: number }[],
+  value: number,
+  epsilon = 0.001
+): { label: string; value: number } | undefined {
+  return presets.find((p) => Math.abs(p.value - value) <= epsilon);
+}
 
 export function isValidDesktopAspect(n: number): boolean {
   return typeof n === 'number' && Number.isFinite(n) && n >= MIN_DESKTOP_ASPECT && n <= MAX_DESKTOP_ASPECT;

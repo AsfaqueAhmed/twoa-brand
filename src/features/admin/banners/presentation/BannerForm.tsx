@@ -6,9 +6,13 @@ import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCrop
 import HeroCarousel from '@/features/catalog/presentation/HeroCarousel';
 import {
   DEFAULT_DESKTOP_ASPECT,
+  DEFAULT_MOBILE_ASPECT,
   DESKTOP_ASPECT_PRESETS,
+  MOBILE_ASPECT_PRESETS,
+  findAspectPreset,
   isSafeCtaHref,
   isValidDesktopAspect,
+  isValidMobileAspect,
   type HomeBanner,
 } from '@/features/catalog/domain/banner';
 import { createBanner, removeBannerImage, updateBanner, uploadBannerImage } from '../infrastructure/bannerAdminRepository';
@@ -39,6 +43,58 @@ function newUuid(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+type Preset = { label: string; value: number };
+
+interface Shape {
+  aspect: number;
+  custom: boolean;
+  w: string;
+  h: string;
+  preset: Preset | undefined;
+  label: string;
+  choosePreset: (value: number) => void;
+  chooseCustom: () => void;
+  updateCustom: (w: string, h: string) => void;
+}
+
+// Tracks one aspect ratio: preset vs custom entry. Saved ratios are rounded by
+// the DB, so presets are matched with a tolerance. Unparseable custom input
+// (empty/0) keeps the last valid ratio instead of producing NaN.
+function useShape(initialAspect: number, presets: Preset[]): Shape {
+  const [aspect, setAspect] = useState(initialAspect);
+  const [custom, setCustom] = useState(() => !findAspectPreset(presets, initialAspect));
+  const [w, setW] = useState(() => String(Number(initialAspect.toFixed(2))));
+  const [h, setH] = useState('1');
+
+  const updateCustom = (nw: string, nh: string) => {
+    setW(nw);
+    setH(nh);
+    const ratio = Number(nw) / Number(nh);
+    if (nw.trim() !== '' && nh.trim() !== '' && Number.isFinite(ratio) && ratio > 0) setAspect(ratio);
+  };
+
+  const preset = findAspectPreset(presets, aspect);
+  const label = preset ? preset.label : custom ? `${w}:${h}` : String(Number(aspect.toFixed(2)));
+
+  return {
+    aspect,
+    custom,
+    w,
+    h,
+    preset: custom ? undefined : preset,
+    label,
+    choosePreset: (value) => {
+      setCustom(false);
+      setAspect(value);
+    },
+    chooseCustom: () => {
+      setCustom(true);
+      updateCustom(w, h);
+    },
+    updateCustom,
+  };
+}
+
 export default function BannerForm({ initial, nextPosition, onSaved, onCancel }: BannerFormProps) {
   // A new banner needs its id up front so images can be uploaded to banners/<id>-*.
   const [id] = useState(() => initial?.id ?? newUuid());
@@ -49,12 +105,10 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   const [subtext, setSubtext] = useState(initial?.subtext ?? '');
   const [ctaLabel, setCtaLabel] = useState(initial?.ctaLabel ?? '');
   const [ctaHref, setCtaHref] = useState(initial?.ctaHref ?? '');
-  const [desktopAspect, setDesktopAspect] = useState<number>(initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT);
-  const [customShape, setCustomShape] = useState(
-    () => !DESKTOP_ASPECT_PRESETS.some((p) => p.value === (initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT))
-  );
-  const [customW, setCustomW] = useState(() => String(Number((initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT).toFixed(2))));
-  const [customH, setCustomH] = useState('1');
+  const desktopShape = useShape(initial?.desktopAspect ?? DEFAULT_DESKTOP_ASPECT, DESKTOP_ASPECT_PRESETS);
+  const mobileShape = useShape(initial?.mobileAspect ?? DEFAULT_MOBILE_ASPECT, MOBILE_ASPECT_PRESETS);
+  const desktopAspect = desktopShape.aspect;
+  const mobileAspect = mobileShape.aspect;
   const [cropTarget, setCropTarget] = useState<Target | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -73,24 +127,14 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       ctaLabel,
       ctaHref,
       desktopAspect: isValidDesktopAspect(desktopAspect) ? desktopAspect : DEFAULT_DESKTOP_ASPECT,
+      mobileAspect: isValidMobileAspect(mobileAspect) ? mobileAspect : DEFAULT_MOBILE_ASPECT,
       createdAt: '',
     }),
-    [id, desktopImageUrl, mobileImageUrl, eyebrow, headline, subtext, ctaLabel, ctaHref, desktopAspect]
+    [id, desktopImageUrl, mobileImageUrl, eyebrow, headline, subtext, ctaLabel, ctaHref, desktopAspect, mobileAspect]
   );
 
-  const presetMatch = DESKTOP_ASPECT_PRESETS.find((p) => p.value === desktopAspect);
-  const aspectLabel = presetMatch
-    ? presetMatch.label
-    : customShape
-      ? `${customW}:${customH}`
-      : String(Number(desktopAspect.toFixed(2)));
-
-  const updateCustom = (w: string, h: string) => {
-    setCustomW(w);
-    setCustomH(h);
-    const ratio = Number(w) / Number(h);
-    setDesktopAspect(Number.isFinite(ratio) && Number(h) > 0 ? ratio : NaN);
-  };
+  const aspectLabel = desktopShape.label;
+  const mobileAspectLabel = mobileShape.label;
 
   const handleCropped = async (dataUrl: string) => {
     const target = cropTarget;
@@ -119,6 +163,10 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       setError('Desktop shape must be between 1:1 and 6:1.');
       return;
     }
+    if (!isValidMobileAspect(mobileAspect)) {
+      setError('Mobile shape must be between 1:2 and 2:1.');
+      return;
+    }
     if (!ctaHref.trim() || !isSafeCtaHref(ctaHref)) {
       setError('Banner link is required and must start with / or https://');
       return;
@@ -134,6 +182,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       ctaLabel: ctaLabel.trim(),
       ctaHref: ctaHref.trim(),
       desktopAspect,
+      mobileAspect,
     };
     try {
       if (initial) {
@@ -154,6 +203,57 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       setBusy(false);
     }
   };
+
+  const shapeField = (label: string, key: string, shape: Shape, presets: Preset[]) => (
+    <div>
+      <label htmlFor={`${fid}-${key}`} className={labelClass}>{label}</label>
+      <select
+        id={`${fid}-${key}`}
+        className={inputClass}
+        value={shape.custom ? 'custom' : String(presets.findIndex((p) => p === shape.preset))}
+        onChange={(e) => {
+          if (e.target.value === 'custom') shape.chooseCustom();
+          else shape.choosePreset(presets[Number(e.target.value)].value);
+        }}
+      >
+        {presets.map((p, i) => (
+          <option key={p.label} value={String(i)}>{p.label}</option>
+        ))}
+        <option value="custom">Custom…</option>
+      </select>
+      {shape.custom && (
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor={`${fid}-${key}-w`} className={labelClass}>Width</label>
+            <input
+              id={`${fid}-${key}-w`}
+              type="number"
+              min="0"
+              step="any"
+              className={inputClass}
+              value={shape.w}
+              onChange={(e) => shape.updateCustom(e.target.value, shape.h)}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${fid}-${key}-h`} className={labelClass}>Height</label>
+            <input
+              id={`${fid}-${key}-h`}
+              type="number"
+              min="0"
+              step="any"
+              className={inputClass}
+              value={shape.h}
+              onChange={(e) => shape.updateCustom(shape.w, e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+      <p className="mt-1.5 text-[11px] text-[#717171]">
+        The carousel uses the first banner&apos;s shape; other banners are cropped to fit.
+      </p>
+    </div>
+  );
 
   const imageField = (label: string, target: Target, url: string, hint: string) => (
     <div>
@@ -189,61 +289,10 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   return (
     <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-2 border border-[#EEEEEE] p-4 sm:p-6 mb-8" id="banner-form">
       <div className="space-y-4">
-        <div>
-          <label htmlFor={`${fid}-shape`} className={labelClass}>Desktop shape</label>
-          <select
-            id={`${fid}-shape`}
-            className={inputClass}
-            value={customShape ? 'custom' : String(DESKTOP_ASPECT_PRESETS.findIndex((p) => p.value === desktopAspect))}
-            onChange={(e) => {
-              if (e.target.value === 'custom') {
-                setCustomShape(true);
-                updateCustom(customW, customH);
-              } else {
-                setCustomShape(false);
-                setDesktopAspect(DESKTOP_ASPECT_PRESETS[Number(e.target.value)].value);
-              }
-            }}
-          >
-            {DESKTOP_ASPECT_PRESETS.map((p, i) => (
-              <option key={p.label} value={String(i)}>{p.label}</option>
-            ))}
-            <option value="custom">Custom…</option>
-          </select>
-          {customShape && (
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor={`${fid}-shape-w`} className={labelClass}>Width</label>
-                <input
-                  id={`${fid}-shape-w`}
-                  type="number"
-                  min="0"
-                  step="any"
-                  className={inputClass}
-                  value={customW}
-                  onChange={(e) => updateCustom(e.target.value, customH)}
-                />
-              </div>
-              <div>
-                <label htmlFor={`${fid}-shape-h`} className={labelClass}>Height</label>
-                <input
-                  id={`${fid}-shape-h`}
-                  type="number"
-                  min="0"
-                  step="any"
-                  className={inputClass}
-                  value={customH}
-                  onChange={(e) => updateCustom(customW, e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          <p className="mt-1.5 text-[11px] text-[#717171]">
-            The carousel uses the first banner&apos;s shape; other banners are cropped to fit.
-          </p>
-        </div>
+        {shapeField('Desktop shape', 'shape', desktopShape, DESKTOP_ASPECT_PRESETS)}
+        {shapeField('Mobile shape', 'mshape', mobileShape, MOBILE_ASPECT_PRESETS)}
         {imageField('Desktop image', 'desktop', desktopImageUrl, aspectLabel)}
-        {imageField('Mobile image (optional)', 'mobile', mobileImageUrl, '4:5')}
+        {imageField('Mobile image (optional)', 'mobile', mobileImageUrl, mobileAspectLabel)}
         <div>
           <label htmlFor={`${fid}-eyebrow`} className={labelClass}>Eyebrow</label>
           <input id={`${fid}-eyebrow`} className={inputClass} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} />
@@ -309,8 +358,12 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         isOpen={cropTarget !== null}
         onClose={() => setCropTarget(null)}
         onCropComplete={handleCropped}
-        title={cropTarget === 'mobile' ? 'Crop mobile banner (4:5)' : `Crop desktop banner (${aspectLabel})`}
-        aspect={cropTarget === 'mobile' ? 4 / 5 : isValidDesktopAspect(desktopAspect) ? desktopAspect : DEFAULT_DESKTOP_ASPECT}
+        title={
+          cropTarget === 'mobile'
+            ? `Crop mobile banner (${mobileAspectLabel})`
+            : `Crop desktop banner (${aspectLabel})`
+        }
+        aspect={cropTarget === 'mobile' ? (isValidMobileAspect(mobileAspect) ? mobileAspect : DEFAULT_MOBILE_ASPECT) : isValidDesktopAspect(desktopAspect) ? desktopAspect : DEFAULT_DESKTOP_ASPECT}
       />
     </form>
   );

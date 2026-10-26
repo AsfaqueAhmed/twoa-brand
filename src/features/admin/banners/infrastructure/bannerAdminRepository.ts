@@ -16,6 +16,7 @@ function toRow(payload: Partial<BannerFormPayload>): Record<string, unknown> {
   if (payload.ctaLabel !== undefined) row.cta_label = payload.ctaLabel;
   if (payload.ctaHref !== undefined) row.cta_href = payload.ctaHref;
   if (payload.desktopAspect !== undefined) row.desktop_aspect = payload.desktopAspect;
+  if (payload.mobileAspect !== undefined) row.mobile_aspect = payload.mobileAspect;
   return row;
 }
 
