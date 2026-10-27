@@ -206,7 +206,7 @@ export default function CheckoutForm() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-5 pb-28 sm:py-8 sm:px-6 lg:px-8" id="checkout-view-container">
+    <div className="mx-auto max-w-7xl px-4 py-5 pb-4 sm:py-8 sm:px-6 lg:px-8" id="checkout-view-container">
       <nav className="flex items-center gap-2 text-sm text-[#717171]">
         <button
           type="button"

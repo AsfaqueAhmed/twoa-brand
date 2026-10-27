@@ -395,7 +395,7 @@ export default function ProductDetailView({
             )}
 
             {product.parentProduct && (
-              <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-[#E4E1DA] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:z-auto sm:flex-row sm:items-end sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+              <div className="fixed inset-x-0 bottom-0 z-40 max-sm:mb-0! flex items-center gap-3 border-t border-[#E4E1DA] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:z-auto sm:flex-row sm:items-end sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
                 <div>
                   <span className="mb-2 hidden sm:block text-sm font-semibold text-black">Quantity</span>
                   <div className="flex h-12 sm:h-14 items-center border border-[#E4E1DA] bg-white">
@@ -461,7 +461,7 @@ export default function ProductDetailView({
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 pb-28 sm:pb-10">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-10">
           <RelatedProducts
             product={product}
             onSelect={onSelectRelated ?? ((p) => router.replace(`/product?id=${p.id}`))}

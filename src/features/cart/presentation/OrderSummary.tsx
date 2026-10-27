@@ -44,7 +44,7 @@ export default function OrderSummary() {
       </div>
 
       {/* Mobile: pinned to the bottom of the screen with the running total. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-4 border-t border-[#EEEEEE] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:block sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+      <div className="fixed inset-x-0 bottom-0 z-40 max-sm:mb-0! flex items-center gap-4 border-t border-[#EEEEEE] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:block sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <div className="shrink-0 sm:hidden">
           <p className="text-[11px] text-[#717171]">Total</p>
           <p className="text-lg font-bold leading-tight text-black">{formatCurrency(subtotal)}</p>

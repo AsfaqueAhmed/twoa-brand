@@ -11,7 +11,7 @@ export default function CartPage() {
   const { items, count } = useCart();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-8 sm:space-y-10 pb-28 sm:pb-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-8 sm:space-y-10 pb-4 sm:pb-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-4xl font-bold text-black">Shopping Cart</h1>
