@@ -182,3 +182,18 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
   const days = Math.floor(hours / 24);
   return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
+
+export function customerInsights(orders: Order[], range: DateRange) {
+  const customers = buildCustomers(orders);
+  const activeKeys = new Set(filterOrdersByRange(orders, range).map((o) => o.userId));
+  let newCustomers = 0;
+  let returningCustomers = 0;
+  for (const c of customers) {
+    if (!activeKeys.has(c.key)) continue;
+    const first = new Date(c.firstOrderAt).getTime();
+    if (first >= range.from.getTime() && first <= range.to.getTime()) newCustomers++;
+    else if (first < range.from.getTime()) returningCustomers++;
+  }
+  const topSpenders = customers.filter((c) => activeKeys.has(c.key)).slice(0, 10);
+  return { newCustomers, returningCustomers, topSpenders };
+}

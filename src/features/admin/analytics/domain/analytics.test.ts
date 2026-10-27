@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Order, Product } from '@/shared/domain/types';
 import {
   lastNDays, previousRange, filterOrdersByRange, percentChange, computeStats, countByStatus,
-  dailySales, topProducts, buildCustomers, lowStockProducts, recentActivity, formatRelativeTime,
+  dailySales, topProducts, buildCustomers, lowStockProducts, recentActivity, formatRelativeTime, customerInsights,
 } from './analytics';
 
 function order(over: Partial<Order> & { id: string }): Order {
@@ -123,5 +123,19 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-10-27T11:50:00', now)).toBe('10 mins ago');
     expect(formatRelativeTime('2026-10-27T09:00:00', now)).toBe('3 hours ago');
     expect(formatRelativeTime('2026-10-25T12:00:00', now)).toBe('2 days ago');
+  });
+});
+
+describe('customerInsights', () => {
+  it('splits new vs returning within the range and lists top spenders', () => {
+    const orders = [
+      order({ id: 'a', userId: 'u1', createdAt: '2026-10-01T10:00:00', totalAmount: 100 }),
+      order({ id: 'b', userId: 'u1', createdAt: '2026-10-27T10:00:00', totalAmount: 100 }),
+      order({ id: 'c', userId: 'u2', createdAt: '2026-10-26T10:00:00', totalAmount: 500 }),
+    ];
+    const r = customerInsights(orders, lastNDays(7, now));
+    expect(r.newCustomers).toBe(1);
+    expect(r.returningCustomers).toBe(1);
+    expect(r.topSpenders[0].key).toBe('u2');
   });
 });
