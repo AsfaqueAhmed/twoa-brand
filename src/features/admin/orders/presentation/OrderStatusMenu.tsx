@@ -18,9 +18,10 @@ interface Props {
   status: OrderStatus;
   onChange: (status: OrderStatus) => void;
   disabled?: boolean;
+  fullWidth?: boolean;
 }
 
-export default function OrderStatusMenu({ status, onChange, disabled = false }: Props) {
+export default function OrderStatusMenu({ status, onChange, disabled = false, fullWidth = false }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,7 +46,7 @@ export default function OrderStatusMenu({ status, onChange, disabled = false }: 
   }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-flex">
+    <div ref={ref} className={`relative ${fullWidth ? 'flex w-full' : 'inline-flex'}`}>
       <button
         ref={triggerRef}
         type="button"
@@ -54,14 +55,14 @@ export default function OrderStatusMenu({ status, onChange, disabled = false }: 
         aria-expanded={open}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${STATUS_STYLES[status]} disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${fullWidth ? 'w-full' : ''} ${STATUS_STYLES[status]} disabled:cursor-not-allowed disabled:opacity-50`}
       >
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-        {STATUS_LABELS[status]}
+        <span className={fullWidth ? 'flex-1 text-left' : ''}>{STATUS_LABELS[status]}</span>
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && !disabled && (
-        <div role="menu" className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-lg">
+        <div role="menu" className={`absolute left-0 top-full z-20 mt-1 rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-lg ${fullWidth ? 'w-full' : 'w-44'}`}>
           {STATUS_ORDER.map((s) => (
             <button
               key={s}
