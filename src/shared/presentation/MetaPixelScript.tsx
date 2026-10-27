@@ -10,9 +10,8 @@ function PixelRouteTracker() {
 
   useEffect(() => {
     pixelPageView();
-    // Real Next.js route changes only — the product detail modal changes the
-    // URL via raw history.pushState (see ProductModalProvider), which this
-    // hook can't observe; that case fires its own ViewContent event instead.
+    // Fires on real Next.js route changes. ViewContent for product pages is
+    // fired separately by the product detail view.
   }, [pathname]);
 
   return null;

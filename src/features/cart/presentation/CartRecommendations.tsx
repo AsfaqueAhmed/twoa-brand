@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Product } from '@/shared/domain/types';
 import { getProducts } from '@/features/catalog/application/getProducts';
-import { useProductModal } from '@/features/product/presentation/ProductModalProvider';
+import { useProductNavigation } from '@/features/product/presentation/ProductNavigationProvider';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { discountPercent } from '../domain/cart';
 import { pickRecommendations } from '../domain/recommendations';
@@ -13,7 +13,7 @@ import { useCart } from './CartProvider';
 
 export default function CartRecommendations() {
   const { items } = useCart();
-  const { open } = useProductModal();
+  const { open } = useProductNavigation();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
 
   useEffect(() => {

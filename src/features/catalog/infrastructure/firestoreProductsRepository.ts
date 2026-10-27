@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { Product, ProductVariant } from '@/shared/domain/types';
+import { normalizeHighlights } from '@/features/product/domain/highlights';
 
 // Cursor is the last-seen product id — products are ordered by id for stable
 // keyset pagination (`.gt('id', cursor)` picks up where the previous page left off).
@@ -29,6 +30,8 @@ function toProduct(row: Record<string, any>): Product {
     parentProductId: row.parent_product_id || undefined,
     variants: Array.isArray(row.variants) ? row.variants.map(toVariant) : [],
     sizeChartId: row.size_chart_id || undefined,
+    gallery: Array.isArray(row.gallery) ? row.gallery.filter((u: unknown): u is string => typeof u === 'string' && !!u) : [],
+    highlights: normalizeHighlights(row.highlights),
   };
 }
 
@@ -38,13 +41,46 @@ export async function fetchAllProducts(): Promise<Product[]> {
   return (data || []).map(toProduct);
 }
 
+// A product is purchasable only when its parent product still has stock in at
+// least one size (see isProductOutOfStock). Parent products are few, so the ids
+// of those with stock are fetched once and cached briefly; the catalog query
+// then filters on them server-side so pages stay full and pagination works.
+const IN_STOCK_CACHE_MS = 30_000;
+let inStockParentIdsCache: { at: number; ids: Promise<string[]> } | null = null;
+
+async function fetchInStockParentIds(): Promise<string[]> {
+  if (inStockParentIdsCache && Date.now() - inStockParentIdsCache.at < IN_STOCK_CACHE_MS) {
+    return inStockParentIdsCache.ids;
+  }
+  const ids = (async () => {
+    const { data, error } = await supabase.from('parent_product_size_stock').select('parent_id').gt('stock', 0);
+    if (error) throw error;
+    return Array.from(new Set((data || []).map((row) => row.parent_id as string)));
+  })();
+  inStockParentIdsCache = { at: Date.now(), ids };
+  ids.catch(() => {
+    inStockParentIdsCache = null;
+  });
+  return ids;
+}
+
 export async function fetchProductsPage(
   pageSize: number,
   category: string | undefined,
+  subcategory: string | undefined,
   cursor: ProductsPageCursor
 ): Promise<ProductsPage> {
-  let q = supabase.from('products').select('*').order('id', { ascending: true }).limit(pageSize);
+  const inStockParentIds = await fetchInStockParentIds();
+  if (inStockParentIds.length === 0) return { products: [], cursor, hasMore: false };
+
+  let q = supabase
+    .from('products')
+    .select('*')
+    .in('parent_product_id', inStockParentIds)
+    .order('id', { ascending: true })
+    .limit(pageSize);
   if (category && category !== 'All') q = q.eq('category', category);
+  if (subcategory && subcategory !== 'All') q = q.eq('subcategory', subcategory);
   if (cursor) q = q.gt('id', cursor);
 
   const { data, error } = await q;

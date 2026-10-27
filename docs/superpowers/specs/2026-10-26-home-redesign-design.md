@@ -1,0 +1,58 @@
+# Home Page Redesign — Design
+
+Date: 2026-10-26
+Branch: `feat/home-redesign`
+Reference: web mockup supplied by the user (cream theme, split hero, trust strip, pill filters, richer product cards).
+
+## Scope
+
+Sub-project 1 of 2. Frontend-only restyle of the home page plus selectable variant/size on product cards.
+
+**In scope**
+- Cream/black theme on the home page and navbar.
+- Trust strip (`TrustStrip`): Cash on Delivery, 100% Risk-Free, Nationwide Delivery.
+- Pill-style category and subcategory filters.
+- Navbar: brand logo-with-text image (`public/branding/logo-wordmark.png`), cart count badge.
+- Product card redesign with selectable color variant and size, and Add to Cart straight from the grid.
+
+**Removed from the current page / not built**
+- No hero section. The old black hero box is deleted and nothing replaces it.
+- No search box. The search input is removed from the home page.
+
+**Follow-ups (separate specs and branches, after this one)**
+1. Backend-managed hero banner and drag-and-drop home editor.
+2. Wishlist hearts.
+3. Merchant Hub nav link.
+
+## Design
+
+### Section components
+Each home section is a standalone component under `src/features/catalog/presentation/` taking plain props (no data fetching of its own), so the later home editor can feed them from stored block data without a rewrite.
+
+- `TrustStrip` — three static items with lucide icons.
+- `CatalogGrid` — drops the black hero box and the search input; hosts the pill filters and the grid. Filtering logic in `domain/filter.ts` is unchanged. Search state stays in `useCatalogProducts` untouched (unused by the home UI) to keep this change small.
+- `Navbar` — replaces the current logo with the logo-with-text image; adds the cart badge.
+- `app/page.tsx` — composes `TrustStrip` and `CatalogGrid`; skeleton loading state preserved.
+
+### Product card
+- Image area: category tag, discount badge, variant thumbnails (existing behavior), out-of-stock overlay.
+- Body: name, description, selected color name with swatch, selectable size chips (in-stock sizes only), price with struck-through original, full-width Add to Cart.
+- State: `activeVariantIndex` (existing; thumbnail click/hover selects variant) and `selectedSize` (first in-stock size by default; reset if it goes out of stock).
+- Auto-rotation of variants (existing) continues only while the card is not hovered; picking a variant explicitly stops rotation for that card.
+- Add to Cart calls `addToCart(product, 1, selectedSize, selectedVariant)` directly. Clicking elsewhere on the card still opens the product modal. `CartProvider` already accepts size and variant, so it is not changed.
+- Products with no `parentProduct` sizes add with no size.
+- Out-of-stock products keep the disabled button.
+
+Pure helper `getDefaultSize(product)` lives in the catalog domain layer and is unit-tested.
+
+### Theme
+Use existing `#FAF9F6` as the page background, black for primary actions, `#EEEEEE` borders. Keep square corners on cards and buttons; pills for filters only. Tokens are applied in the components, not a global theme change, to avoid touching checkout, orders and admin.
+
+## Testing
+- Vitest: `getDefaultSize` (first in-stock size, none in stock, no parent product).
+- Manual: dev server at desktop and mobile widths compared to the mockup; filter, variant/size selection, add to cart from grid, modal open on card click, loading skeleton, empty state.
+- `npm run lint` (tsc) and `npm test` pass.
+
+## Risks
+- Hover-driven variant selection and tap on touch devices: thumbnails select on click; hover-select remains desktop-only via existing behavior.
+- Cart badge needs the cart item count from `CartProvider`; verify it is exposed, otherwise derive from items.

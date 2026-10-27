@@ -12,6 +12,24 @@ export interface ParentProduct {
   stockBySize: Record<string, number>; // keys are exactly the entries in sizeOrder
 }
 
+export type HighlightIconKey =
+  | 'leaf'
+  | 'shirt'
+  | 'truck'
+  | 'shield'
+  | 'package'
+  | 'sparkles'
+  | 'ruler'
+  | 'droplets'
+  | 'wind';
+
+// One entry of a product's admin-entered feature row, e.g. 180 GSM / Lycra Cotton.
+export interface ProductHighlight {
+  icon: HighlightIconKey;
+  title: string;
+  subtitle: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -25,6 +43,8 @@ export interface Product {
   parentProductId?: string; // references the ParentProduct that owns this product's sizes & stock
   variants?: ProductVariant[]; // list of design/color variants
   sizeChartId?: string; // references a reusable SizeChart template
+  gallery?: string[]; // extra product photos shown as thumbnails (main image stays in `image`)
+  highlights?: ProductHighlight[]; // admin-entered feature row
   parentProduct?: ParentProduct; // read-time join attached by the application layer; never persisted on the product doc
 }
 
