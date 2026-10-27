@@ -25,7 +25,9 @@ import {
 } from '@/features/checkout/domain/pricing';
 import { resolveAvailableStock } from '@/shared/domain/stock';
 import { pixelViewContent } from '@/shared/lib/metaPixel';
+import { getGalleryImages } from '../domain/gallery';
 import ProductImageStack from './ProductImageStack';
+import ProductHighlights from './ProductHighlights';
 import Accordion from './Accordion';
 import RelatedProducts from './RelatedProducts';
 
@@ -55,6 +57,7 @@ export default function ProductDetailView({
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>(getDefaultSize(product) ?? '');
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(product.variants?.[0] ?? null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [sizeChart, setSizeChart] = useState<SizeChart | null>(null);
   const availableStock = resolveAvailableStock(product, selectedSize);
@@ -93,6 +96,12 @@ export default function ProductDetailView({
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : 0;
   const variants = product.variants ?? [];
+  const mainImage = selectedVariant?.image || product.image;
+  const galleryImages = getGalleryImages(mainImage, product.gallery);
+  const selectVariant = (v: ProductVariant) => {
+    setSelectedVariant(v);
+    setActiveImageIndex(0);
+  };
 
   const accordionSections = [
     {
@@ -167,22 +176,22 @@ export default function ProductDetailView({
   ];
 
   const thumbnails = (className: string, mobile: boolean) =>
-    variants.length > 1 && (
+    galleryImages.length > 1 && (
       <div className={className}>
-        {variants.map((v) => {
-          const isSelected = selectedVariant?.id === v.id;
+        {galleryImages.map((url, i) => {
+          const isSelected = activeImageIndex === i;
           return (
             <button
-              key={v.id}
+              key={`${url}-${i}`}
               type="button"
-              aria-label={v.name}
+              aria-label={`Image ${i + 1}`}
               aria-pressed={isSelected}
-              onClick={() => setSelectedVariant(v)}
+              onClick={() => setActiveImageIndex(i)}
               className={`aspect-square shrink-0 overflow-hidden bg-[#F5F5F5] ${mobile ? 'h-16 w-16' : 'w-full'} ${
                 isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA]'
               }`}
             >
-              <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              <img src={url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
             </button>
           );
         })}
@@ -236,7 +245,7 @@ export default function ProductDetailView({
           {/* Left: gallery */}
           <div>
             <div className="flex gap-3">
-              {variants.length > 1 && (
+              {galleryImages.length > 1 && (
                 <div className="relative hidden w-20 shrink-0 md:block">
                   {thumbnails('absolute inset-0 flex flex-col gap-3 overflow-y-auto', false)}
                 </div>
@@ -246,7 +255,7 @@ export default function ProductDetailView({
                 id="modal-product-image-container"
               >
                 <ProductImageStack
-                  image={selectedVariant?.image || product.image}
+                  image={galleryImages[activeImageIndex] ?? mainImage}
                   alt={product.name}
                   category={product.category}
                   onNavigate={onNavigate}
@@ -297,7 +306,7 @@ export default function ProductDetailView({
                       <button
                         key={v.id}
                         type="button"
-                        onClick={() => setSelectedVariant(v)}
+                        onClick={() => selectVariant(v)}
                         title={v.name}
                         aria-label={v.name}
                         aria-pressed={isSelected}
@@ -430,15 +439,19 @@ export default function ProductDetailView({
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-3 border-y border-[#E4E1DA] py-4">
-              {TRUST_ITEMS.map(({ icon: Icon, title, subtitle }) => (
-                <div key={title} className="flex flex-col items-center gap-1 text-center">
-                  <Icon className="h-6 w-6 text-black" strokeWidth={1.25} />
-                  <p className="text-xs font-bold text-black">{title}</p>
-                  <p className="text-[11px] text-[#717171]">{subtitle}</p>
-                </div>
-              ))}
-            </div>
+            {product.highlights && product.highlights.length > 0 ? (
+              <ProductHighlights highlights={product.highlights} />
+            ) : (
+              <div className="grid grid-cols-3 gap-3 border-y border-[#E4E1DA] py-4">
+                {TRUST_ITEMS.map(({ icon: Icon, title, subtitle }) => (
+                  <div key={title} className="flex flex-col items-center gap-1 text-center">
+                    <Icon className="h-6 w-6 text-black" strokeWidth={1.25} />
+                    <p className="text-xs font-bold text-black">{title}</p>
+                    <p className="text-[11px] text-[#717171]">{subtitle}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <Accordion
               sections={accordionSections}
