@@ -192,7 +192,7 @@ export default function ProductDetailView({
   return (
     <div className="relative w-full bg-[#FAF9F6]" id="product-detail-view">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-[#FAF9F6] px-4 sm:px-6 py-4">
         <button
           type="button"
           onClick={onClose}
@@ -449,7 +449,7 @@ export default function ProductDetailView({
       <div className="px-4 sm:px-6 pb-10">
         <RelatedProducts
           product={product}
-          onSelect={onSelectRelated ?? ((p) => router.push(`/product?id=${p.id}`))}
+          onSelect={onSelectRelated ?? ((p) => router.replace(`/product?id=${p.id}`))}
         />
       </div>
     </div>
