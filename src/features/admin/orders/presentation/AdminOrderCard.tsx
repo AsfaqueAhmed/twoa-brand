@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronDown, Pencil } from 'lucide-react';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { orderBreakdown, orderItemCount, shortOrderId } from '../domain/orderView';
@@ -57,6 +58,13 @@ export default function AdminOrderCard({ order, onStatusChange }: Props) {
         </div>
         <span className="font-mono text-[10px] text-[#919191]">{new Date(order.createdAt).toLocaleString()}</span>
         <span className="font-mono text-sm font-bold text-black">{formatCurrency(order.totalAmount)}</span>
+        <Link
+          id={`admin-order-edit-${order.id}`}
+          href={`/admin/orders/edit?id=${order.id}`}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[#EEEEEE] px-2.5 py-1.5 text-xs font-semibold text-black hover:border-black"
+        >
+          <Pencil className="h-3 w-3" /> Edit
+        </Link>
         <button
           type="button"
           aria-expanded={expanded}
