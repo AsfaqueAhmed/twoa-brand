@@ -249,8 +249,6 @@ export default function ProductDetailView({
                   image={selectedVariant?.image || product.image}
                   alt={product.name}
                   category={product.category}
-                  previousImage={previousProduct?.image}
-                  nextImage={nextProduct?.image}
                   onNavigate={onNavigate}
                   navKey={product.id}
                   discountPercent={discountPercent}

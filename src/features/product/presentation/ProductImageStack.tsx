@@ -7,8 +7,6 @@ interface ProductImageStackProps {
   image: string;
   alt: string;
   category: string;
-  previousImage?: string;
-  nextImage?: string;
   onNavigate?: (offset: 1 | -1) => void;
   positionLabel?: { index: number; total: number };
   navKey: string;
@@ -19,8 +17,6 @@ export default function ProductImageStack({
   image,
   alt,
   category,
-  previousImage,
-  nextImage,
   onNavigate,
   positionLabel,
   navKey,
@@ -34,31 +30,13 @@ export default function ProductImageStack({
 
   return (
     <div className="relative w-full overflow-hidden" id="product-image-stack">
-      {previousImage && (
-        <img
-          src={previousImage}
-          alt=""
-          aria-hidden="true"
-          referrerPolicy="no-referrer"
-          className="absolute inset-y-3 left-0 w-full -translate-x-3 scale-95 object-cover opacity-50"
-        />
-      )}
-      {nextImage && (
-        <img
-          src={nextImage}
-          alt=""
-          aria-hidden="true"
-          referrerPolicy="no-referrer"
-          className="absolute inset-y-3 left-0 w-full translate-x-3 scale-95 object-cover opacity-50"
-        />
-      )}
       {/* Keying on image (not just navKey) means a variant swap — same product,
           different photo — retriggers this transition too, instead of the <img>
           src just snapping instantly with no animation at all. */}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={`${navKey}::${image}`}
-          className={`relative bg-[#F5F5F5] ${onNavigate ? 'm-2 border border-black/10 shadow-lg' : ''}`}
+          className="relative bg-[#F5F5F5]"
           drag={onNavigate ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.5}
