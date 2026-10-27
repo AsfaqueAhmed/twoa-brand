@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, ShoppingBag, Search } from 'lucide-react';
+import Link from 'next/link';
+import { RefreshCw, ShoppingBag, Search, Plus } from 'lucide-react';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
@@ -64,7 +65,20 @@ export default function AdminOrderManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <AdminPageHeader title="All Orders" subtitle="Review orders and update their status." />
+      <AdminPageHeader
+        title="All Orders"
+        subtitle="Review orders and update their status."
+        actions={
+          <Link
+            href="/admin/orders/new"
+            id="admin-create-order-btn"
+            className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-xs font-bold text-white hover:bg-[#222222]"
+          >
+            <Plus className="h-4 w-4" />
+            Create Order
+          </Link>
+        }
+      />
 
       {/* Header Filtering and Sorting controls */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { CartItem } from '@/shared/domain/types';
 import {
   lineSubtotal, draftSubtotal, newCustomItemId, adminOrderTotal, formatAdminAddress,
-  buildAdminOrderItems, validateDraft, type DraftLine,
+  buildAdminOrderItems, validateDraft, addCatalogLine, type DraftLine,
 } from './adminOrder';
 
 const product = { id: 'p1', name: 'Tee', description: '', price: 500, image: 'tee.png', category: 'c', rating: 0, parentProductId: 'pp1' };
@@ -69,5 +69,15 @@ describe('validateDraft', () => {
     expect(validateDraft({ ...ok, lines: [{ kind: 'custom', id: 'c', name: ' ', price: 10, quantity: 1 }] })).toBe('Every custom item needs a name.');
     expect(validateDraft({ ...ok, lines: [custom(-1, 1)] })).toBe('Custom item prices cannot be negative.');
     expect(validateDraft({ ...ok, lines: [custom(10, 0)] })).toBe('Quantities must be at least 1.');
+  });
+});
+
+describe('addCatalogLine', () => {
+  it('merges the same product+size and appends different sizes', () => {
+    const a = catalog(1) as Extract<DraftLine, { kind: 'catalog' }>;
+    const merged = addCatalogLine([a], { ...a.item, quantity: 2 });
+    expect(merged).toHaveLength(1);
+    expect(merged[0].kind === 'catalog' && merged[0].item.quantity).toBe(3);
+    expect(addCatalogLine([a], { ...a.item, selectedSize: 'L' })).toHaveLength(2);
   });
 });

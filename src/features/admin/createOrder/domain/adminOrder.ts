@@ -56,3 +56,18 @@ export function validateDraft(d: { name: string; phone: string; address: string;
   }
   return null;
 }
+
+// Adds a catalog item to the draft, summing quantity into an existing line of the same product+size+variant.
+export function addCatalogLine(lines: DraftLine[], item: CartItem): DraftLine[] {
+  const idx = lines.findIndex(
+    (l) =>
+      l.kind === 'catalog' &&
+      l.item.product.id === item.product.id &&
+      l.item.selectedSize === item.selectedSize &&
+      l.item.selectedVariant?.id === item.selectedVariant?.id,
+  );
+  if (idx === -1) return [...lines, { kind: 'catalog', item }];
+  return lines.map((l, i) =>
+    i === idx && l.kind === 'catalog' ? { kind: 'catalog', item: { ...l.item, quantity: l.item.quantity + item.quantity } } : l,
+  );
+}
