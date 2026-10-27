@@ -10,7 +10,14 @@ export function orderToDraftLines(order: Order, products: Product[]): DraftLine[
     }
     const live = products.find((p) => p.id === item.productId);
     const product: Product = live
-      ? { ...live, price: item.price }
+      ? {
+          // Rebuild from the order line's historical data (price, name, image, parent) so legacy
+          // lines stay non-stock-bearing and a re-parented live product can't cause stock side
+          // effects; the live parentProduct is kept only when the parent is unchanged (stock caps).
+          ...live, price: item.price, name: item.name, image: item.image,
+          parentProductId: item.parentProductId,
+          parentProduct: live.parentProductId === item.parentProductId ? live.parentProduct : undefined,
+        }
       : {
           id: item.productId, name: item.name, description: '', price: item.price, image: item.image,
           category: '', rating: 0, parentProductId: item.parentProductId,

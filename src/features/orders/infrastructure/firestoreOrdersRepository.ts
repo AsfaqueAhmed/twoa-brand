@@ -146,7 +146,7 @@ export async function adminUpdateOrder(
     p_address: p.address,
     p_items: p.items,
     p_total_amount: p.totalAmount,
-    p_promo_code: p.promoCode ?? null,
+    p_promo_code: p.promoCode?.trim() || null,
     p_discount: p.discount ?? null,
   });
   if (error) throw new Error(error.message);

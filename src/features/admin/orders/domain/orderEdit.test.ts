@@ -28,4 +28,20 @@ describe('orderToDraftLines', () => {
   it('maps custom_ items to custom lines', () => {
     expect(lines[2]).toEqual({ kind: 'custom', id: 'custom_abc', name: 'Gift wrap', price: 50, quantity: 3 });
   });
+  it('keeps the historical name/image for a known product', () => {
+    const l = orderToDraftLines({ ...order, items: [{ ...order.items[0], name: 'Old Tee', image: 'old.png' }] }, [product]);
+    expect((l[0] as any).item.product).toMatchObject({ name: 'Old Tee', image: 'old.png', parentProductId: 'pp1' });
+  });
+  it('does not treat a legacy line (no parentProductId) as stock-bearing', () => {
+    const { parentProductId, ...legacy } = order.items[0];
+    const l = orderToDraftLines({ ...order, items: [legacy] }, [product]);
+    expect((l[0] as any).item.product.parentProductId).toBeUndefined();
+    expect((l[0] as any).item.product.parentProduct).toBeUndefined();
+  });
+  it('does not re-parent when the live product moved to another parent', () => {
+    const moved: Product = { ...product, parentProductId: 'pp2', parentProduct: { id: 'pp2', name: 'x', sizeOrder: ['M'], stockBySize: { M: 1 } } };
+    const l = orderToDraftLines({ ...order, items: [order.items[0]] }, [moved]);
+    expect((l[0] as any).item.product.parentProductId).toBe('pp1');
+    expect((l[0] as any).item.product.parentProduct).toBeUndefined();
+  });
 });

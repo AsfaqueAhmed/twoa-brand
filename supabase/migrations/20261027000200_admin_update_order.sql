@@ -1,6 +1,8 @@
 -- Admin-only: edit an order's customer details, items and pricing.
 -- p_items NULL keeps the existing items. Items may only change while the
 -- order is pending/confirmed; stock is adjusted by the net per-size delta.
+-- NOTE: lines without parentProductId/selectedSize (custom and legacy lines)
+-- are never stock-adjusted.
 create or replace function admin_update_order(
   p_order_id text,
   p_user_name text,
@@ -35,6 +37,10 @@ begin
       raise exception 'Items can only be changed while the order is pending or confirmed';
     end if;
 
+    if exists (select 1 from jsonb_array_elements(p_items) i where coalesce((i ->> 'quantity')::int, 0) < 1) then
+      raise exception 'Invalid quantity';
+    end if;
+
     for v_line in
       with old_l as (
         select i ->> 'parentProductId' as parent_id, i ->> 'selectedSize' as size, sum((i ->> 'quantity')::int) as qty
@@ -57,6 +63,9 @@ begin
       select stock into v_current from parent_product_size_stock
       where parent_id = v_line.parent_id and size = v_line.size for update;
 
+      if v_current is null and v_line.delta < 0 then
+        continue; -- parent product was deleted; restoring stock to nothing must not block the edit
+      end if;
       if v_current is null then
         raise exception 'Stock record not found for %/%', v_line.parent_id, v_line.size;
       end if;
