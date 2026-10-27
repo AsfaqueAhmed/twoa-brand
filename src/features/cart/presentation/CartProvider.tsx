@@ -2,7 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { CartItem, Product, ProductVariant } from '@/shared/domain/types';
-import { addItem, updateItemQuantity, removeItem, computeSubtotal, computeCartCount } from '../domain/cart';
+import {
+  addItem, updateItemQuantity, removeItem, changeVariant,
+  computeSubtotal, computeCartCount,
+} from '../domain/cart';
 import { loadCart, saveCart } from '../infrastructure/localStorageCartRepository';
 import { resolveAvailableStock } from '@/shared/domain/stock';
 import { pixelAddToCart } from '@/shared/lib/metaPixel';
@@ -12,6 +15,12 @@ interface CartContextValue {
   addToCart: (product: Product, quantity?: number, selectedSize?: string, selectedVariant?: ProductVariant) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedVariant?: ProductVariant) => void;
   removeFromCart: (productId: string, selectedSize?: string, selectedVariant?: ProductVariant) => void;
+  changeVariant: (
+    productId: string,
+    selectedSize: string | undefined,
+    oldVariant: ProductVariant | undefined,
+    newVariant: ProductVariant
+  ) => void;
   subtotal: number;
   count: number;
   isOpen: boolean;
@@ -51,6 +60,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }),
     removeFromCart: (productId, selectedSize, selectedVariant) =>
       setItems((prev) => removeItem(prev, productId, selectedSize, selectedVariant)),
+    changeVariant: (productId, selectedSize, oldVariant, newVariant) =>
+      setItems((prev) => changeVariant(prev, productId, selectedSize, oldVariant, newVariant)),
     subtotal: computeSubtotal(items),
     count: computeCartCount(items),
     isOpen,
