@@ -48,14 +48,19 @@ export type DashboardStats = { totalOrders: number; totalSales: number; products
 
 const isLive = (o: Order) => o.status !== 'cancelled';
 
+export function customerKey(o: Order): string {
+  return o.userId !== 'guest' ? o.userId : `guest:${o.phone || o.userEmail || o.id}`;
+}
+
 export function computeStats(allOrders: Order[], range: DateRange): DashboardStats {
   const inWindow = filterOrdersByRange(allOrders, range);
   const live = inWindow.filter(isLive);
   const firstOrderByUser = new Map<string, number>();
   for (const o of allOrders) {
     const t = new Date(o.createdAt).getTime();
-    const prev = firstOrderByUser.get(o.userId);
-    if (prev === undefined || t < prev) firstOrderByUser.set(o.userId, t);
+    const k = customerKey(o);
+    const prev = firstOrderByUser.get(k);
+    if (prev === undefined || t < prev) firstOrderByUser.set(k, t);
   }
   let newCustomers = 0;
   for (const t of firstOrderByUser.values()) {
@@ -122,10 +127,11 @@ export type CustomerSummary = {
 export function buildCustomers(orders: Order[]): CustomerSummary[] {
   const map = new Map<string, CustomerSummary>();
   for (const o of orders) {
-    const cur = map.get(o.userId);
+    const key = customerKey(o);
+    const cur = map.get(key);
     if (!cur) {
-      map.set(o.userId, {
-        key: o.userId, name: o.userName, email: o.userEmail, phone: o.phone,
+      map.set(key, {
+        key, name: o.userName, email: o.userEmail, phone: o.phone,
         orderCount: 1, totalSpent: isLive(o) ? o.totalAmount : 0, firstOrderAt: o.createdAt, lastOrderAt: o.createdAt,
       });
       continue;
@@ -185,7 +191,7 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
 
 export function customerInsights(orders: Order[], range: DateRange) {
   const customers = buildCustomers(orders);
-  const activeKeys = new Set(filterOrdersByRange(orders, range).map((o) => o.userId));
+  const activeKeys = new Set(filterOrdersByRange(orders, range).filter(isLive).map(customerKey));
   let newCustomers = 0;
   let returningCustomers = 0;
   for (const c of customers) {

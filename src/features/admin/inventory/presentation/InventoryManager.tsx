@@ -426,13 +426,6 @@ export default function InventoryManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {productsLoading && products.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-[#EEEEEE]">
-          <RefreshCw className="h-6 w-6 text-black animate-spin mb-4" />
-          <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">Synchronizing inventory...</span>
-        </div>
-      )}
-
       <AdminPageHeader
         title="Products"
         subtitle="Manage your catalog, pricing and images."
@@ -447,6 +440,13 @@ export default function InventoryManager() {
           </button>
         }
       />
+
+      {productsLoading && products.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-[#EEEEEE]">
+          <RefreshCw className="h-6 w-6 text-black animate-spin mb-4" />
+          <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">Synchronizing inventory...</span>
+        </div>
+      )}
 
       {/* Search bar */}
       <div className="bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">

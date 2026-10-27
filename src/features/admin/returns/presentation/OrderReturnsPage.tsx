@@ -8,7 +8,7 @@ import EmptyState from '@/shared/ui/EmptyState';
 import Spinner from '@/shared/ui/Spinner';
 import { useAdminData } from '@/features/admin/analytics/application/useAdminData';
 import { listReturns, createReturn, updateReturnStatus } from '../infrastructure/orderReturnsRepository';
-import { NEXT_RETURN_STATUSES, RETURN_STATUS_LABELS, type OrderReturn, type ReturnStatus } from '../domain/orderReturn';
+import { NEXT_RETURN_STATUSES, RETURN_STATUS_LABELS, resolveOrderByNumber, type OrderReturn, type ReturnStatus } from '../domain/orderReturn';
 
 const BADGE: Record<ReturnStatus, string> = {
   requested: 'bg-amber-50 text-amber-800',
@@ -18,7 +18,7 @@ const BADGE: Record<ReturnStatus, string> = {
 };
 
 export default function OrderReturnsPage() {
-  const { orders } = useAdminData();
+  const { orders, loading: ordersLoading, error: ordersError, reload: reloadOrders } = useAdminData();
   const [returns, setReturns] = useState<OrderReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +44,12 @@ export default function OrderReturnsPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const v = orderInput.trim().replace(/^#/, '');
-    const order = v ? orders.find((o) => o.id === v || o.id.endsWith(v)) : undefined;
-    if (!order) {
-      setFormError('No order matches that number.');
+    const resolved = resolveOrderByNumber(orders, orderInput);
+    if ('error' in resolved) {
+      setFormError(resolved.error);
       return;
     }
+    const order = resolved.order;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -100,8 +100,13 @@ export default function OrderReturnsPage() {
               <textarea id="return-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
                 className="w-full max-w-lg rounded-md border border-[#EEEEEE] px-3 py-2 text-sm" />
             </div>
-            {formError && <p role="alert" className="text-sm text-red-700">{formError}</p>}
-            <button type="submit" disabled={submitting}
+            {ordersError ? (
+              <p role="alert" className="text-sm text-red-700">
+                Could not load orders: {ordersError}{' '}
+                <button type="button" onClick={reloadOrders} className="font-bold underline">Retry</button>
+              </p>
+            ) : formError && <p role="alert" className="text-sm text-red-700">{formError}</p>}
+            <button type="submit" disabled={submitting || ordersLoading || !!ordersError}
               className="rounded-md bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
               {submitting ? 'Saving...' : 'Submit'}
             </button>

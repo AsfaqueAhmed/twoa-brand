@@ -96,15 +96,11 @@ export default function ProductFeedManager() {
       />
 
       <div className="bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">
-        <div>
-          <div>
-            <p className="text-[10px] text-[#717171]">
-              Give this URL to Meta Commerce Manager as a scheduled feed fetch. It's regenerated automatically every
-              time you build &amp; deploy the site (via <code className="font-mono">npm run build</code>) — base64
-              uploaded images are rehosted to a real URL automatically, no manual step needed.
-            </p>
-          </div>
-        </div>
+        <p className="text-[10px] text-[#717171]">
+          Give this URL to Meta Commerce Manager as a scheduled feed fetch. It's regenerated automatically every
+          time you build &amp; deploy the site (via <code className="font-mono">npm run build</code>) — base64
+          uploaded images are rehosted to a real URL automatically, no manual step needed.
+        </p>
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 text-[10px]">
           <button

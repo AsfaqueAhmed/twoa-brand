@@ -49,6 +49,9 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
+            {rows.length === 0 && q && (
+              <p className="py-6 text-center text-sm text-[#717171]">No customers match your search.</p>
+            )}
           </div>
         </AdminCard>
       )}

@@ -44,6 +44,7 @@ export default function CustomerInsightsPage() {
             {insights.topSpenders.length === 0 ? (
               <p className="py-6 text-center text-sm text-[#717171]">No customer activity in this period.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs text-[#717171]"><tr><th className="py-2 font-medium">Name</th><th className="font-medium">Orders</th><th className="text-right font-medium">Total Spent</th></tr></thead>
                 <tbody className="divide-y divide-[#EEEEEE]">
@@ -52,6 +53,7 @@ export default function CustomerInsightsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </AdminCard>
         </div>

@@ -11,7 +11,7 @@ export default function LowStockList({ items }: { items: StockProduct[] }) {
           <img src={p.image} alt="" className="h-11 w-11 rounded object-cover" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{p.name}</div>
-            <div className="text-xs font-semibold text-emerald-600">{p.stock} in stock</div>
+            <div className={`text-xs font-semibold ${p.stock === 0 ? 'text-red-600' : p.stock <= 10 ? 'text-amber-600' : 'text-emerald-600'}`}>{p.stock} in stock</div>
           </div>
           <Link href="/admin/products" className="rounded border border-[#EEEEEE] px-3 py-1.5 text-xs font-medium hover:border-black">Edit</Link>
         </li>

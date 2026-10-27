@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Order, Product } from '@/shared/domain/types';
 import {
   lastNDays, previousRange, filterOrdersByRange, percentChange, computeStats, countByStatus,
-  dailySales, topProducts, buildCustomers, lowStockProducts, recentActivity, formatRelativeTime, customerInsights,
+  dailySales, topProducts, buildCustomers, lowStockProducts, recentActivity, formatRelativeTime, customerInsights, customerKey,
 } from './analytics';
 
 function order(over: Partial<Order> & { id: string }): Order {
@@ -137,5 +137,33 @@ describe('customerInsights', () => {
     expect(r.newCustomers).toBe(1);
     expect(r.returningCustomers).toBe(1);
     expect(r.topSpenders[0].key).toBe('u2');
+  });
+});
+
+describe('guest customers', () => {
+  const g = (id: string, phone: string, over: Partial<Order> = {}) =>
+    order({ id, userId: 'guest', phone, userEmail: '', ...over });
+
+  it('customerKey uses userId for registered and phone for guests', () => {
+    expect(customerKey(order({ id: 'a' }))).toBe('u1');
+    expect(customerKey(g('b', '018'))).toBe('guest:018');
+  });
+  it('buildCustomers splits guests with different phones', () => {
+    expect(buildCustomers([g('a', '017'), g('b', '018')])).toHaveLength(2);
+  });
+  it('buildCustomers merges guests with the same phone', () => {
+    const c = buildCustomers([g('a', '017'), g('b', '017')]);
+    expect(c).toHaveLength(1);
+    expect(c[0].orderCount).toBe(2);
+  });
+  it('computeStats newCustomers counts distinct guest phones', () => {
+    const s = computeStats([g('a', '017'), g('b', '018'), g('c', '017')], lastNDays(7, now));
+    expect(s.newCustomers).toBe(2);
+  });
+  it('customerInsights ignores customers whose only in-range order is cancelled', () => {
+    const r = customerInsights([order({ id: 'a', status: 'cancelled' })], lastNDays(7, now));
+    expect(r.newCustomers).toBe(0);
+    expect(r.returningCustomers).toBe(0);
+    expect(r.topSpenders).toHaveLength(0);
   });
 });

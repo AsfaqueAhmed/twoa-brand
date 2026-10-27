@@ -13,3 +13,15 @@ export function NEXT_RETURN_STATUSES(status: ReturnStatus): ReturnStatus[] {
   if (status === 'approved') return ['refunded'];
   return [];
 }
+
+export function resolveOrderByNumber<T extends { id: string }>(orders: T[], input: string): { order: T } | { error: string } {
+  const v = input.trim().replace(/^#/, '');
+  if (!v) return { error: 'Enter an order number.' };
+  const exact = orders.find((o) => o.id === v);
+  if (exact) return { order: exact };
+  if (v.length < 6) return { error: 'Ambiguous or too short — enter more of the order number' };
+  const matches = orders.filter((o) => o.id.endsWith(v));
+  if (matches.length === 1) return { order: matches[0] };
+  if (matches.length === 0) return { error: 'No order matches that number.' };
+  return { error: 'Ambiguous or too short — enter more of the order number' };
+}

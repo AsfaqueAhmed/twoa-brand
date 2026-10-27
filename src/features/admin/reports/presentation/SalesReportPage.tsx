@@ -59,6 +59,7 @@ export default function SalesReportPage() {
           </div>
           <AdminCard title="Sales Overview"><SalesChart data={view.series} /></AdminCard>
           <AdminCard title="Daily Sales">
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs text-[#717171]"><tr><th className="py-2 font-medium">Date</th><th className="text-right font-medium">Total</th></tr></thead>
               <tbody className="divide-y divide-[#EEEEEE]">
@@ -67,6 +68,7 @@ export default function SalesReportPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </AdminCard>
         </div>
       )}
