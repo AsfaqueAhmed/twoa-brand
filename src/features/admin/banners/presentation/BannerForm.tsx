@@ -364,17 +364,36 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
         </div>
       </div>
 
-      <div>
-        <span className={labelClass}>Live preview</span>
-        {desktopImageUrl ? (
-          <div className="border border-[#EEEEEE]">
-            <HeroCarousel banners={[preview]} />
-          </div>
-        ) : (
-          <div className="flex aspect-[16/6] items-center justify-center border border-[#EEEEEE] text-xs text-[#919191]">
-            Upload a desktop image to preview
-          </div>
-        )}
+      <div className="space-y-5">
+        <div>
+          <span className={labelClass}>Live preview · Desktop</span>
+          {desktopImageUrl ? (
+            <div className="border border-[#EEEEEE]">
+              <HeroCarousel banners={[preview]} previewMode="desktop" />
+            </div>
+          ) : (
+            <div className="flex aspect-[16/6] items-center justify-center border border-[#EEEEEE] text-xs text-[#919191]">
+              Upload a desktop image to preview
+            </div>
+          )}
+        </div>
+        <div>
+          <span className={labelClass}>Live preview · Mobile</span>
+          {desktopImageUrl ? (
+            <div className="mx-auto w-full max-w-[375px] border-2 border-black bg-white">
+              <HeroCarousel banners={[preview]} previewMode="mobile" />
+            </div>
+          ) : (
+            <div className="mx-auto flex aspect-[4/5] w-full max-w-[375px] items-center justify-center border-2 border-[#EEEEEE] text-xs text-[#919191]">
+              Upload an image to preview
+            </div>
+          )}
+          {desktopImageUrl && !mobileImageUrl && (
+            <p className="mt-1.5 text-center text-[11px] text-[#717171]">
+              No mobile image yet, so phones will show the desktop image cropped to this shape.
+            </p>
+          )}
+        </div>
       </div>
 
       <ImageCropperModal

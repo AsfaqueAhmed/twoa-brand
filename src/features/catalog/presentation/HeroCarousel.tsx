@@ -7,7 +7,15 @@ import { isSafeCtaHref } from '../domain/banner';
 const AUTO_ADVANCE_MS = 5000;
 const SWIPE_THRESHOLD_PX = 40;
 
-export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
+// previewMode forces the desktop or mobile layout regardless of viewport width
+// (used by the admin live preview); without it the layout follows the viewport.
+export default function HeroCarousel({
+  banners,
+  previewMode,
+}: {
+  banners: HomeBanner[];
+  previewMode?: 'desktop' | 'mobile';
+}) {
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -35,6 +43,14 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
   if (count === 0) return null;
 
   const go = (next: number) => setIndex(((next % count) + count) % count);
+
+  const isMobile = previewMode === 'mobile';
+  const isDesktop = previewMode === 'desktop';
+  const eyebrowSize = isMobile ? 'text-xs' : isDesktop ? 'text-sm' : 'text-xs sm:text-sm';
+  const headlineSize = isMobile ? 'text-4xl' : isDesktop ? 'text-6xl' : 'text-4xl sm:text-6xl';
+  const subtextSize = isMobile ? 'text-sm' : isDesktop ? 'text-base' : 'text-sm sm:text-base';
+  const textAlign = isMobile ? 'items-end' : isDesktop ? 'items-center' : 'items-end sm:items-center';
+  const textPadding = isMobile ? 'px-4 pb-10' : isDesktop ? 'px-6 lg:px-8 pb-0' : 'px-4 sm:px-6 lg:px-8 pb-10 sm:pb-0';
 
   return (
     <section
@@ -70,12 +86,18 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
       }}
     >
       <div
-        className="relative aspect-[var(--hero-aspect-mobile)] sm:aspect-[var(--hero-aspect)] w-full"
+        className={
+          previewMode
+            ? 'relative w-full'
+            : 'relative aspect-[var(--hero-aspect-mobile)] sm:aspect-[var(--hero-aspect)] w-full'
+        }
         style={
-          {
-            '--hero-aspect': String(banners[0].desktopAspect),
-            '--hero-aspect-mobile': String(banners[0].mobileAspect),
-          } as React.CSSProperties
+          previewMode
+            ? { aspectRatio: String(isMobile ? banners[0].mobileAspect : banners[0].desktopAspect) }
+            : ({
+                '--hero-aspect': String(banners[0].desktopAspect),
+                '--hero-aspect-mobile': String(banners[0].mobileAspect),
+              } as React.CSSProperties)
         }
       >
         {banners.map((banner, i) => {
@@ -93,9 +115,11 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
               }`}
             >
               <picture>
-                {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
+                {!previewMode && banner.mobileImageUrl && (
+                  <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />
+                )}
                 <img
-                  src={banner.desktopImageUrl}
+                  src={isMobile ? banner.mobileImageUrl || banner.desktopImageUrl : banner.desktopImageUrl}
                   alt={banner.headline ? '' : 'Banner'}
                   className="h-full w-full object-cover"
                   loading={i === 0 ? 'eager' : 'lazy'}
@@ -104,21 +128,21 @@ export default function HeroCarousel({ banners }: { banners: HomeBanner[] }) {
               </picture>
 
               {(banner.eyebrow || banner.headline || banner.subtext || showCta) && (
-                <div className="pointer-events-none absolute inset-0 flex items-end sm:items-center">
-                  <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-10 sm:pb-0">
+                <div className={`pointer-events-none absolute inset-0 flex ${textAlign}`}>
+                  <div className={`mx-auto w-full max-w-7xl ${textPadding}`}>
                     <div className="max-w-xl space-y-3">
                       {banner.eyebrow && (
-                        <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-black">
+                        <p className={`${eyebrowSize} font-semibold uppercase tracking-[0.2em] text-black`}>
                           {banner.eyebrow}
                         </p>
                       )}
                       {banner.headline && (
-                        <h2 className="text-4xl sm:text-6xl font-black uppercase leading-[0.95] tracking-tight text-black">
+                        <h2 className={`${headlineSize} font-black uppercase leading-[0.95] tracking-tight text-black`}>
                           {banner.headline}
                         </h2>
                       )}
                       {banner.subtext && (
-                        <p className="text-sm sm:text-base text-black/80 leading-relaxed">{banner.subtext}</p>
+                        <p className={`${subtextSize} text-black/80 leading-relaxed`}>{banner.subtext}</p>
                       )}
                       {showCta && (
                         <span className="inline-flex h-11 items-center bg-black px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white">
