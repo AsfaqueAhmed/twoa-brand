@@ -6,23 +6,8 @@ import { RefreshCw, ShoppingBag, Search, Plus } from 'lucide-react';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
-import { formatCurrency } from '@/shared/lib/formatCurrency';
+import AdminOrderCard from './AdminOrderCard';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
-
-const getStatusStyle = (status: OrderStatus) => {
-  switch (status) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-800 border-amber-200';
-    case 'confirmed':
-      return 'bg-blue-50 text-blue-800 border-blue-200';
-    case 'out_for_delivery':
-      return 'bg-indigo-50 text-indigo-800 border-indigo-200';
-    case 'delivered':
-      return 'bg-emerald-50 text-emerald-800 border-emerald-200';
-    case 'cancelled':
-      return 'bg-red-50 text-red-800 border-red-200';
-  }
-};
 
 export default function AdminOrderManager() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -126,117 +111,9 @@ export default function AdminOrderManager() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredOrders.map((ord) => (
-            <div
-              key={ord.id}
-              className="bg-white border border-[#EEEEEE] rounded-lg p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-start justify-between gap-6"
-              id={`admin-order-row-${ord.id}`}
-            >
-              {/* Order Main Details & Customer Data */}
-              <div className="space-y-4 flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="font-mono text-xs font-bold text-black uppercase tracking-tight">Order #{ord.id}</span>
-                  <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border ${getStatusStyle(ord.status)}`}>
-                    {ord.status.replace(/_/g, ' ')}
-                  </span>
-                  {ord.userId === 'guest' && (
-                    <span className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border border-[#EEEEEE] bg-[#F5F5F5] text-[#717171]">
-                      Guest Checkout
-                    </span>
-                  )}
-                  <span className="text-[10px] text-[#919191] font-mono">{new Date(ord.createdAt).toLocaleString()}</span>
-                </div>
-
-                {/* Customer Identity */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs leading-relaxed">
-                  <div>
-                    <span className="text-[#717171] block font-medium">Customer Information:</span>
-                    <p className="text-black font-bold uppercase tracking-wide mt-0.5">{ord.userName}</p>
-                    <p className="text-[#717171] font-mono">{ord.userEmail || '— (guest, no email)'}</p>
-                    <p className="text-[#111111] font-mono font-bold mt-0.5">Phone: {ord.phone}</p>
-                  </div>
-                  <div>
-                    <span className="text-[#717171] block font-medium">Delivery Address (Cash on Delivery):</span>
-                    <p className="text-black font-semibold mt-0.5 leading-relaxed">{ord.address}</p>
-                  </div>
-                </div>
-
-                {/* Ordered Items summary breakdown */}
-                <div className="border-t border-[#F5F5F5] pt-4.5">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#717171]">Order Details:</span>
-                  <div className="mt-2 divide-y divide-[#F5F5F5] bg-[#FAF9F6] border border-[#EEEEEE] p-4 space-y-1 max-h-[140px] overflow-y-auto">
-                    {ord.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-xs py-1.5 first:pt-0 last:pb-0">
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="h-7 w-7 object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"
-                            referrerPolicy="no-referrer"
-                            loading="lazy"
-                          />
-                          <div className="min-w-0">
-                            <span className="font-bold text-black truncate block max-w-[200px] uppercase tracking-wide">
-                              {item.name} <span className="text-[#717171] font-normal">× {item.quantity}</span>
-                            </span>
-
-                            {/* Badges */}
-                            <div className="flex gap-1 mt-0.5">
-                              {item.selectedVariant && (
-                                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-black uppercase font-mono tracking-wider bg-white px-1 border border-[#EEEEEE]">
-                                  {item.selectedVariant.name}
-                                </span>
-                              )}
-                              {item.selectedSize && (
-                                <span className="text-[8px] font-bold text-black uppercase font-mono tracking-wider bg-white px-1 border border-[#EEEEEE]">
-                                  Size: {item.selectedSize}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="font-mono font-bold text-black">{formatCurrency(item.price * item.quantity)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Delivery Total and Shipping controls */}
-              <div className="flex flex-col md:items-end justify-between self-stretch shrink-0 gap-4">
-                <div className="text-right">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#717171]">Total Delivery Amount</span>
-                  <p className="text-2xl font-bold text-black font-mono mt-1">{formatCurrency(ord.totalAmount)}</p>
-                  <span className="inline-block mt-1 bg-black text-white px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold">
-                    Pay on Delivery
-                  </span>
-                </div>
-
-                {/* Merchant actions dropdown status updates */}
-                <div className="border border-[#EEEEEE] bg-[#FAF9F6] p-3.5 space-y-2">
-                  <span className="block text-[9px] font-bold uppercase tracking-wider text-black">Update Shipping Status:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(['pending', 'confirmed', 'out_for_delivery', 'delivered', 'cancelled'] as OrderStatus[]).map((statusVal) => {
-                      const isCurrent = ord.status === statusVal;
-                      return (
-                        <button
-                          key={statusVal}
-                          onClick={() => handleAdminUpdateOrderStatus(ord.id, statusVal)}
-                          className={`px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all border ${
-                            isCurrent
-                              ? 'bg-black text-white border-black'
-                              : 'bg-white text-[#717171] border-[#EEEEEE] hover:border-black hover:text-black'
-                          }`}
-                        >
-                          {statusVal.replace(/_/g, ' ')}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminOrderCard key={ord.id} order={ord} onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
           ))}
         </div>
       )}
