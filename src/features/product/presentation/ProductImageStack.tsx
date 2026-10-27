@@ -12,6 +12,7 @@ interface ProductImageStackProps {
   onNavigate?: (offset: 1 | -1) => void;
   positionLabel?: { index: number; total: number };
   navKey: string;
+  discountPercent?: number;
 }
 
 export default function ProductImageStack({
@@ -23,6 +24,7 @@ export default function ProductImageStack({
   onNavigate,
   positionLabel,
   navKey,
+  discountPercent,
 }: ProductImageStackProps) {
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (!onNavigate) return;
@@ -72,6 +74,11 @@ export default function ProductImageStack({
       <span className="absolute top-4 left-4 z-10 bg-black px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white">
         {category}
       </span>
+      {discountPercent !== undefined && discountPercent > 0 && (
+        <span className="absolute top-4 right-4 z-10 bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white">
+          {discountPercent}% OFF
+        </span>
+      )}
       {positionLabel && (
         <span className="absolute bottom-4 right-4 z-10 bg-white/90 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-black">
           {positionLabel.index} of {positionLabel.total}

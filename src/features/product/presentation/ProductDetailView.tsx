@@ -1,16 +1,33 @@
 'use client';
 
-import { ShoppingBag, CheckCircle, X, Ruler } from 'lucide-react';
+import {
+  ShoppingBag,
+  CheckCircle,
+  X,
+  Ruler,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Truck,
+} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Product, ProductVariant, SizeChart } from '@/shared/domain/types';
-import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/features/cart/presentation/CartProvider';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
-import { resolveAvailableStock, isProductOutOfStock } from '@/shared/domain/stock';
+import { getDefaultSize } from '@/features/catalog/domain/sizes';
+import { TRUST_ITEMS } from '@/features/catalog/presentation/TrustStrip';
+import {
+  CITY_CORPORATION_DELIVERY_FEE,
+  DHAKA_SUBURBAN_DELIVERY_FEE,
+  STANDARD_DELIVERY_FEE,
+} from '@/features/checkout/domain/pricing';
+import { resolveAvailableStock } from '@/shared/domain/stock';
 import { pixelViewContent } from '@/shared/lib/metaPixel';
 import ProductImageStack from './ProductImageStack';
+import Accordion from './Accordion';
+import RelatedProducts from './RelatedProducts';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -19,6 +36,7 @@ interface ProductDetailViewProps {
   nextProduct?: Product;
   onNavigate?: (offset: 1 | -1) => void;
   positionLabel?: { index: number; total: number };
+  onSelectRelated?: (product: Product) => void;
 }
 
 export default function ProductDetailView({
@@ -28,19 +46,18 @@ export default function ProductDetailView({
   nextProduct,
   onNavigate,
   positionLabel,
+  onSelectRelated,
 }: ProductDetailViewProps) {
   const router = useRouter();
   const { addToCart } = useCart();
   const onClose = onCloseProp ?? (() => router.push('/'));
-  const onAddToCart = (p: Product, quantity: number, selectedSize?: string, selectedVariant?: ProductVariant) =>
-    addToCart(p, quantity, selectedSize, selectedVariant);
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>(getDefaultSize(product) ?? '');
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(product.variants?.[0] ?? null);
-  const availableStock = resolveAvailableStock(product, selectedSize);
-  const [showSizeChart, setShowSizeChart] = useState(false);
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const [sizeChart, setSizeChart] = useState<SizeChart | null>(null);
+  const availableStock = resolveAvailableStock(product, selectedSize);
 
   useEffect(() => {
     pixelViewContent(product);
@@ -48,7 +65,6 @@ export default function ProductDetailView({
 
   useEffect(() => {
     setSizeChart(null);
-    setShowSizeChart(false);
     if (!product.sizeChartId) return;
     let cancelled = false;
     fetchSizeChartById(product.sizeChartId).then((chart) => {
@@ -60,98 +76,235 @@ export default function ProductDetailView({
   }, [product.sizeChartId]);
 
   const handleAddToCart = () => {
-    onAddToCart(product, quantity, selectedSize || undefined, selectedVariant || undefined);
+    addToCart(product, quantity, selectedSize || undefined, selectedVariant || undefined);
     setQuantity(1);
     onClose();
   };
 
-  return (
-    <div className="relative w-full flex flex-col md:flex-row" id="product-detail-view">
-      <button
-        onClick={onClose}
-        className="fixed sm:absolute top-4 right-4 z-20 rounded-none border border-[#EEEEEE] bg-white/95 backdrop-blur-xs p-2 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-200 shadow-sm"
-        id="product-modal-close"
-      >
-        <X className="h-4 w-4" />
-      </button>
+  const openSizeGuide = () => {
+    setOpenSection('size-chart');
+    requestAnimationFrame(() => {
+      document.getElementById('accordion-size-chart')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
 
-      {/* Image side */}
-      <div
-        className="relative w-full aspect-square md:w-[45%] lg:w-[50%] bg-[#F5F5F5] shrink-0"
-        id="modal-product-image-container"
-      >
-        <ProductImageStack
-          image={selectedVariant?.image || product.image}
-          alt={product.name}
-          category={product.category}
-          previousImage={previousProduct?.image}
-          nextImage={nextProduct?.image}
-          onNavigate={onNavigate}
-          positionLabel={positionLabel}
-          navKey={product.id}
-        />
+  const hasDiscount = !!(product.originalPrice && product.originalPrice > product.price);
+  const discountPercent = hasDiscount
+    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    : 0;
+  const variants = product.variants ?? [];
+
+  const accordionSections = [
+    {
+      id: 'description',
+      title: 'Description',
+      content: <p className="whitespace-pre-line">{product.description}</p>,
+    },
+    ...(sizeChart
+      ? [
+          {
+            id: 'size-chart',
+            title: 'Size Chart',
+            content: (
+              <div id="size-chart-panel">
+                <span className="block text-[11px] font-bold uppercase tracking-widest text-[#717171] mb-2">
+                  {sizeChart.name}
+                </span>
+                <div className="overflow-x-auto">
+                  <table className="w-full table-fixed text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E4E1DA] text-[#717171]">
+                        <th className="py-2 text-left font-bold uppercase">Size</th>
+                        {sizeChart.columns.map((col) => (
+                          <th key={col} className="py-2 text-center font-mono font-bold">
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E4E1DA] text-black">
+                      {sizeChart.rows.map((row, i) => (
+                        <tr key={`${row.size}-${i}`} className={i % 2 === 1 ? 'bg-white/50' : undefined}>
+                          <td className="py-2 text-left font-bold font-mono">{row.size}</td>
+                          {sizeChart.columns.map((col, ci) => (
+                            <td key={col} className="py-2 text-center font-mono">
+                              {row.values[ci] ?? ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ),
+          },
+        ]
+      : []),
+    {
+      id: 'shipping',
+      title: 'Shipping & Delivery',
+      content: (
+        <div className="space-y-3">
+          <p>Cash on delivery is available all over Bangladesh. Pay when you receive your order.</p>
+          <ul className="space-y-1">
+            <li className="flex justify-between">
+              <span>City corporations (Dhaka North &amp; South)</span>
+              <span className="font-semibold text-black">{formatCurrency(CITY_CORPORATION_DELIVERY_FEE)}</span>
+            </li>
+            <li className="flex justify-between">
+              <span>Dhaka suburban areas</span>
+              <span className="font-semibold text-black">{formatCurrency(DHAKA_SUBURBAN_DELIVERY_FEE)}</span>
+            </li>
+            <li className="flex justify-between">
+              <span>Everywhere else</span>
+              <span className="font-semibold text-black">{formatCurrency(STANDARD_DELIVERY_FEE)}</span>
+            </li>
+          </ul>
+        </div>
+      ),
+    },
+  ];
+
+  const thumbnails = (className: string, mobile: boolean) =>
+    variants.length > 1 && (
+      <div className={className}>
+        {variants.map((v) => {
+          const isSelected = selectedVariant?.id === v.id;
+          return (
+            <button
+              key={v.id}
+              type="button"
+              aria-label={v.name}
+              onClick={() => setSelectedVariant(v)}
+              className={`aspect-square shrink-0 overflow-hidden bg-[#F5F5F5] ${mobile ? 'h-16 w-16' : 'w-full'} ${
+                isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA]'
+              }`}
+            >
+              <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            </button>
+          );
+        })}
+      </div>
+    );
+
+  return (
+    <div className="relative w-full bg-[#FAF9F6]" id="product-detail-view">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-2 text-sm font-semibold text-black hover:opacity-70 transition-opacity"
+          id="product-modal-close"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Shop</span>
+        </button>
+        {positionLabel && (
+          <div className="flex items-center gap-2 text-sm text-[#4A4A4A]">
+            <button
+              type="button"
+              aria-label="Previous product"
+              id="product-modal-prev-btn"
+              disabled={!previousProduct}
+              onClick={() => onNavigate?.(-1)}
+              className="p-1 text-black disabled:text-[#B5B5B5] disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span>
+              {positionLabel.index} of {positionLabel.total}
+            </span>
+            <button
+              type="button"
+              aria-label="Next product"
+              id="product-modal-next-btn"
+              disabled={!nextProduct}
+              onClick={() => onNavigate?.(1)}
+              className="p-1 text-black disabled:text-[#B5B5B5] disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Info side */}
-      <div className="w-full md:w-[55%] lg:w-[50%] flex flex-col p-6 sm:p-8 justify-between md:overflow-y-auto md:max-h-[85vh] bg-[#FDFDFD]">
+      <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-8 px-4 sm:px-6 pb-8">
+        {/* Left: gallery */}
         <div>
-          <h2 className="font-sans text-xl font-bold tracking-tight text-[#1A1A1A] uppercase">
-            {product.name}
-          </h2>
+          <div className="flex gap-3">
+            {thumbnails('hidden md:flex flex-col gap-3 w-20 max-h-[560px] overflow-y-auto', false)}
+            <div
+              className="relative flex-1 aspect-[4/5] bg-[#F5F5F5] overflow-hidden"
+              id="modal-product-image-container"
+            >
+              <ProductImageStack
+                image={selectedVariant?.image || product.image}
+                alt={product.name}
+                category={product.category}
+                previousImage={previousProduct?.image}
+                nextImage={nextProduct?.image}
+                onNavigate={onNavigate}
+                positionLabel={positionLabel}
+                navKey={product.id}
+                discountPercent={discountPercent}
+              />
+            </div>
+          </div>
+          {thumbnails('md:hidden flex gap-2 mt-3 overflow-x-auto', true)}
+        </div>
 
-          {/* Price Tag */}
-          <div className="mt-4 flex flex-wrap items-baseline gap-2.5">
-            <span className="text-2xl font-bold text-black">{formatCurrency(product.price)}</span>
-            {product.originalPrice && product.originalPrice > product.price && (
+        {/* Right: info */}
+        <div className="space-y-5 min-w-0">
+          <h1 className="text-3xl font-bold text-black">{product.name}</h1>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-3xl font-bold text-black">{formatCurrency(product.price)}</span>
+            {hasDiscount && (
               <>
-                <span className="text-sm font-semibold text-[#919191] line-through font-mono">
-                  {formatCurrency(product.originalPrice)}
+                <span className="text-base font-semibold text-[#919191] line-through">
+                  {formatCurrency(product.originalPrice!)}
                 </span>
-                <span className="bg-red-600 text-white px-2 py-0.5 text-[9px] uppercase font-bold tracking-[0.1em] font-mono">
-                  {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                <span className="bg-red-600 text-white px-2 py-0.5 text-[11px] font-bold">
+                  {discountPercent}% OFF
                 </span>
               </>
             )}
-            <span className="border border-black text-black px-2 py-0.5 text-[9px] uppercase font-bold tracking-[0.1em]">
+            <span className="inline-flex items-center gap-1.5 border border-[#E4E1DA] rounded-full px-3 py-1 text-xs font-semibold text-black sm:ml-auto">
+              <Truck className="h-3.5 w-3.5" />
               Cash on Delivery Eligible
             </span>
           </div>
 
-          <div className="mt-6">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#717171]">Description</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#717171]">{product.description}</p>
-          </div>
+          <p className="line-clamp-2 text-sm text-[#4A4A4A]">{product.description}</p>
 
-          {/* Color / Design Variant Selector */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="mt-6 border-t border-[#EEEEEE] pt-6" id="product-variant-section">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#717171] block mb-3">
-                Select Design/Color: <span className="text-black font-semibold ml-1">{selectedVariant?.name}</span>
-              </span>
+          <hr className="border-[#E4E1DA]" />
 
-              {/* Swatch list */}
+          {variants.length > 0 && (
+            <div id="product-variant-section">
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="font-semibold text-black">Color / Design</span>
+                <span className="text-[#4A4A4A]">{selectedVariant?.name}</span>
+              </div>
               <div className="flex flex-wrap gap-2.5">
-                {product.variants.map((v) => {
+                {variants.map((v) => {
                   const isSelected = selectedVariant?.id === v.id;
                   return (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => setSelectedVariant(v)}
-                      className={`flex items-center space-x-2 px-3 py-1.5 border rounded-none text-xs font-bold transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-black text-white border-black'
-                          : 'bg-white text-black border-[#EEEEEE] hover:border-black'
-                      }`}
                       title={v.name}
+                      aria-label={v.name}
+                      className={`h-16 w-16 overflow-hidden ${
+                        isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA] hover:border-black'
+                      }`}
+                      style={!v.image && v.colorCode ? { backgroundColor: v.colorCode } : undefined}
                     >
-                      {v.colorCode && (
-                        <span
-                          className="h-3.5 w-3.5 rounded-full border border-black/10 shrink-0"
-                          style={{ backgroundColor: v.colorCode }}
-                        />
+                      {v.image && (
+                        <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                       )}
-                      <span>{v.name}</span>
                     </button>
                   );
                 })}
@@ -159,30 +312,23 @@ export default function ProductDetailView({
             </div>
           )}
 
-          {/* Size Variant Selector */}
           {product.parentProduct && product.parentProduct.sizeOrder.length > 0 && (
-            <div className="mt-6 border-t border-[#EEEEEE] pt-6" id="product-size-section">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#717171]">
-                  Select Size: <span className="text-black font-mono font-bold ml-1">{selectedSize}</span>
-                </span>
-
-                {/* View Size Chart Button */}
+            <div id="product-size-section">
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="font-semibold text-black">Size</span>
                 {sizeChart && (
                   <button
                     type="button"
-                    onClick={() => setShowSizeChart(!showSizeChart)}
-                    className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-black border-b border-black hover:opacity-70 transition-opacity"
+                    onClick={openSizeGuide}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-black underline underline-offset-4 hover:opacity-70"
                     id="toggle-size-chart-btn"
                   >
-                    <Ruler className="h-3 w-3" />
-                    <span>{showSizeChart ? 'Hide Size Chart' : 'View Size Chart'}</span>
+                    <Ruler className="h-4 w-4" />
+                    <span>Size Guide</span>
                   </button>
                 )}
               </div>
-
-              {/* Size pills */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2">
                 {product.parentProduct.sizeOrder.map((sz) => {
                   const sizeStock = product.parentProduct!.stockBySize[sz] ?? 0;
                   return (
@@ -194,12 +340,12 @@ export default function ProductDetailView({
                         setSelectedSize(sz);
                         setQuantity(1);
                       }}
-                      className={`min-w-[40px] h-10 px-3 flex items-center justify-center text-xs font-bold font-mono transition-all duration-200 border rounded-none ${
+                      className={`min-w-[56px] h-12 px-3 flex items-center justify-center text-sm font-semibold border transition-colors ${
                         selectedSize === sz
                           ? 'bg-black text-white border-black'
                           : sizeStock <= 0
-                            ? 'bg-[#F5F5F5] text-[#B5B5B5] border-[#EEEEEE] line-through cursor-not-allowed'
-                            : 'bg-white text-black border-[#EEEEEE] hover:border-black'
+                            ? 'bg-[#EFEDE8] text-[#B5B5B5] border-[#E4E1DA] line-through cursor-not-allowed'
+                            : 'bg-white text-black border-[#E4E1DA] hover:border-black'
                       }`}
                     >
                       {sz}
@@ -207,124 +353,101 @@ export default function ProductDetailView({
                   );
                 })}
               </div>
-
-              {/* Size Chart Table Panel */}
-              <AnimatePresence>
-                {showSizeChart && sizeChart && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border border-[#EEEEEE] bg-[#FAF9F6] p-4 rounded-none mb-4"
-                    id="size-chart-panel"
-                  >
-                    <span className="block text-[9px] font-bold uppercase tracking-widest text-[#717171] mb-2">
-                      {sizeChart.name}
-                    </span>
-                    <div className="overflow-x-auto">
-                      <table className="w-full table-fixed text-[10px] border-collapse">
-                        <thead>
-                          <tr className="border-b border-[#EEEEEE] text-[#717171]">
-                            <th className="py-2 text-left font-bold uppercase">Size</th>
-                            {sizeChart.columns.map((col) => (
-                              <th key={col} className="py-2 text-center font-mono font-bold">
-                                {col}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#EEEEEE] text-black">
-                          {sizeChart.rows.map((row, i) => (
-                            <tr key={`${row.size}-${i}`} className={i % 2 === 1 ? 'bg-white/50' : undefined}>
-                              <td className="py-2 text-left font-bold font-mono">{row.size}</td>
-                              {sizeChart.columns.map((col, ci) => (
-                                <td key={col} className="py-2 text-center font-mono">
-                                  {row.values[ci] ?? ''}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           )}
 
-          {/* Stock Status */}
-          <div className="mt-6 flex items-center space-x-2 rounded-none border border-[#EEEEEE] bg-[#F9F9F9] p-3">
-            {!product.parentProduct ? (
-              <>
-                <X className="h-4.5 w-4.5 text-[#717171]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">Unavailable</span>
-              </>
-            ) : !selectedSize ? (
-              <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">
-                Select a size to see availability
-              </span>
-            ) : availableStock > 0 ? (
-              <>
-                <CheckCircle className="h-4.5 w-4.5 text-black" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A]">
-                  In Stock ({availableStock} units left)
-                </span>
-              </>
-            ) : (
-              <>
-                <X className="h-4.5 w-4.5 text-[#717171]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">
-                  Temporarily Out of Stock
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Add to Cart Actions */}
-        {product.parentProduct && (
-          <div className="mt-8 space-y-4">
-            {/* Quantity selector */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#717171]">Quantity</span>
-              <div className="flex items-center space-x-1 rounded-none border border-[#EEEEEE] p-0.5 bg-[#F5F5F5]">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="flex h-8 w-8 items-center justify-center text-black hover:bg-white transition-colors"
-                  id="modal-qty-minus"
-                >
-                  -
-                </button>
-                <span className="w-10 text-center text-xs font-bold text-black">{quantity}</span>
-                <button
-                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                  className="flex h-8 w-8 items-center justify-center text-black hover:bg-white transition-colors"
-                  id="modal-qty-plus"
-                >
-                  +
-                </button>
-              </div>
+          {/* Availability */}
+          {product.parentProduct && selectedSize && availableStock > 0 ? (
+            <div className="flex items-center gap-2 border border-[#D5E3CC] bg-[#E9F0E4] p-3 text-sm font-semibold text-[#2F5D1E]">
+              <CheckCircle className="h-5 w-5" />
+              <span>In Stock ({availableStock} left)</span>
             </div>
+          ) : (
+            <div className="flex items-center gap-2 border border-[#E4E1DA] bg-[#F3F3F3] p-3 text-sm font-semibold text-[#717171]">
+              {!product.parentProduct ? (
+                <>
+                  <X className="h-5 w-5" />
+                  <span>Unavailable</span>
+                </>
+              ) : !selectedSize ? (
+                <span>Select a size to see availability</span>
+              ) : (
+                <>
+                  <X className="h-5 w-5" />
+                  <span>Temporarily Out of Stock</span>
+                </>
+              )}
+            </div>
+          )}
 
-            {/* Submit Add to Cart */}
-            <button
-              onClick={handleAddToCart}
-              disabled={!selectedSize || availableStock <= 0}
-              className="flex w-full items-center justify-center space-x-2 rounded-none bg-black py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
-              id="modal-add-to-cart-action"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              <span>
-                {!selectedSize
-                  ? 'Select a Size'
-                  : availableStock <= 0
-                    ? 'Out of Stock'
-                    : `Add to Cart${selectedVariant ? ` (${selectedVariant.name} - ${selectedSize})` : ` (${selectedSize})`} - ${formatCurrency(product.price * quantity)}`}
-              </span>
-            </button>
+          {product.parentProduct && (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div>
+                <span className="mb-2 block text-sm font-semibold text-black">Quantity</span>
+                <div className="flex h-14 items-center border border-[#E4E1DA] bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="flex h-full w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
+                    id="modal-qty-minus"
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center text-sm font-bold text-black">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                    className="flex h-full w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
+                    id="modal-qty-plus"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!selectedSize || availableStock <= 0}
+                className="flex h-14 w-full flex-1 items-center justify-center gap-2 bg-black px-4 text-sm font-bold text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
+                id="modal-add-to-cart-action"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                <span>
+                  {!selectedSize
+                    ? 'Select a Size'
+                    : availableStock <= 0
+                      ? 'Out of Stock'
+                      : `Add to Cart${selectedVariant ? ` (${selectedVariant.name} – ${selectedSize})` : ` (${selectedSize})`} – ${formatCurrency(product.price * quantity)}`}
+                </span>
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-3 border-y border-[#E4E1DA] py-4">
+            {TRUST_ITEMS.map(({ icon: Icon, title, subtitle }) => (
+              <div key={title} className="flex flex-col items-center gap-1 text-center">
+                <Icon className="h-6 w-6 text-black" strokeWidth={1.25} />
+                <p className="text-xs font-bold text-black">{title}</p>
+                <p className="text-[11px] text-[#717171]">{subtitle}</p>
+              </div>
+            ))}
           </div>
-        )}
+
+          <Accordion
+            sections={accordionSections}
+            openId={openSection}
+            onToggle={(id) => setOpenSection((cur) => (cur === id ? null : id))}
+          />
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-6 pb-10">
+        <RelatedProducts
+          product={product}
+          onSelect={onSelectRelated ?? ((p) => router.push(`/product?id=${p.id}`))}
+        />
       </div>
     </div>
   );
