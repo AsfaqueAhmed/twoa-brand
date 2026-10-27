@@ -113,9 +113,10 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
     <ProductModalContext.Provider value={{ open, close, syncList, registerPagination }}>
       {children}
       {productId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
-          <div className="relative w-full h-full sm:h-[90vh] sm:max-w-6xl bg-[#FAF9F6] overflow-hidden shadow-2xl">
+        // Full-screen product page layered under the sticky navbar (z-40) and
+        // mobile bottom nav, so it reads as a page, not a popup.
+        <div className="fixed inset-x-0 bottom-0 top-20 z-30 bg-[#FAF9F6]" id="product-page-overlay">
+          <div className="mx-auto h-full w-full max-w-7xl pb-16 sm:pb-0">
             {loading ? (
               <div className="flex justify-center py-32">
                 <Spinner />
