@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, XCircle, Upload, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ParentProduct } from '@/shared/domain/types';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../infrastructure/firestoreParentProductsAdminRepository';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 import AdminCard from '@/features/admin/presentation/AdminCard';
+import { uploadProductImage } from '@/features/admin/inventory/infrastructure/productImageUpload';
+import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 
 interface SizeRow {
   size: string;
@@ -20,10 +22,11 @@ interface SizeRow {
 interface FormState {
   id: string;
   name: string;
+  image: string;
   rows: SizeRow[];
 }
 
-const emptyForm: FormState = { id: '', name: '', rows: [] };
+const emptyForm: FormState = { id: '', name: '', image: '', rows: [] };
 
 export default function ParentProductManager() {
   const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
@@ -34,6 +37,8 @@ export default function ParentProductManager() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -49,7 +54,7 @@ export default function ParentProductManager() {
   }, [refresh]);
 
   const openCreate = () => {
-    setForm({ id: `parent-${Date.now()}`, name: '', rows: [{ size: '', stock: 0 }] });
+    setForm({ id: `parent-${Date.now()}`, name: '', image: '', rows: [{ size: '', stock: 0 }] });
     setIsEditingExistingId(null);
     setPreviousSizeOrder([]);
     setError('');
@@ -60,6 +65,7 @@ export default function ParentProductManager() {
     setForm({
       id: pp.id,
       name: pp.name,
+      image: pp.image || '',
       rows: pp.sizeOrder.map((size) => ({ size, stock: pp.stockBySize[size] ?? 0 })),
     });
     setIsEditingExistingId(pp.id);
@@ -88,6 +94,19 @@ export default function ParentProductManager() {
       ...prev,
       rows: prev.rows.map((r, i) => (i === rowIdx ? { ...r, stock: parseInt(value) || 0 } : r)),
     }));
+  };
+
+  const handleCropComplete = async (compressedDataUrl: string) => {
+    setIsUploadingImage(true);
+    setError('');
+    try {
+      const url = await uploadProductImage(`parent-products/${form.id}/${Date.now()}`, compressedDataUrl);
+      setForm((prev) => ({ ...prev, image: url }));
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload image.');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -119,7 +138,7 @@ export default function ParentProductManager() {
     try {
       const sizeOrder = labels;
       const stockBySize = Object.fromEntries(form.rows.map((r) => [r.size.trim(), r.stock]));
-      await saveParentProduct({ id: form.id, name: form.name.trim(), sizeOrder, stockBySize }, previousSizeOrder);
+      await saveParentProduct({ id: form.id, name: form.name.trim(), image: form.image.trim(), sizeOrder, stockBySize }, previousSizeOrder);
       await refresh();
       setIsEditing(false);
     } catch (err: any) {
@@ -200,6 +219,52 @@ export default function ParentProductManager() {
                     placeholder="e.g. Classic Linen Overshirt — Stock Pool"
                     className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
+                </div>
+
+                {/* Image */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
+                    Image (Paste URL or Upload Directly)
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={form.image}
+                      onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
+                      placeholder="Paste image URL (or upload directly)"
+                      className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCropperOpen(true)}
+                      disabled={isUploadingImage}
+                      className="bg-black hover:bg-[#333333] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 transition-colors flex items-center justify-center space-x-1.5 shrink-0 disabled:bg-[#717171] disabled:cursor-not-allowed"
+                    >
+                      {isUploadingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      <span>{isUploadingImage ? 'Uploading…' : 'Upload & Crop'}</span>
+                    </button>
+                  </div>
+                  {form.image && (
+                    <div className="mt-3 flex items-center space-x-3 bg-[#FAF9F6] p-2.5 border border-[#EEEEEE]">
+                      <img
+                        src={form.image}
+                        alt="Parent product preview"
+                        className="h-14 w-14 object-cover border border-[#EEEEEE]"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
+                        }}
+                      />
+                      <span className="flex-1 min-w-0 truncate text-[10px] font-mono font-semibold text-black">{form.image}</span>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
+                        className="text-red-600 hover:text-red-800 text-[10px] font-bold uppercase tracking-wider px-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Size + stock rows */}
@@ -293,6 +358,7 @@ export default function ParentProductManager() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
+              <th className="py-4 px-6">Image</th>
               <th className="py-4 px-6">Name</th>
               <th className="py-4 px-6">Sizes</th>
               <th className="py-4 px-6">Total Stock</th>
@@ -302,13 +368,13 @@ export default function ParentProductManager() {
           <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
+                <td colSpan={5} className="py-12 text-center text-[#717171] font-semibold">
                   Loading parent products...
                 </td>
               </tr>
             ) : parentProducts.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
+                <td colSpan={5} className="py-12 text-center text-[#717171] font-semibold">
                   No parent products yet. Add one to get started.
                 </td>
               </tr>
@@ -317,6 +383,13 @@ export default function ParentProductManager() {
                 const totalStock = Object.values(pp.stockBySize).reduce((a, b) => a + b, 0);
                 return (
                   <tr key={pp.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
+                    <td className="py-4 px-6">
+                      {pp.image ? (
+                        <img src={pp.image} alt={pp.name} className="h-10 w-10 object-cover border border-[#EEEEEE]" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="h-10 w-10 border border-dashed border-[#EEEEEE] bg-[#FAF9F6]" />
+                      )}
+                    </td>
                     <td className="py-4 px-6 font-bold text-black uppercase tracking-wide">{pp.name}</td>
                     <td className="py-4 px-6 text-[10px] text-[#717171] font-mono">
                       {pp.sizeOrder.map((s) => `${s}:${pp.stockBySize[s] ?? 0}`).join('  ')}
@@ -345,6 +418,13 @@ export default function ParentProductManager() {
           </tbody>
         </table>
       </AdminCard>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        onCropComplete={handleCropComplete}
+        title="Crop & Optimize Parent Product Image"
+      />
     </div>
   );
 }

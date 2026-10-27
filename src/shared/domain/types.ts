@@ -8,6 +8,7 @@ export interface ProductVariant {
 export interface ParentProduct {
   id: string;
   name: string;
+  image?: string; // optional representative image
   sizeOrder: string[]; // canonical size list & display order, e.g. ['S', 'M', 'L', 'XL']
   stockBySize: Record<string, number>; // keys are exactly the entries in sizeOrder
 }

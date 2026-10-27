@@ -9,7 +9,7 @@ export async function fetchParentProducts(): Promise<ParentProduct[]> {
 export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: string[]): Promise<void> {
   const { error: parentError } = await supabase
     .from('parent_products')
-    .upsert({ id: pp.id, name: pp.name, size_order: pp.sizeOrder });
+    .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder });
   if (parentError) throw parentError;
 
   const stockRows = pp.sizeOrder.map((size) => ({ parent_id: pp.id, size, stock: Number(pp.stockBySize[size]) || 0 }));
