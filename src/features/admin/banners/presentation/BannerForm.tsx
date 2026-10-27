@@ -204,7 +204,14 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
     }
   };
 
-  const shapeField = (label: string, key: string, shape: Shape, presets: Preset[]) => (
+  const shapeField = (
+    label: string,
+    key: string,
+    shape: Shape,
+    presets: Preset[],
+    isValid: (n: number) => boolean,
+    rangeText: string
+  ) => (
     <div>
       <label htmlFor={`${fid}-${key}`} className={labelClass}>{label}</label>
       <select
@@ -247,6 +254,22 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
               onChange={(e) => shape.updateCustom(shape.w, e.target.value)}
             />
           </div>
+          {(() => {
+            const ratio = Number(shape.w) / Number(shape.h);
+            const ok = isValid(ratio);
+            return (
+              <p
+                role={ok ? undefined : 'alert'}
+                className={`col-span-2 text-[11px] font-semibold ${ok ? 'text-[#717171]' : 'text-red-600'}`}
+              >
+                {ok
+                  ? `Ratio ${ratio.toFixed(2)} : 1`
+                  : `${shape.w || '?'} : ${shape.h || '?'} is not allowed (ratio ${
+                      Number.isFinite(ratio) ? ratio.toFixed(2) : '?'
+                    } : 1). ${rangeText}`}
+              </p>
+            );
+          })()}
         </div>
       )}
       <p className="mt-1.5 text-[11px] text-[#717171]">
@@ -289,8 +312,8 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
   return (
     <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-2 border border-[#EEEEEE] p-4 sm:p-6 mb-8" id="banner-form">
       <div className="space-y-4">
-        {shapeField('Desktop shape', 'shape', desktopShape, DESKTOP_ASPECT_PRESETS)}
-        {shapeField('Mobile shape', 'mshape', mobileShape, MOBILE_ASPECT_PRESETS)}
+        {shapeField('Desktop shape', 'shape', desktopShape, DESKTOP_ASPECT_PRESETS, isValidDesktopAspect, 'Width ÷ height must be between 1 and 6 (for example 16:6 or 18:4).')}
+        {shapeField('Mobile shape', 'mshape', mobileShape, MOBILE_ASPECT_PRESETS, isValidMobileAspect, 'Width ÷ height must be between 0.5 and 2 (for example 4:5 or 1:1).')}
         {imageField('Desktop image', 'desktop', desktopImageUrl, aspectLabel)}
         {imageField('Mobile image (optional)', 'mobile', mobileImageUrl, mobileAspectLabel)}
         <div>
