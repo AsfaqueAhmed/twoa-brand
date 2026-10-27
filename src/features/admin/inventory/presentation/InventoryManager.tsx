@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy, Split } from 'lucide-react';
+import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy, Split, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import type { Product, ProductVariant, ParentProduct } from '@/shared/domain/types';
+import type { Product, ProductVariant, ParentProduct, ProductHighlight } from '@/shared/domain/types';
+import { MAX_GALLERY_IMAGES } from '@/features/product/domain/gallery';
+import { HIGHLIGHT_ICON_KEYS, MAX_HIGHLIGHTS } from '@/features/product/domain/highlights';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
@@ -45,6 +47,8 @@ export default function InventoryManager() {
 
   // Temp array for design/color variants
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+  const [productGallery, setProductGallery] = useState<string[]>([]);
+  const [productHighlights, setProductHighlights] = useState<ProductHighlight[]>([]);
 
   // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
   const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
@@ -107,7 +111,7 @@ export default function InventoryManager() {
 
   // Image Cropper States
   const [isCropperOpen, setIsCropperOpen] = useState(false);
-  const [cropperTarget, setCropperTarget] = useState<'primary' | 'variant' | null>(null);
+  const [cropperTarget, setCropperTarget] = useState<'primary' | 'variant' | 'gallery' | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Product form handlers
@@ -125,6 +129,8 @@ export default function InventoryManager() {
       parentProductId: undefined,
     });
     setProductVariants([]);
+    setProductGallery([]);
+    setProductHighlights([]);
     setEditorError('');
     setIsAddingNewCategory(false);
     setNewCategoryInput('');
@@ -136,6 +142,8 @@ export default function InventoryManager() {
   const handleOpenEditProduct = (p: Product) => {
     setEditingProduct({ ...p });
     setProductVariants(p.variants || []);
+    setProductGallery(p.gallery ?? []);
+    setProductHighlights(p.highlights ?? []);
     setEditorError('');
     setIsAddingNewCategory(false);
     setNewCategoryInput('');
@@ -150,6 +158,8 @@ export default function InventoryManager() {
   const handleDuplicateProduct = (p: Product) => {
     setEditingProduct({ ...p, id: `prod-${Date.now()}`, name: `${p.name} (Copy)` });
     setProductVariants(p.variants || []);
+    setProductGallery(p.gallery ?? []);
+    setProductHighlights(p.highlights ?? []);
     setEditorError('');
     setIsAddingNewCategory(false);
     setNewCategoryInput('');
@@ -178,7 +188,7 @@ export default function InventoryManager() {
     await loadCategories();
   };
 
-  const handleTriggerCrop = (target: 'primary' | 'variant') => {
+  const handleTriggerCrop = (target: 'primary' | 'variant' | 'gallery') => {
     setCropperTarget(target);
     setIsCropperOpen(true);
   };
@@ -194,6 +204,10 @@ export default function InventoryManager() {
       } else if (cropperTarget === 'variant') {
         const url = await uploadProductImage(`products/${productId}/variants/${Date.now()}`, compressedDataUrl);
         setNewVariantImage(url);
+      } else if (cropperTarget === 'gallery') {
+        if (productGallery.length >= MAX_GALLERY_IMAGES) return;
+        const url = await uploadProductImage(`products/${productId}/gallery/${Date.now()}`, compressedDataUrl);
+        setProductGallery((prev) => (prev.length >= MAX_GALLERY_IMAGES ? prev : [...prev, url]));
       }
     } catch (err: any) {
       setEditorError(err.message || 'Failed to upload image.');
@@ -263,6 +277,8 @@ export default function InventoryManager() {
         parentProductId,
         variants: productVariants,
         sizeChartId: editingProduct.sizeChartId || null,
+        gallery: productGallery,
+        highlights: productHighlights.filter((h) => h.title.trim()),
       });
       await refreshProducts();
       setIsEditingProduct(false);
@@ -750,6 +766,148 @@ export default function InventoryManager() {
                   )}
                 </div>
 
+                {/* Gallery images */}
+                <div className="border-t border-[#EEEEEE] pt-5">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
+                    Gallery images
+                  </span>
+                  <div className="flex flex-wrap gap-3">
+                    {productGallery.map((url, i) => (
+                      <div key={`${url}-${i}`} className="w-20">
+                        <div className="relative h-20 w-20 border border-[#EEEEEE] bg-[#FAF9F6]">
+                          <img src={url} alt={`Gallery image ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <button
+                            type="button"
+                            aria-label={`Remove gallery image ${i + 1}`}
+                            onClick={() => setProductGallery((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="absolute top-0 right-0 bg-black text-white p-0.5 hover:bg-[#333333]"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="mt-1 flex justify-between">
+                          <button
+                            type="button"
+                            aria-label={`Move gallery image ${i + 1} left`}
+                            disabled={i === 0}
+                            onClick={() =>
+                              setProductGallery((prev) => {
+                                const next = [...prev];
+                                [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                return next;
+                              })
+                            }
+                            className="border border-[#EEEEEE] p-0.5 text-black disabled:text-[#CCCCCC] disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move gallery image ${i + 1} right`}
+                            disabled={i === productGallery.length - 1}
+                            onClick={() =>
+                              setProductGallery((prev) => {
+                                const next = [...prev];
+                                [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                                return next;
+                              })
+                            }
+                            className="border border-[#EEEEEE] p-0.5 text-black disabled:text-[#CCCCCC] disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {productGallery.length < MAX_GALLERY_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerCrop('gallery')}
+                        disabled={isUploadingImage}
+                        className="h-20 w-20 border border-dashed border-[#717171] text-[10px] font-bold uppercase tracking-wider text-[#717171] hover:border-black hover:text-black flex flex-col items-center justify-center space-y-1 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isUploadingImage && cropperTarget === 'gallery' ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                        <span>{isUploadingImage && cropperTarget === 'gallery' ? 'Uploading…' : 'Add image'}</span>
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-[10px] text-[#717171]">
+                    Extra photos shown as thumbnails on the product page (up to 8)
+                  </p>
+                </div>
+
+                {/* Feature row */}
+                <div className="border-t border-[#EEEEEE] pt-5">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
+                    Feature row
+                  </span>
+                  <div className="space-y-2">
+                    {productHighlights.map((h, i) => (
+                      <div key={i} className="flex flex-col sm:flex-row gap-2">
+                        <select
+                          aria-label={`Feature ${i + 1} icon`}
+                          value={h.icon}
+                          onChange={(e) =>
+                            setProductHighlights((prev) =>
+                              prev.map((x, idx) => (idx === i ? { ...x, icon: e.target.value as ProductHighlight['icon'] } : x)),
+                            )
+                          }
+                          className="rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none sm:w-40"
+                        >
+                          {HIGHLIGHT_ICON_KEYS.map((key) => (
+                            <option key={key} value={key}>
+                              {key.charAt(0).toUpperCase() + key.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          aria-label={`Feature ${i + 1} title`}
+                          value={h.title}
+                          onChange={(e) =>
+                            setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x)))
+                          }
+                          placeholder="180 GSM"
+                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          aria-label={`Feature ${i + 1} subtitle`}
+                          value={h.subtitle ?? ''}
+                          onChange={(e) =>
+                            setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, subtitle: e.target.value } : x)))
+                          }
+                          placeholder="Lycra Cotton"
+                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remove feature ${i + 1}`}
+                          onClick={() => setProductHighlights((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-red-600 hover:text-red-800 text-[10px] font-bold uppercase tracking-wider px-2"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProductHighlights((prev) => [...prev, { icon: HIGHLIGHT_ICON_KEYS[0], title: '', subtitle: '' }])}
+                    disabled={productHighlights.length >= MAX_HIGHLIGHTS}
+                    className="mt-3 bg-black hover:bg-[#333333] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 transition-colors disabled:bg-[#717171] disabled:cursor-not-allowed"
+                  >
+                    Add feature
+                  </button>
+                  <p className="mt-2 text-[10px] text-[#717171]">
+                    Shown in a row under Add to Cart; replaces the default trust row. Leave empty to keep the default.
+                  </p>
+                </div>
+
                 {/* Description */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
@@ -1188,7 +1346,13 @@ export default function InventoryManager() {
           setCropperTarget(null);
         }}
         onCropComplete={handleCropComplete}
-        title={cropperTarget === 'primary' ? 'Crop & Optimize Primary Image' : 'Crop & Optimize Variant Image'}
+        title={
+          cropperTarget === 'primary'
+            ? 'Crop & Optimize Primary Image'
+            : cropperTarget === 'gallery'
+              ? 'Crop & Optimize Gallery Image'
+              : 'Crop & Optimize Variant Image'
+        }
       />
     </div>
   );
