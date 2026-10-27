@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { useCart } from '@/features/cart/presentation/CartProvider';
-import { useProductModal } from '@/features/product/presentation/ProductModalProvider';
+import { useProductNavigation } from '@/features/product/presentation/ProductNavigationProvider';
 import ProductCard from './ProductCard';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import EmptyState from '@/shared/ui/EmptyState';
@@ -42,7 +42,7 @@ export default function CatalogGrid({
   loadMore,
 }: CatalogGridProps) {
   const { addToCart } = useCart();
-  const { open, syncList, registerPagination } = useProductModal();
+  const { open, syncList, registerPagination } = useProductNavigation();
 
   // Keep a ref to the latest loadMore so the observer always triggers current
   // behavior without needing to be recreated when loadMore's identity changes.

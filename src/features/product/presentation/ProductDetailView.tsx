@@ -190,9 +190,9 @@ export default function ProductDetailView({
     );
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col bg-[#FAF9F6]" id="product-detail-view">
+    <div className="relative w-full bg-[#FAF9F6]" id="product-detail-view">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between bg-[#FAF9F6] px-4 sm:px-6 py-4">
+      <div className="flex items-center justify-between bg-[#FAF9F6] px-4 sm:px-6 py-4">
         <button
           type="button"
           onClick={onClose}
@@ -231,7 +231,7 @@ export default function ProductDetailView({
         )}
       </div>
 
-      <div id="product-detail-scroll" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div id="product-detail-scroll">
         <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-8 px-4 sm:px-6 pb-8">
           {/* Left: gallery */}
           <div>

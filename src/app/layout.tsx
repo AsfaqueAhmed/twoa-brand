@@ -3,7 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider';
 import { CartProvider } from '@/features/cart/presentation/CartProvider';
 import CartDrawer from '@/features/cart/presentation/CartDrawer';
-import { ProductModalProvider } from '@/features/product/presentation/ProductModalProvider';
+import { ProductNavigationProvider } from '@/features/product/presentation/ProductNavigationProvider';
 import MetaPixelScript from '@/shared/presentation/MetaPixelScript';
 
 export const metadata: Metadata = {
@@ -19,10 +19,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <MetaPixelScript />
         <AuthProvider>
           <CartProvider>
-            <ProductModalProvider>
+            <ProductNavigationProvider>
               {children}
               <CartDrawer />
-            </ProductModalProvider>
+            </ProductNavigationProvider>
           </CartProvider>
         </AuthProvider>
       </body>
