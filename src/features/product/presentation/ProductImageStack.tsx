@@ -33,7 +33,7 @@ export default function ProductImageStack({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden" id="product-image-stack">
+    <div className="relative w-full overflow-hidden" id="product-image-stack">
       {previousImage && (
         <img
           src={previousImage}
@@ -58,7 +58,7 @@ export default function ProductImageStack({
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={`${navKey}::${image}`}
-          className={`absolute bg-[#F5F5F5] ${onNavigate ? 'inset-2 border border-black/10 shadow-lg' : 'inset-0'}`}
+          className={`relative bg-[#F5F5F5] ${onNavigate ? 'm-2 border border-black/10 shadow-lg' : ''}`}
           drag={onNavigate ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.5}
@@ -68,7 +68,7 @@ export default function ProductImageStack({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src={image} alt={alt} className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+          <img src={image} alt={alt} className="block h-auto w-full" referrerPolicy="no-referrer" />
         </motion.div>
       </AnimatePresence>
       <span className="absolute top-4 left-4 z-10 bg-black px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white">

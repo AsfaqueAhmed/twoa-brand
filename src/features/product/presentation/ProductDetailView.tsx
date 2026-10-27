@@ -236,9 +236,13 @@ export default function ProductDetailView({
           {/* Left: gallery */}
           <div>
             <div className="flex gap-3">
-              {thumbnails('hidden md:flex flex-col gap-3 w-20 md:max-h-[clamp(320px,62vh,640px)] overflow-y-auto', false)}
+              {variants.length > 1 && (
+                <div className="relative hidden w-20 shrink-0 md:block">
+                  {thumbnails('absolute inset-0 flex flex-col gap-3 overflow-y-auto', false)}
+                </div>
+              )}
               <div
-                className="relative flex-1 aspect-square md:aspect-auto md:h-[clamp(320px,62vh,640px)] bg-[#F5F5F5] overflow-hidden"
+                className="relative min-w-0 flex-1 self-start bg-[#F5F5F5] overflow-hidden"
                 id="modal-product-image-container"
               >
                 <ProductImageStack
