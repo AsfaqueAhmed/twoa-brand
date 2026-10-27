@@ -5,7 +5,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import AdminCard from '@/features/admin/presentation/AdminCard';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
-import { addCatalogLine, lineSubtotal, type DraftLine } from '../domain/adminOrder';
+import { addCatalogLine, lineSubtotal, stockCapFor, type DraftLine } from '../domain/adminOrder';
 import CatalogItemPicker from './CatalogItemPicker';
 import CustomItemForm from './CustomItemForm';
 
@@ -23,7 +23,9 @@ export default function ItemsCard({ products, lines, onChange }: Props) {
     onChange(
       lines.map((l, i) => {
         if (i !== index) return l;
-        return l.kind === 'catalog' ? { kind: 'catalog', item: { ...l.item, quantity: qty } } : { ...l, quantity: qty };
+        if (l.kind !== 'catalog') return { ...l, quantity: qty };
+        const cap = stockCapFor(l.item);
+        return { kind: 'catalog', item: { ...l.item, quantity: cap === undefined ? qty : Math.min(qty, cap) } };
       }),
     );
   };
@@ -57,6 +59,8 @@ export default function ItemsCard({ products, lines, onChange }: Props) {
             {lines.map((l, i) => {
               const name = l.kind === 'catalog' ? l.item.product.name : l.name;
               const qty = l.kind === 'catalog' ? l.item.quantity : l.quantity;
+              const cap = l.kind === 'catalog' ? stockCapFor(l.item) : undefined;
+              const atCap = cap !== undefined && qty >= cap;
               const detail =
                 l.kind === 'catalog'
                   ? [l.item.selectedSize, l.item.selectedVariant?.name].filter(Boolean).join(' / ')
@@ -72,7 +76,7 @@ export default function ItemsCard({ products, lines, onChange }: Props) {
                       <Minus className="h-3 w-3" />
                     </button>
                     <span className="w-8 text-center">{qty}</span>
-                    <button type="button" aria-label="Increase quantity" onClick={() => setQty(i, qty + 1)} className="rounded border border-[#EEEEEE] p-1 hover:border-black">
+                    <button type="button" aria-label="Increase quantity" onClick={() => setQty(i, qty + 1)} disabled={atCap} title={atCap ? 'Maximum available stock' : undefined} className="rounded border border-[#EEEEEE] p-1 hover:border-black disabled:cursor-not-allowed disabled:opacity-40">
                       <Plus className="h-3 w-3" />
                     </button>
                   </div>

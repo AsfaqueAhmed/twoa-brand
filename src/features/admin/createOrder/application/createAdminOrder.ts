@@ -4,6 +4,13 @@ import { generateOrderId } from '@/features/checkout/domain/pricing';
 import { updateOrderStatusAsAdmin } from '@/features/admin/orders/application/updateOrderStatusAsAdmin';
 import { buildAdminOrderItems, type DraftLine } from '../domain/adminOrder';
 
+export class OrderStatusUpdateError extends Error {
+  constructor(public readonly orderId: string) {
+    super(`Order #${orderId.slice(-8)} was created but setting its status failed — change it from All Orders.`);
+    this.name = 'OrderStatusUpdateError';
+  }
+}
+
 export async function createAdminOrder(params: {
   name: string;
   phone: string;
@@ -32,7 +39,7 @@ export async function createAdminOrder(params: {
     try {
       await updateOrderStatusAsAdmin(orderId, params.status);
     } catch {
-      throw new Error(`Order #${orderId.slice(-8)} was created but setting its status failed — change it from All Orders.`);
+      throw new OrderStatusUpdateError(orderId);
     }
   }
   return orderId;

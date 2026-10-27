@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { CartItem } from '@/shared/domain/types';
 import {
   lineSubtotal, draftSubtotal, newCustomItemId, adminOrderTotal, formatAdminAddress,
-  buildAdminOrderItems, validateDraft, addCatalogLine, type DraftLine,
+  buildAdminOrderItems, validateDraft, addCatalogLine, stockCapFor, type DraftLine,
 } from './adminOrder';
 
 const product = { id: 'p1', name: 'Tee', description: '', price: 500, image: 'tee.png', category: 'c', rating: 0, parentProductId: 'pp1' };
@@ -64,6 +64,12 @@ describe('validateDraft', () => {
     expect(validateDraft({ ...ok, address: '' })).toBe('Delivery address is required.');
     expect(validateDraft({ ...ok, lines: [] })).toBe('Add at least one item.');
   });
+  it('validates phone length like checkout (8-20 chars, spaces ignored)', () => {
+    const msg = 'Please provide a valid contact phone number (8-20 digits).';
+    expect(validateDraft({ ...ok, phone: '1234567' })).toBe(msg);
+    expect(validateDraft({ ...ok, phone: '1'.repeat(21) })).toBe(msg);
+    expect(validateDraft({ ...ok, phone: '0171 111 1111' })).toBeNull();
+  });
   it('rejects address over 500 chars and bad custom lines', () => {
     expect(validateDraft({ ...ok, address: 'a'.repeat(501) })).toBe('Address is too long. Maximum length is 500 characters.');
     expect(validateDraft({ ...ok, lines: [{ kind: 'custom', id: 'c', name: ' ', price: 10, quantity: 1 }] })).toBe('Every custom item needs a name.');
@@ -79,5 +85,26 @@ describe('addCatalogLine', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0].kind === 'catalog' && merged[0].item.quantity).toBe(3);
     expect(addCatalogLine([a], { ...a.item, selectedSize: 'L' })).toHaveLength(2);
+  });
+});
+
+describe('addCatalogLine stock cap', () => {
+  const withStock = (qty: number, stock?: number): Extract<DraftLine, { kind: 'catalog' }> => ({
+    kind: 'catalog',
+    item: {
+      product: { ...product, parentProduct: stock === undefined ? undefined : { stockBySize: { M: stock } } },
+      quantity: qty,
+      selectedSize: 'M',
+    } as unknown as CartItem,
+  });
+  it('clamps merged quantity to the stock of that size', () => {
+    const merged = addCatalogLine([withStock(3, 5)], withStock(4, 5).item);
+    expect(merged[0].kind === 'catalog' && merged[0].item.quantity).toBe(5);
+    expect(stockCapFor(withStock(1, 5).item)).toBe(5);
+  });
+  it('does not clamp when stock is unknown', () => {
+    const merged = addCatalogLine([withStock(3)], withStock(4).item);
+    expect(merged[0].kind === 'catalog' && merged[0].item.quantity).toBe(7);
+    expect(stockCapFor(withStock(1).item)).toBeUndefined();
   });
 });

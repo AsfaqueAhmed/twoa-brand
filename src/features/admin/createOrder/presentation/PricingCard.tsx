@@ -16,12 +16,13 @@ interface Props {
   onDiscountChange: (v: string) => void;
   promoCode: string | undefined;
   onApplyCoupon: (code: string) => Promise<void>;
+  onCouponCodeChange: () => void;
   couponMessage: string | null;
 }
 
 export default function PricingCard({
   districtId, deliveryFee, feeOverride, onFeeOverrideChange, discount, onDiscountChange,
-  promoCode, onApplyCoupon, couponMessage,
+  promoCode, onApplyCoupon, onCouponCodeChange, couponMessage,
 }: Props) {
   const [code, setCode] = useState('');
   const [applying, setApplying] = useState(false);
@@ -55,7 +56,7 @@ export default function PricingCard({
         <div>
           <span className="text-xs text-[#717171]">Coupon code</span>
           <div className="mt-0 flex gap-2">
-            <input className={INPUT} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter code" />
+            <input className={INPUT} value={code} onChange={(e) => { setCode(e.target.value); onCouponCodeChange(); }} placeholder="Enter code" />
             <button type="button" onClick={apply} disabled={applying || !code.trim()} className="rounded-md border border-black px-4 py-2 text-sm font-semibold disabled:opacity-40">
               Apply
             </button>

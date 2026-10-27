@@ -43,6 +43,8 @@ export function buildAdminOrderItems(lines: DraftLine[]): { items: Record<string
 export function validateDraft(d: { name: string; phone: string; address: string; lines: DraftLine[] }): string | null {
   if (!d.name.trim()) return 'Customer name is required.';
   if (!d.phone.trim()) return 'Phone number is required.';
+  const cleanPhone = d.phone.replace(/\s+/g, '');
+  if (cleanPhone.length < 8 || cleanPhone.length > 20) return 'Please provide a valid contact phone number (8-20 digits).';
   if (!d.address.trim()) return 'Delivery address is required.';
   if (d.address.length > 500) return 'Address is too long. Maximum length is 500 characters.';
   if (d.lines.length === 0) return 'Add at least one item.';
@@ -57,6 +59,12 @@ export function validateDraft(d: { name: string; phone: string; address: string;
   return null;
 }
 
+// Stock available for the item's size, or undefined when there is no stock info (no cap).
+export function stockCapFor(item: CartItem): number | undefined {
+  if (!item.selectedSize) return undefined;
+  return item.product.parentProduct?.stockBySize?.[item.selectedSize];
+}
+
 // Adds a catalog item to the draft, summing quantity into an existing line of the same product+size+variant.
 export function addCatalogLine(lines: DraftLine[], item: CartItem): DraftLine[] {
   const idx = lines.findIndex(
@@ -67,7 +75,10 @@ export function addCatalogLine(lines: DraftLine[], item: CartItem): DraftLine[] 
       l.item.selectedVariant?.id === item.selectedVariant?.id,
   );
   if (idx === -1) return [...lines, { kind: 'catalog', item }];
-  return lines.map((l, i) =>
-    i === idx && l.kind === 'catalog' ? { kind: 'catalog', item: { ...l.item, quantity: l.item.quantity + item.quantity } } : l,
-  );
+  return lines.map((l, i) => {
+    if (i !== idx || l.kind !== 'catalog') return l;
+    const cap = stockCapFor(item);
+    const merged = l.item.quantity + item.quantity;
+    return { kind: 'catalog', item: { ...l.item, quantity: cap === undefined ? merged : Math.min(merged, cap) } };
+  });
 }

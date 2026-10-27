@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { OrderStatus } from '@/shared/domain/types';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
@@ -14,7 +15,7 @@ import { useAdminData } from '@/features/admin/analytics/application/useAdminDat
 import { STATUS_LABELS, STATUS_ORDER } from '@/features/admin/analytics/domain/analytics';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { adminOrderTotal, draftSubtotal, formatAdminAddress, validateDraft, type DraftLine } from '../domain/adminOrder';
-import { createAdminOrder } from '../application/createAdminOrder';
+import { createAdminOrder, OrderStatusUpdateError } from '../application/createAdminOrder';
 import ItemsCard from './ItemsCard';
 import PricingCard from './PricingCard';
 
@@ -32,6 +33,9 @@ export default function CreateOrderPage() {
   const [discount, setDiscount] = useState('');
   const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [couponInputs, setCouponInputs] = useState<{ subtotal: number; deliveryFee: number; districtId: string } | null>(null);
+  const [orderCreated, setOrderCreated] = useState(false);
+  const submitGuard = useRef(false);
   const [status, setStatus] = useState<OrderStatus>('pending');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -48,15 +52,30 @@ export default function CreateOrderPage() {
   const total = adminOrderTotal({ subtotal, deliveryFee, discount: discountNum });
   const effectiveDiscount = Math.min(Math.max(discountNum, 0), subtotal + deliveryFee);
 
+  useEffect(() => {
+    if (!appliedCode || !couponInputs) return;
+    if (couponInputs.subtotal !== subtotal || couponInputs.deliveryFee !== deliveryFee || couponInputs.districtId !== districtId) {
+      setAppliedCode(undefined);
+      setDiscount('');
+      setCouponInputs(null);
+      setCouponMessage('Order changed — re-apply the coupon.');
+    }
+  }, [appliedCode, couponInputs, subtotal, deliveryFee, districtId]);
+
   const handleApplyCoupon = async (code: string) => {
     setCouponMessage(null);
+    const inputs = { subtotal, deliveryFee, districtId };
     try {
       const result = await applyCoupon({ code, user: null, subtotal, deliveryFee, districtId: districtId || undefined });
       if (result.valid && result.coupon) {
         setDiscount(String(result.discountAmount ?? 0));
         setAppliedCode(result.coupon.code);
+        setCouponInputs(inputs);
+        setCouponMessage(null);
       } else {
         setAppliedCode(undefined);
+        setCouponInputs(null);
+        setDiscount('');
         setCouponMessage(result.reason ?? 'Invalid promo code.');
       }
     } catch (e) {
@@ -65,6 +84,7 @@ export default function CreateOrderPage() {
   };
 
   const handleSubmit = async () => {
+    if (submitting || orderCreated || submitGuard.current) return;
     setError('');
     if (overrideInvalid) {
       setError('Delivery fee must be a non-negative number.');
@@ -87,6 +107,7 @@ export default function CreateOrderPage() {
     const invalid = validateDraft({ name: delivery.name, phone: delivery.phone, address, lines });
     if (invalid) return setError(invalid);
 
+    submitGuard.current = true;
     setSubmitting(true);
     try {
       await createAdminOrder({
@@ -102,7 +123,13 @@ export default function CreateOrderPage() {
       router.push('/admin/orders');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create order. Please try again.');
-      setSubmitting(false);
+      if (e instanceof OrderStatusUpdateError) {
+        // The order already exists; never allow resubmitting this draft.
+        setOrderCreated(true);
+      } else {
+        setSubmitting(false);
+        submitGuard.current = false;
+      }
     }
   };
 
@@ -152,7 +179,8 @@ export default function CreateOrderPage() {
             feeOverride={feeOverride}
             onFeeOverrideChange={setFeeOverride}
             discount={discount}
-            onDiscountChange={(v) => { setDiscount(v); setAppliedCode(undefined); }}
+            onDiscountChange={(v) => { setDiscount(v); setAppliedCode(undefined); setCouponInputs(null); }}
+            onCouponCodeChange={() => setCouponMessage(null)}
             promoCode={appliedCode}
             onApplyCoupon={handleApplyCoupon}
             couponMessage={couponMessage}
@@ -165,10 +193,13 @@ export default function CreateOrderPage() {
               <div className="flex justify-between border-t border-[#EEEEEE] pt-2 text-base font-bold"><dt>Total</dt><dd>{formatCurrency(total)}</dd></div>
             </dl>
             {error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+            {orderCreated && (
+              <Link href="/admin/orders" className="mt-3 block text-center text-sm font-semibold underline">Open All Orders</Link>
+            )}
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || orderCreated}
               className="mt-4 w-full rounded-md bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Order'}
