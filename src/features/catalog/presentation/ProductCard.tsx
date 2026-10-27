@@ -129,7 +129,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
       {/* Details */}
       <div className="flex flex-1 flex-col pt-2.5 sm:pt-3 pb-1">
         <h3 className="text-[13px] sm:text-[14px] font-bold text-black line-clamp-1">{product.name}</h3>
-        <p className="mt-1 hidden sm:block text-xs text-[#717171] line-clamp-2 leading-relaxed">{product.description}</p>
+        <p className="mt-1 hidden sm:line-clamp-2 text-xs text-[#717171] leading-relaxed">{product.description}</p>
 
         {activeVariant && (
           <div className="mt-1 sm:mt-2.5 flex items-center gap-2 text-[11px] sm:text-xs text-[#717171]">
@@ -170,7 +170,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
           </div>
         )}
 
-        <div className="mt-2 sm:mt-3 flex flex-wrap items-baseline gap-x-2">
+        <div className="mt-2 sm:mt-3 flex flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:gap-2">
           <span className="text-[15px] sm:text-[16px] font-bold text-black leading-tight">{formatCurrency(product.price)}</span>
           {hasDiscount && product.originalPrice !== undefined && (
             <span className="text-[11px] text-[#919191] line-through font-semibold font-mono">

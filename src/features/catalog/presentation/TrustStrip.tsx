@@ -14,7 +14,7 @@ export default function TrustStrip() {
           <div key={title} className="flex flex-col items-center justify-start gap-1.5 text-center sm:flex-row sm:justify-center sm:gap-3 sm:text-left">
             <Icon className="h-6 w-6 sm:h-7 sm:w-7 text-black" strokeWidth={1.25} />
             <div>
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide sm:tracking-wider leading-tight text-black">{title}</p>
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide sm:tracking-wider leading-tight sm:leading-normal text-black">{title}</p>
               <p className="hidden sm:block text-xs text-[#717171]">{subtitle}</p>
             </div>
           </div>

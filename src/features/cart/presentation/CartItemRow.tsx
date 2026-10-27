@@ -30,7 +30,7 @@ export default function CartItemRow({ item }: { item: CartItem }) {
           referrerPolicy="no-referrer"
         />
         <div className="min-w-0 space-y-1">
-          <h3 className="text-sm font-bold text-black line-clamp-2 sm:truncate">{product.name}</h3>
+          <h3 className="text-sm font-bold text-black max-sm:line-clamp-2 sm:truncate">{product.name}</h3>
           {selectedVariant && <p className="text-xs text-[#717171]">Color: {selectedVariant.name}</p>}
           {selectedSize && <p className="text-xs text-[#717171]">Size: {selectedSize}</p>}
           <p className="flex items-center gap-2 pt-0.5 text-sm font-bold text-black sm:hidden">

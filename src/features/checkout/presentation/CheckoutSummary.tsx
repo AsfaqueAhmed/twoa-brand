@@ -140,11 +140,11 @@ export default function CheckoutSummary({
             <span>Creating Order...</span>
           ) : (
             <>
-              <Lock className="h-4 w-4 shrink-0" />
+              <Lock className="h-4 w-4 shrink-0 sm:shrink" />
               <span>
                 Place Order<span className="hidden sm:inline"> (Cash on Delivery)</span>
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0" />
+              <ArrowRight className="h-4 w-4 shrink-0 sm:shrink" />
             </>
           )}
         </button>

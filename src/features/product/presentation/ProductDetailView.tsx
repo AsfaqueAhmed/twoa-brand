@@ -269,7 +269,7 @@ export default function ProductDetailView({
 
           {/* Right: info */}
           <div className="space-y-4 sm:space-y-5 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-black leading-tight">{product.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-black leading-tight sm:leading-9">{product.name}</h1>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span className="text-2xl sm:text-3xl font-bold text-black">{formatCurrency(product.price)}</span>
@@ -427,8 +427,8 @@ export default function ProductDetailView({
                   className="flex h-12 sm:h-14 w-full min-w-0 flex-1 items-center justify-center gap-2 bg-black px-3 sm:px-4 text-[13px] sm:text-sm font-bold text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
                   id="modal-add-to-cart-action"
                 >
-                  <ShoppingBag className="h-5 w-5 shrink-0" />
-                  <span className="truncate">
+                  <ShoppingBag className="h-5 w-5 shrink-0 sm:shrink" />
+                  <span className="truncate sm:overflow-visible sm:whitespace-normal sm:text-clip">
                     {!selectedSize
                       ? 'Select a Size'
                       : availableStock <= 0

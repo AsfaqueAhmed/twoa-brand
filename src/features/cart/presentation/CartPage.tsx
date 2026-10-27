@@ -21,7 +21,7 @@ export default function CartPage() {
         </div>
         <Link
           href="/"
-          className="flex items-center gap-2 border border-[#EEEEEE] bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium text-black hover:bg-[#F5F5F5]"
+          className="flex items-center gap-2 border border-[#EEEEEE] bg-white sm:bg-transparent px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium text-black hover:bg-[#F5F5F5]"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Continue Shopping</span>
