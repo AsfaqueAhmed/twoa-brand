@@ -7,14 +7,15 @@ import OrderNotesPanel from './OrderNotesPanel';
 
 interface Props {
   order: Order;
-  onStatusChange: (status: OrderStatus) => void;
+  onStatusChange: (status: OrderStatus) => void | Promise<void>;
+  disabled?: boolean;
 }
 
 const btn = 'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-[11px] font-medium';
 
-export default function OrderQuickActions({ order, onStatusChange }: Props) {
+export default function OrderQuickActions({ order, onStatusChange, disabled = false }: Props) {
   const [notesOpen, setNotesOpen] = useState(false);
-  const cancelDisabled = order.status === 'cancelled' || order.status === 'delivered';
+  const cancelDisabled = order.status === 'cancelled' || order.status === 'delivered' || disabled;
 
   const cancel = () => {
     if (window.confirm('Cancel this order?')) onStatusChange('cancelled');

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { OrderImage } from '../domain/orderImages';
 
@@ -10,6 +11,14 @@ interface Props {
 }
 
 export default function OrderImagesModal({ images, onClose }: Props) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -18,22 +27,25 @@ export default function OrderImagesModal({ images, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Product images"
+      aria-labelledby="order-images-title"
     >
       <div
         className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-black">Product Images</h3>
+          <h3 id="order-images-title" className="text-sm font-bold text-black">Product Images</h3>
           <button
             type="button"
+            ref={closeRef}
             aria-label="Close"
             onClick={onClose}
             className="rounded-md p-1.5 text-[#717171] hover:bg-[#F5F5F5] hover:text-black"
@@ -60,6 +72,7 @@ export default function OrderImagesModal({ images, onClose }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

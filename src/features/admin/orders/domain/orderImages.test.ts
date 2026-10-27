@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Order, Product } from '@/shared/domain/types';
-import { buildOrderImages, itemThumbnails, pruneSelection } from './orderImages';
+import { buildOrderImages, itemThumbnails } from './orderImages';
 
 const order = {
   items: [
@@ -25,10 +25,5 @@ describe('orderImages', () => {
     expect(itemThumbnails('p1', products)).toHaveLength(3);
     expect(itemThumbnails('zz', products)).toEqual([]);
     expect(itemThumbnails('p1')).toEqual([]);
-  });
-  it('prunes selection', () => {
-    expect(pruneSelection(['a', 'b'], ['b', 'c'])).toEqual(['b']);
-    const s = ['a'];
-    expect(pruneSelection(s, ['a'])).toBe(s);
   });
 });

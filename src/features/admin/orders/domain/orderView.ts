@@ -28,6 +28,15 @@ export function deliveryZoneLabel(fee: number): string {
   return 'Custom fee';
 }
 
+export function deliveryZoneDetail(order: Order): string {
+  const fee = orderBreakdown(order).deliveryFee;
+  if (fee === 70) {
+    if (order.address.includes('(DSCC)')) return 'Inside Dhaka City Corporation (DSCC)';
+    if (order.address.includes('(DNCC)')) return 'Inside Dhaka City Corporation (DNCC)';
+  }
+  return deliveryZoneLabel(fee);
+}
+
 export function paymentStatus(status: OrderStatus): 'Unpaid' | 'Paid' | 'Void' {
   if (status === 'delivered') return 'Paid';
   if (status === 'cancelled') return 'Void';
@@ -44,4 +53,10 @@ export function formatPlacedOn(iso: string): string {
 
 export function toggleSelected(selected: string[], id: string): string[] {
   return selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
+}
+
+export function pruneSelection(selected: string[], validIds: string[]): string[] {
+  const valid = new Set(validIds);
+  const next = selected.filter((id) => valid.has(id));
+  return next.length === selected.length ? selected : next;
 }

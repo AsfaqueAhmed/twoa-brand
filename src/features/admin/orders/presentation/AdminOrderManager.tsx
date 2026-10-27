@@ -7,8 +7,7 @@ import type { Order, OrderStatus, Product } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
-import { toggleSelected, shortOrderId } from '../domain/orderView';
-import { pruneSelection } from '../domain/orderImages';
+import { toggleSelected, shortOrderId, pruneSelection } from '../domain/orderView';
 import BulkToolbar from './BulkToolbar';
 import AdminOrderCard from './AdminOrderCard';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
@@ -38,12 +37,12 @@ export default function AdminOrderManager() {
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  const refreshOrders = useCallback(async () => {
-    setOrdersLoading(true);
+  const refreshOrders = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setOrdersLoading(true);
     try {
       setAllOrders(await listAllOrders());
     } finally {
-      setOrdersLoading(false);
+      if (!silent) setOrdersLoading(false);
     }
   }, []);
 
@@ -54,14 +53,19 @@ export default function AdminOrderManager() {
   const handleAdminUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       await updateOrderStatusAsAdmin(orderId, newStatus);
-      await refreshOrders();
     } catch (err) {
       console.error('Error updating order status: ', err);
       alert('Failed to update status.');
+      return;
+    }
+    try {
+      await refreshOrders({ silent: true });
+    } catch (err) {
+      console.error('Error refreshing orders after status update: ', err);
     }
   };
 
-  const filteredOrders = allOrders.filter((o) => {
+  const filteredOrders = useMemo(() => allOrders.filter((o) => {
     const matchesSearch =
       o.userName.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
       o.userEmail.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
@@ -69,37 +73,44 @@ export default function AdminOrderManager() {
       o.id.toLowerCase().includes(orderSearchQuery.toLowerCase());
     const matchesStatus = orderStatusFilter === 'all' || o.status === orderStatusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }), [allOrders, orderSearchQuery, orderStatusFilter]);
 
-  const visibleIdsKey = filteredOrders.map((o) => o.id).join('|');
+  const visibleIds = useMemo(() => filteredOrders.map((o) => o.id), [filteredOrders]);
   useEffect(() => {
-    setSelected((prev) => pruneSelection(prev, visibleIdsKey ? visibleIdsKey.split('|') : []));
-  }, [visibleIdsKey]);
+    setSelected((prev) => pruneSelection(prev, visibleIds));
+  }, [visibleIds]);
 
-  const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selected.includes(o.id));
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selectedSet.has(o.id));
 
-  const handleToggleAll = () => setSelected(allSelected ? [] : filteredOrders.map((o) => o.id));
+  const handleToggleAll = () => setSelected(allSelected ? [] : visibleIds);
 
   const handleBulkApply = async (status: OrderStatus) => {
+    if (bulkBusy) return;
     if (status === 'cancelled' && !window.confirm(`Cancel ${selected.length} selected order(s)?`)) return;
     setBulkBusy(true);
-    const failed: string[] = [];
+    const failedIds: string[] = [];
     const ids = [...selected];
-    for (const id of ids) {
-      try {
-        await updateOrderStatusAsAdmin(id, status);
-      } catch (err) {
-        console.error('Error updating order status: ', err);
-        failed.push(id);
-      }
-    }
     try {
-      await refreshOrders();
+      for (const id of ids) {
+        try {
+          await updateOrderStatusAsAdmin(id, status);
+        } catch (err) {
+          console.error('Error updating order status: ', err);
+          failedIds.push(id);
+        }
+      }
+      try {
+        await refreshOrders({ silent: true });
+      } catch (err) {
+        console.error('Error refreshing orders after bulk update: ', err);
+      }
     } finally {
       setBulkBusy(false);
     }
-    if (failed.length > 0) {
-      alert(`Updated ${ids.length - failed.length} of ${ids.length} orders. Failed: ${failed.map(shortOrderId).join(', ')}`);
+    if (failedIds.length > 0) {
+      setSelected(failedIds);
+      alert(`Updated ${ids.length - failedIds.length} of ${ids.length} orders. Failed: ${failedIds.map(shortOrderId).join(', ')}`);
     } else {
       setSelected([]);
     }
@@ -183,7 +194,8 @@ export default function AdminOrderManager() {
               key={ord.id}
               order={ord}
               productsById={productsById}
-              selected={selected.includes(ord.id)}
+              selected={selectedSet.has(ord.id)}
+              disabled={bulkBusy}
               onToggleSelected={() => setSelected((prev) => toggleSelected(prev, ord.id))}
               onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
           ))}

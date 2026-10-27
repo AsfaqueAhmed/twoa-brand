@@ -25,9 +25,3 @@ export function buildOrderImages(order: Order, productsById?: Map<string, Produc
   }
   return out;
 }
-
-export function pruneSelection(selected: string[], validIds: string[]): string[] {
-  const valid = new Set(validIds);
-  const next = selected.filter((id) => valid.has(id));
-  return next.length === selected.length ? selected : next;
-}

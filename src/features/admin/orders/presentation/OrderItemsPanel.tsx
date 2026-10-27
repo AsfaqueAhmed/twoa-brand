@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ImageIcon, ShoppingBag } from 'lucide-react';
 import type { Order, Product } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
@@ -16,6 +16,7 @@ const tag = 'rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-2.5 py-1 text-[1
 
 export default function OrderItemsPanel({ order, productsById }: Props) {
   const [showImages, setShowImages] = useState(false);
+  const closeImages = useCallback(() => setShowImages(false), []);
 
   return (
     <section className="rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] p-4 text-xs">
@@ -76,7 +77,7 @@ export default function OrderItemsPanel({ order, productsById }: Props) {
           );
         })}
       </div>
-      {showImages && <OrderImagesModal images={buildOrderImages(order, productsById)} onClose={() => setShowImages(false)} />}
+      {showImages && <OrderImagesModal images={buildOrderImages(order, productsById)} onClose={closeImages} />}
     </section>
   );
 }

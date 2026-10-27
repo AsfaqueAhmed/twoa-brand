@@ -1,22 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CircleDot } from 'lucide-react';
 import type { OrderStatus } from '@/shared/domain/types';
 import { STATUS_LABELS, STATUS_ORDER } from '@/features/admin/analytics/domain/analytics';
-import { STATUS_DOT } from './OrderStatusMenu';
+import { STATUS_DOT } from '../domain/orderStatusStyle';
 
 interface Props {
   status: OrderStatus;
-  onStatusChange: (status: OrderStatus) => void;
+  onStatusChange: (status: OrderStatus) => void | Promise<void>;
+  disabled?: boolean;
 }
 
-export default function OrderStatusUpdater({ status, onStatusChange }: Props) {
+export default function OrderStatusUpdater({ status, onStatusChange, disabled = false }: Props) {
   const [choice, setChoice] = useState<OrderStatus>(status);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setChoice(status);
   }, [status]);
+
+  const apply = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await onStatusChange(choice);
+    } finally {
+      busyRef.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
 
   return (
     <section className="rounded-lg border border-[#EEEEEE] bg-white p-4">
@@ -29,7 +52,8 @@ export default function OrderStatusUpdater({ status, onStatusChange }: Props) {
           aria-label="New order status"
           value={choice}
           onChange={(e) => setChoice(e.target.value as OrderStatus)}
-          className="w-full rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] py-2.5 pl-8 pr-3 text-xs font-semibold text-black focus:border-black focus:outline-none"
+          disabled={busy || disabled}
+          className="w-full rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] py-2.5 pl-8 pr-3 text-xs font-semibold text-black focus:border-black focus:outline-none disabled:opacity-60"
         >
           {STATUS_ORDER.map((s) => (
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -38,11 +62,11 @@ export default function OrderStatusUpdater({ status, onStatusChange }: Props) {
       </div>
       <button
         type="button"
-        disabled={choice === status}
-        onClick={() => onStatusChange(choice)}
+        disabled={choice === status || busy || disabled}
+        onClick={apply}
         className="mt-3 w-full rounded-lg bg-black py-2.5 text-xs font-bold text-white hover:bg-[#222222] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Update Status
+        {busy ? 'Updating...' : 'Update Status'}
       </button>
     </section>
   );

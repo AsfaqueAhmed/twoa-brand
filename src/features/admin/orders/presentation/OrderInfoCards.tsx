@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { CreditCard, MapPin, Pencil, Phone, Truck } from 'lucide-react';
 import type { Order } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
-import { deliveryZoneLabel, orderBreakdown, paymentStatus } from '../domain/orderView';
+import { deliveryZoneDetail, orderBreakdown, paymentStatus } from '../domain/orderView';
 
 const PAY_STYLES = {
   Unpaid: 'bg-amber-50 text-amber-800',
@@ -46,7 +46,7 @@ export default function OrderInfoCards({ order }: { order: Order }) {
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-black" />
         <div className="min-w-0">
           <p className="text-xs font-bold text-black">Delivery Zone</p>
-          <p className="mt-1.5 text-xs text-black">{deliveryZoneLabel(deliveryFee)}</p>
+          <p className="mt-1.5 text-xs text-black">{deliveryZoneDetail(order)}</p>
           <span className="mt-1.5 inline-block rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-700">
             {formatCurrency(deliveryFee)}
           </span>

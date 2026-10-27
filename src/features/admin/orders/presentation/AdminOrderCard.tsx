@@ -15,13 +15,14 @@ import OrderItemsPanel from './OrderItemsPanel';
 
 interface Props {
   order: Order;
-  onStatusChange: (status: OrderStatus) => void;
+  onStatusChange: (status: OrderStatus) => void | Promise<void>;
+  disabled?: boolean;
   selected?: boolean;
   onToggleSelected?: () => void;
   productsById?: Map<string, Product>;
 }
 
-export default function AdminOrderCard({ order, onStatusChange, selected = false, onToggleSelected, productsById }: Props) {
+export default function AdminOrderCard({ order, onStatusChange, selected = false, onToggleSelected, productsById, disabled = false }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const count = orderItemCount(order);
@@ -47,7 +48,8 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
             aria-label={`Select order ${shortOrderId(order.id)}`}
             checked={selected}
             onChange={onToggleSelected}
-            className="h-4 w-4 shrink-0 rounded border-[#CCCCCC] accent-black"
+            disabled={disabled}
+            className="h-4 w-4 shrink-0 rounded border-[#CCCCCC] accent-black disabled:opacity-50"
           />
         )}
         <div>
@@ -61,7 +63,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
-            <OrderStatusMenu status={order.status} onChange={onStatusChange} />
+            <OrderStatusMenu status={order.status} onChange={onStatusChange} disabled={disabled} />
           </div>
           <p className="mt-1 text-[11px] text-[#717171]">Placed on {formatPlacedOn(order.createdAt)}</p>
         </div>
@@ -72,14 +74,14 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           </span>
           <div className="min-w-0 text-xs">
             <p className="flex items-center gap-2 truncate font-bold text-black">
-              {order.userName}
+              <span className="truncate">{order.userName}</span>
               {order.userId === 'guest' && (
                 <span className="rounded-full border border-[#EEEEEE] bg-[#F5F5F5] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#717171]">
                   Guest
                 </span>
               )}
             </p>
-            <p className="font-mono text-[#717171]">{order.phone}</p>
+            <p className="text-[#717171]">{order.phone}</p>
           </div>
         </div>
 
@@ -106,7 +108,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           <ShoppingCart className="h-5 w-5" />
           <span className="text-sm">{count} {count === 1 ? 'item' : 'items'}</span>
         </div>
-        <span className="font-mono text-lg font-bold text-black">{formatCurrency(order.totalAmount)}</span>
+        <span className="text-lg font-bold text-black">{formatCurrency(order.totalAmount)}</span>
         <Link
           id={`admin-order-edit-${order.id}`}
           href={`/admin/orders/edit?id=${order.id}`}
@@ -132,8 +134,8 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
             <OrderItemsPanel order={order} productsById={productsById} />
             <div className="space-y-3">
               <OrderSummaryPanel order={order} />
-              <OrderStatusUpdater status={order.status} onStatusChange={onStatusChange} />
-              <OrderQuickActions order={order} onStatusChange={onStatusChange} />
+              <OrderStatusUpdater status={order.status} onStatusChange={onStatusChange} disabled={disabled} />
+              <OrderQuickActions order={order} onStatusChange={onStatusChange} disabled={disabled} />
             </div>
           </div>
         </div>

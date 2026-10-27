@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Order } from '@/shared/domain/types';
-import { shortOrderId, orderItemCount, orderBreakdown, canEditItems, deliveryZoneLabel, paymentStatus, formatPlacedOn, toggleSelected } from './orderView';
+import { shortOrderId, orderItemCount, orderBreakdown, canEditItems, deliveryZoneLabel, paymentStatus, formatPlacedOn, toggleSelected, pruneSelection, deliveryZoneDetail } from './orderView';
 
 const order = (over: Partial<Order> = {}): Order => ({
   id: 'ord_fdd133de9b04b8e61a13', userId: 'guest', userName: 'A', userEmail: '', address: 'x', phone: '017',
@@ -74,5 +74,24 @@ describe('toggleSelected', () => {
     expect(toggleSelected([], 'a')).toEqual(['a']);
     expect(toggleSelected(['a', 'b'], 'a')).toEqual(['b']);
     expect(toggleSelected(['a'], 'b')).toEqual(['a', 'b']);
+  });
+});
+
+describe('pruneSelection', () => {
+  it('prunes selection', () => {
+    expect(pruneSelection(['a', 'b'], ['b', 'c'])).toEqual(['b']);
+    const s = ['a'];
+    expect(pruneSelection(s, ['a'])).toBe(s);
+  });
+});
+
+describe('deliveryZoneDetail', () => {
+  it('uses the city corporation tag for the 70 fee', () => {
+    expect(deliveryZoneDetail(order({ address: 'Mirpur, Dhaka South City Corporation (DSCC), Dhaka' }))).toBe('Inside Dhaka City Corporation (DSCC)');
+    expect(deliveryZoneDetail(order({ address: 'Uttara (DNCC), Dhaka' }))).toBe('Inside Dhaka City Corporation (DNCC)');
+  });
+  it('falls back to the short label', () => {
+    expect(deliveryZoneDetail(order())).toBe('Inside Dhaka City');
+    expect(deliveryZoneDetail(order({ address: '(DSCC)', totalAmount: 750 }))).toBe('Dhaka Suburban');
   });
 });
