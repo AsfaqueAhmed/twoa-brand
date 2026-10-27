@@ -7,6 +7,9 @@ import type { Order, OrderStatus, Product } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { toggleSelected, shortOrderId } from '../domain/orderView';
+import { pruneSelection } from '../domain/orderImages';
+import BulkToolbar from './BulkToolbar';
 import AdminOrderCard from './AdminOrderCard';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 
@@ -31,6 +34,9 @@ export default function AdminOrderManager() {
   }, []);
 
   const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const refreshOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -64,6 +70,40 @@ export default function AdminOrderManager() {
     const matchesStatus = orderStatusFilter === 'all' || o.status === orderStatusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const visibleIdsKey = filteredOrders.map((o) => o.id).join('|');
+  useEffect(() => {
+    setSelected((prev) => pruneSelection(prev, visibleIdsKey ? visibleIdsKey.split('|') : []));
+  }, [visibleIdsKey]);
+
+  const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selected.includes(o.id));
+
+  const handleToggleAll = () => setSelected(allSelected ? [] : filteredOrders.map((o) => o.id));
+
+  const handleBulkApply = async (status: OrderStatus) => {
+    if (status === 'cancelled' && !window.confirm(`Cancel ${selected.length} selected order(s)?`)) return;
+    setBulkBusy(true);
+    const failed: string[] = [];
+    const ids = [...selected];
+    for (const id of ids) {
+      try {
+        await updateOrderStatusAsAdmin(id, status);
+      } catch (err) {
+        console.error('Error updating order status: ', err);
+        failed.push(id);
+      }
+    }
+    try {
+      await refreshOrders();
+    } finally {
+      setBulkBusy(false);
+    }
+    if (failed.length > 0) {
+      alert(`Updated ${ids.length - failed.length} of ${ids.length} orders. Failed: ${failed.map(shortOrderId).join(', ')}`);
+    } else {
+      setSelected([]);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -129,8 +169,23 @@ export default function AdminOrderManager() {
         </div>
       ) : (
         <div className="space-y-3">
+          <BulkToolbar
+            total={filteredOrders.length}
+            selectedCount={selected.length}
+            allSelected={allSelected}
+            onToggleAll={handleToggleAll}
+            onApply={handleBulkApply}
+            onClear={() => setSelected([])}
+            busy={bulkBusy}
+          />
           {filteredOrders.map((ord) => (
-            <AdminOrderCard key={ord.id} order={ord} productsById={productsById} onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
+            <AdminOrderCard
+              key={ord.id}
+              order={ord}
+              productsById={productsById}
+              selected={selected.includes(ord.id)}
+              onToggleSelected={() => setSelected((prev) => toggleSelected(prev, ord.id))}
+              onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
           ))}
         </div>
       )}

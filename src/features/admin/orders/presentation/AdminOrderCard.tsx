@@ -39,7 +39,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
   };
 
   return (
-    <div id={`admin-order-row-${order.id}`} className="rounded-xl border border-[#EEEEEE] bg-white p-4 shadow-xs">
+    <div id={`admin-order-row-${order.id}`} className={`rounded-xl border border-[#EEEEEE] bg-white p-4 shadow-xs ${selected ? 'ring-1 ring-black' : ''}`}>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
         {onToggleSelected && (
           <input
