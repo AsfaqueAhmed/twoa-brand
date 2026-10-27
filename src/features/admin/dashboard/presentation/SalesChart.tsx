@@ -12,6 +12,7 @@ export default function SalesChart({ data }: { data: { date: string; total: numb
   const line = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(d.total)}`).join(' ');
   const area = `${line} L${x(data.length - 1)},${H - PAD.b} L${x(0)},${H - PAD.b} Z`;
   const step = Math.max(1, Math.ceil(data.length / 7));
+  const hitW = (W - PAD.l - PAD.r) / Math.max(1, data.length - 1);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Sales over time" onMouseLeave={() => setHover(null)}>
@@ -25,14 +26,15 @@ export default function SalesChart({ data }: { data: { date: string; total: numb
       <path d={line} fill="none" stroke="#16a34a" strokeWidth="2" />
       {data.map((d, i) => (
         <g key={d.date}>
-          <rect x={x(i) - 10} y={PAD.t} width="20" height={H - PAD.t - PAD.b} fill="transparent" onMouseEnter={() => setHover(i)} />
+          <rect x={x(i) - hitW / 2} y={PAD.t} width={hitW} height={H - PAD.t - PAD.b} fill="transparent"
+            onPointerEnter={() => setHover(i)} onPointerDown={() => setHover(i)} />
           {i % step === 0 && <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="10" fill="#717171">{d.date.slice(5)}</text>}
         </g>
       ))}
       {hover !== null && (
         <g>
           <circle cx={x(hover)} cy={y(data[hover].total)} r="4" fill="#16a34a" />
-          <text x={Math.min(Math.max(x(hover), 70), W - 70)} y={y(data[hover].total) - 10} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#000">
+          <text x={Math.min(Math.max(x(hover), 70), W - 70)} y={Math.max(y(data[hover].total) - 10, 14)} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#000">
             {data[hover].date.slice(5)}: {formatCurrency(data[hover].total)}
           </text>
         </g>

@@ -13,12 +13,12 @@ export default function RecentOrdersTable({ orders }: { orders: Order[] }) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead className="text-xs text-[#717171]">
-          <tr><th className="py-2 font-medium">#</th><th className="font-medium">Customer</th><th className="font-medium">Items</th><th className="font-medium">Amount</th><th className="font-medium">Status</th><th className="font-medium">Date</th></tr>
+          <tr><th scope="col" className="py-2 font-medium">#</th><th scope="col" className="font-medium">Customer</th><th scope="col" className="font-medium">Items</th><th scope="col" className="font-medium">Amount</th><th scope="col" className="font-medium">Status</th><th scope="col" className="font-medium">Date</th></tr>
         </thead>
         <tbody className="divide-y divide-[#EEEEEE]">
           {orders.map((o) => (
             <tr key={o.id}>
-              <td className="py-3 font-medium underline">#{o.id.slice(-8)}</td>
+              <td className="py-3 font-medium">#{o.id.slice(-8)}</td>
               <td>{o.userName}</td>
               <td>{o.items.reduce((n, i) => n + i.quantity, 0)}</td>
               <td>{formatCurrency(o.totalAmount)}</td>
