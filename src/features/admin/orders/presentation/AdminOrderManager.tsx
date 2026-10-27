@@ -6,6 +6,7 @@ import type { Order, OrderStatus } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 
 const getStatusStyle = (status: OrderStatus) => {
   switch (status) {
@@ -63,8 +64,10 @@ export default function AdminOrderManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      <AdminPageHeader title="All Orders" subtitle="Review orders and update their status." />
+
       {/* Header Filtering and Sorting controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#FAF9F6] border border-[#EEEEEE] p-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">
         {/* Search Input */}
         <div className="relative">
           <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#717171]" />
@@ -73,18 +76,18 @@ export default function AdminOrderManager() {
             placeholder="Search by customer name, phone, email or ID..."
             value={orderSearchQuery}
             onChange={(e) => setOrderSearchQuery(e.target.value)}
-            className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
+            className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
             id="admin-order-search"
           />
         </div>
 
         {/* Status Tabs selector */}
-        <div className="flex bg-[#F5F5F5] p-1 border border-[#EEEEEE] rounded-none justify-between col-span-1 md:col-span-2">
+        <div className="flex bg-[#F5F5F5] p-1 border border-[#EEEEEE] rounded-lg justify-between col-span-1 md:col-span-2">
           {(['all', 'pending', 'confirmed', 'out_for_delivery', 'delivered', 'cancelled'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setOrderStatusFilter(st)}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-none ${
+              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-lg ${
                 orderStatusFilter === st ? 'bg-white text-black shadow-xs' : 'text-[#717171] hover:text-black'
               }`}
             >
@@ -101,7 +104,7 @@ export default function AdminOrderManager() {
           <span className="text-xs font-bold uppercase tracking-wider text-[#717171]">Synchronizing orders list...</span>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="rounded-none border border-[#EEEEEE] p-12 text-center bg-white">
+        <div className="rounded-lg border border-[#EEEEEE] p-12 text-center bg-white">
           <ShoppingBag className="mx-auto h-8 w-8 text-[#717171] mb-3" />
           <h3 className="text-sm font-bold uppercase text-black">No Customer Orders Available</h3>
           <p className="mt-2 text-xs text-[#717171] leading-relaxed max-w-xs mx-auto">
@@ -113,7 +116,7 @@ export default function AdminOrderManager() {
           {filteredOrders.map((ord) => (
             <div
               key={ord.id}
-              className="bg-white border border-[#EEEEEE] rounded-none p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-start justify-between gap-6"
+              className="bg-white border border-[#EEEEEE] rounded-lg p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-start justify-between gap-6"
               id={`admin-order-row-${ord.id}`}
             >
               {/* Order Main Details & Customer Data */}

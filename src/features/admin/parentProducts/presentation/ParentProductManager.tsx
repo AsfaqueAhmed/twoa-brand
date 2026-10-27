@@ -9,6 +9,8 @@ import {
   saveParentProduct,
   deleteParentProduct,
 } from '../infrastructure/firestoreParentProductsAdminRepository';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
+import AdminCard from '@/features/admin/presentation/AdminCard';
 
 interface SizeRow {
   size: string;
@@ -139,22 +141,20 @@ export default function ParentProductManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between bg-[#FAF9F6] border border-[#EEEEEE] p-5">
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black">Parent Products</h2>
-          <p className="text-[10px] text-[#717171] mt-1">
-            Own the canonical size list and per-size stock. Link a catalog product to one from the Inventory tab.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-          id="admin-add-parentproduct-btn"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Parent Product</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Parent Products"
+        subtitle="Manage pooled sizes and stock."
+        actions={
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+            id="admin-add-parentproduct-btn"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Parent Product</span>
+          </button>
+        }
+      />
 
       <AnimatePresence>
         {isEditing && (
@@ -170,7 +170,7 @@ export default function ParentProductManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
+              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-black">
@@ -198,7 +198,7 @@ export default function ParentProductManager() {
                     value={form.name}
                     onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g. Classic Linen Overshirt — Stock Pool"
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
                 </div>
 
@@ -238,7 +238,7 @@ export default function ParentProductManager() {
                                   value={row.size}
                                   onChange={(e) => handleRowSizeChange(rowIdx, e.target.value)}
                                   placeholder="S"
-                                  className="w-24 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
+                                  className="w-24 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
                                 />
                               </td>
                               <td className="py-1.5 px-2">
@@ -247,7 +247,7 @@ export default function ParentProductManager() {
                                   value={row.stock}
                                   onChange={(e) => handleRowStockChange(rowIdx, e.target.value)}
                                   placeholder="0"
-                                  className="w-24 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
+                                  className="w-24 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
                                 />
                               </td>
                               <td className="py-1.5 px-2 text-right">
@@ -289,7 +289,7 @@ export default function ParentProductManager() {
         )}
       </AnimatePresence>
 
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
+      <AdminCard className="overflow-x-auto p-0!">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
@@ -344,7 +344,7 @@ export default function ParentProductManager() {
             )}
           </tbody>
         </table>
-      </div>
+      </AdminCard>
     </div>
   );
 }

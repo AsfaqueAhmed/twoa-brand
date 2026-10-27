@@ -218,7 +218,7 @@ export default function ImageCropperModal({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`bg-white rounded-none border border-black ${aspect > 1 ? 'max-w-3xl' : 'max-w-lg'} w-full flex flex-col overflow-hidden max-h-[90vh]`}
+            className={`bg-white rounded-lg border border-black ${aspect > 1 ? 'max-w-3xl' : 'max-w-lg'} w-full flex flex-col overflow-hidden max-h-[90vh]`}
           >
             {/* Header */}
             <div className="px-6 py-4 border-b border-[#EEEEEE] flex items-center justify-between">

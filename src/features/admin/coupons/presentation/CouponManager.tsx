@@ -13,6 +13,8 @@ import {
   deleteCoupon,
   type CouponFormPayload,
 } from '../infrastructure/firestoreCouponAdminRepository';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
+import AdminCard from '@/features/admin/presentation/AdminCard';
 
 const DISCOUNT_TYPES: { value: DiscountType; label: string }[] = [
   { value: 'percentage', label: 'Percentage off' },
@@ -127,17 +129,20 @@ export default function CouponManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between bg-[#FAF9F6] border border-[#EEEEEE] p-5">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black">Coupons</h2>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-          id="admin-add-coupon-btn"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add New Coupon</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Coupons"
+        subtitle="Create and manage discount codes."
+        actions={
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+            id="admin-add-coupon-btn"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add New Coupon</span>
+          </button>
+        }
+      />
 
       <AnimatePresence>
         {isEditing && (
@@ -153,7 +158,7 @@ export default function CouponManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
+              className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-black">
@@ -180,7 +185,7 @@ export default function CouponManager() {
                     value={form.code}
                     onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
                     placeholder="e.g. SUMMER20"
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191] font-mono uppercase"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191] font-mono uppercase"
                   />
                 </div>
 
@@ -190,7 +195,7 @@ export default function CouponManager() {
                     <select
                       value={form.discountType}
                       onChange={(e) => setForm((prev) => ({ ...prev, discountType: e.target.value as DiscountType }))}
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     >
                       {DISCOUNT_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -209,7 +214,7 @@ export default function CouponManager() {
                         step="0.01"
                         value={form.value}
                         onChange={(e) => setForm((prev) => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                       />
                     </div>
                   )}
@@ -227,7 +232,7 @@ export default function CouponManager() {
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, minOrderSubtotal: e.target.value ? parseFloat(e.target.value) : undefined }))
                       }
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                   <div>
@@ -240,7 +245,7 @@ export default function CouponManager() {
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, usageLimit: e.target.value ? parseInt(e.target.value, 10) : undefined }))
                       }
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -253,7 +258,7 @@ export default function CouponManager() {
                     <select
                       value={form.districtRestriction ?? ''}
                       onChange={(e) => setForm((prev) => ({ ...prev, districtRestriction: e.target.value || undefined }))}
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     >
                       <option value="">No restriction</option>
                       {divisions.map((div) => (
@@ -279,7 +284,7 @@ export default function CouponManager() {
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }))
                       }
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -330,7 +335,7 @@ export default function CouponManager() {
         )}
       </AnimatePresence>
 
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
+      <AdminCard className="overflow-x-auto p-0!">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
@@ -420,7 +425,7 @@ export default function CouponManager() {
             )}
           </tbody>
         </table>
-      </div>
+      </AdminCard>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   updateBanner,
 } from '../infrastructure/bannerAdminRepository';
 import BannerForm from './BannerForm';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 
 interface BannerRowProps {
   banner: HomeBanner;
@@ -131,18 +132,21 @@ export default function BannerManager() {
 
   return (
     <div id="banner-manager">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-sm font-bold uppercase tracking-wider text-black">Home Banners</h1>
-        {editing === null && (
-          <button
-            type="button"
-            onClick={() => setEditing('new')}
-            className="flex h-10 items-center gap-2 bg-black px-5 text-[11px] font-bold uppercase tracking-[0.15em] text-white hover:bg-[#333333]"
-          >
-            <Plus className="h-4 w-4" /> Add banner
-          </button>
-        )}
-      </div>
+      <AdminPageHeader
+        title="Banners"
+        subtitle="Manage the home page banners."
+        actions={
+          editing === null ? (
+            <button
+              type="button"
+              onClick={() => setEditing('new')}
+              className="flex h-10 items-center gap-2 bg-black px-5 text-[11px] font-bold uppercase tracking-[0.15em] text-white hover:bg-[#333333]"
+            >
+              <Plus className="h-4 w-4" /> Add banner
+            </button>
+          ) : undefined
+        }
+      />
 
       {error && <p role="alert" className="mb-4 text-xs font-semibold text-red-600">{error}</p>}
 

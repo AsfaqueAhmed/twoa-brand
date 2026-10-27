@@ -21,6 +21,8 @@ import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/fire
 import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
+import AdminCard from '@/features/admin/presentation/AdminCard';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -431,8 +433,23 @@ export default function InventoryManager() {
         </div>
       )}
 
-      {/* Header Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#FAF9F6] border border-[#EEEEEE] p-5">
+      <AdminPageHeader
+        title="Products"
+        subtitle="Manage your catalog, pricing and images."
+        actions={
+          <button
+            onClick={handleOpenCreateProduct}
+            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+            id="admin-add-product-btn"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add New Product</span>
+          </button>
+        }
+      />
+
+      {/* Search bar */}
+      <div className="bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">
         <div className="relative max-w-sm w-full">
           <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#717171]" />
           <input
@@ -440,19 +457,10 @@ export default function InventoryManager() {
             placeholder="Search inventory products..."
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
-            className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
+            className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
             id="inventory-search-input"
           />
         </div>
-
-        <button
-          onClick={handleOpenCreateProduct}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-          id="admin-add-product-btn"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add New Product</span>
-        </button>
       </div>
 
       {/* Product Form Drawer/Modal overlay */}
@@ -471,7 +479,7 @@ export default function InventoryManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8 flex flex-col"
+              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8 flex flex-col"
               id="product-edit-form-panel"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
@@ -509,7 +517,7 @@ export default function InventoryManager() {
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, id: e.target.value }))}
                       disabled={!!products.find((p) => p.id === editingProduct.id)}
                       placeholder="e.g. prod-jersey-limited"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191]"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191]"
                     />
                   </div>
 
@@ -524,7 +532,7 @@ export default function InventoryManager() {
                       value={editingProduct.name || ''}
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g. Classic Linen Overshirt"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -542,7 +550,7 @@ export default function InventoryManager() {
                       value={editingProduct.price || ''}
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
                       placeholder="e.g. 45.00"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
 
@@ -559,7 +567,7 @@ export default function InventoryManager() {
                         setEditingProduct((prev) => ({ ...prev, originalPrice: parseFloat(e.target.value) || undefined }))
                       }
                       placeholder="e.g. 60.00"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -581,7 +589,7 @@ export default function InventoryManager() {
                             setEditingProduct((prev) => ({ ...prev, category: e.target.value }));
                           }
                         }}
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                       >
                         <option value="" disabled>
                           Select a category…
@@ -611,7 +619,7 @@ export default function InventoryManager() {
                             }
                           }}
                           placeholder="New category name"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -649,7 +657,7 @@ export default function InventoryManager() {
                             setEditingProduct((prev) => ({ ...prev, subcategory: e.target.value }));
                           }
                         }}
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                       >
                         <option value="">None</option>
                         {Array.from(
@@ -680,7 +688,7 @@ export default function InventoryManager() {
                             }
                           }}
                           placeholder="New subcategory name"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -717,7 +725,7 @@ export default function InventoryManager() {
                         value={editingProduct.image || ''}
                         onChange={(e) => setEditingProduct((prev) => ({ ...prev, image: e.target.value }))}
                         placeholder="Paste image URL (or upload directly)"
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                       />
                     </div>
                     <button
@@ -856,7 +864,7 @@ export default function InventoryManager() {
                               prev.map((x, idx) => (idx === i ? { ...x, icon: e.target.value as ProductHighlight['icon'] } : x)),
                             )
                           }
-                          className="rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none sm:w-40"
+                          className="rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none sm:w-40"
                         >
                           {HIGHLIGHT_ICON_KEYS.map((key) => (
                             <option key={key} value={key}>
@@ -872,7 +880,7 @@ export default function InventoryManager() {
                             setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x)))
                           }
                           placeholder="180 GSM"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <input
                           type="text"
@@ -882,7 +890,7 @@ export default function InventoryManager() {
                             setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, subtitle: e.target.value } : x)))
                           }
                           placeholder="Lycra Cotton"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -919,7 +927,7 @@ export default function InventoryManager() {
                     value={editingProduct.description || ''}
                     onChange={(e) => setEditingProduct((prev) => ({ ...prev, description: e.target.value }))}
                     placeholder="Write dynamic sales copy or specs..."
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
                 </div>
 
@@ -950,7 +958,7 @@ export default function InventoryManager() {
                     onChange={(e) =>
                       setEditingProduct((prev) => ({ ...prev, parentProductId: e.target.value || undefined }))
                     }
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   >
                     <option value="" disabled>
                       Select a parent product…
@@ -996,7 +1004,7 @@ export default function InventoryManager() {
                     onChange={(e) =>
                       setEditingProduct((prev) => ({ ...prev, sizeChartId: e.target.value || undefined }))
                     }
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   >
                     <option value="">None</option>
                     {sizeCharts.map((chart) => (
@@ -1055,7 +1063,7 @@ export default function InventoryManager() {
                         value={newVariantName}
                         onChange={(e) => setNewVariantName(e.target.value)}
                         placeholder="Variant name (e.g. Sage Green)"
-                        className="rounded-none border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
+                        className="rounded-lg border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
                       />
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-[#717171] font-bold uppercase">Color:</span>
@@ -1076,7 +1084,7 @@ export default function InventoryManager() {
                           value={newVariantImage}
                           onChange={(e) => setNewVariantImage(e.target.value)}
                           placeholder="Variant Image (Paste URL or upload below)"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1158,7 +1166,7 @@ export default function InventoryManager() {
       </AnimatePresence>
 
       {/* Catalog grid inside admin panel */}
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
+      <AdminCard className="overflow-x-auto p-0!">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
@@ -1319,7 +1327,7 @@ export default function InventoryManager() {
             )}
           </tbody>
         </table>
-      </div>
+      </AdminCard>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center flex-wrap gap-1.5" id="inventory-pagination">

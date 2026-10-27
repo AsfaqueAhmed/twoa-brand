@@ -5,6 +5,8 @@ import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { SizeChart } from '@/shared/domain/types';
 import { fetchSizeCharts, saveSizeChart, deleteSizeChart } from '../infrastructure/firestoreSizeChartsRepository';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
+import AdminCard from '@/features/admin/presentation/AdminCard';
 
 const emptyForm: SizeChart = { id: '', name: '', columns: [], rows: [] };
 
@@ -129,22 +131,20 @@ export default function SizeChartManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between bg-[#FAF9F6] border border-[#EEEEEE] p-5">
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black">Size Charts</h2>
-          <p className="text-[10px] text-[#717171] mt-1">
-            Reusable measurement templates. Assign one to a product from the Inventory tab.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-          id="admin-add-sizechart-btn"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add New Chart</span>
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Size Charts"
+        subtitle="Reusable size chart templates."
+        actions={
+          <button
+            onClick={openCreate}
+            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+            id="admin-add-sizechart-btn"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add New Chart</span>
+          </button>
+        }
+      />
 
       <AnimatePresence>
         {isEditing && (
@@ -160,7 +160,7 @@ export default function SizeChartManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
+              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-black">
@@ -188,7 +188,7 @@ export default function SizeChartManager() {
                     value={form.name}
                     onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g. Men's T-Shirt"
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
                 </div>
 
@@ -230,7 +230,7 @@ export default function SizeChartManager() {
                         }
                       }}
                       placeholder="Add a column (e.g. Chest)"
-                      className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2.5 text-[11px] font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none"
+                      className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2.5 text-[11px] font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none"
                     />
                     <button
                       type="button"
@@ -285,7 +285,7 @@ export default function SizeChartManager() {
                                   value={row.size}
                                   onChange={(e) => handleRowSizeChange(rowIdx, e.target.value)}
                                   placeholder="S"
-                                  className="w-16 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
+                                  className="w-16 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
                                 />
                               </td>
                               {row.values.map((val, colIdx) => (
@@ -295,7 +295,7 @@ export default function SizeChartManager() {
                                     value={val}
                                     onChange={(e) => handleRowValueChange(rowIdx, colIdx, e.target.value)}
                                     placeholder={`e.g. 36" - 38"`}
-                                    className="w-24 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
+                                    className="w-24 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
                                   />
                                 </td>
                               ))}
@@ -338,7 +338,7 @@ export default function SizeChartManager() {
         )}
       </AnimatePresence>
 
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
+      <AdminCard className="overflow-x-auto p-0!">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
@@ -388,7 +388,7 @@ export default function SizeChartManager() {
             )}
           </tbody>
         </table>
-      </div>
+      </AdminCard>
     </div>
   );
 }
