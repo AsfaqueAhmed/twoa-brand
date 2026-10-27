@@ -176,6 +176,7 @@ export default function ProductDetailView({
               key={v.id}
               type="button"
               aria-label={v.name}
+              aria-pressed={isSelected}
               onClick={() => setSelectedVariant(v)}
               className={`aspect-square shrink-0 overflow-hidden bg-[#F5F5F5] ${mobile ? 'h-16 w-16' : 'w-full'} ${
                 isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA]'
@@ -261,7 +262,7 @@ export default function ProductDetailView({
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <span className="text-3xl font-bold text-black">{formatCurrency(product.price)}</span>
-            {hasDiscount && (
+            {hasDiscount && discountPercent > 0 && (
               <>
                 <span className="text-base font-semibold text-[#919191] line-through">
                   {formatCurrency(product.originalPrice!)}
@@ -297,6 +298,7 @@ export default function ProductDetailView({
                       onClick={() => setSelectedVariant(v)}
                       title={v.name}
                       aria-label={v.name}
+                      aria-pressed={isSelected}
                       className={`h-16 w-16 overflow-hidden ${
                         isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA] hover:border-black'
                       }`}
@@ -336,6 +338,7 @@ export default function ProductDetailView({
                       key={sz}
                       type="button"
                       disabled={sizeStock <= 0}
+                      aria-pressed={selectedSize === sz}
                       onClick={() => {
                         setSelectedSize(sz);
                         setQuantity(1);
@@ -397,7 +400,7 @@ export default function ProductDetailView({
                   <span className="w-10 text-center text-sm font-bold text-black">{quantity}</span>
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                    onClick={() => setQuantity((q) => Math.max(1, Math.min(availableStock, q + 1)))}
                     className="flex h-full w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
                     id="modal-qty-plus"
                     aria-label="Increase quantity"
