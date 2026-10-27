@@ -22,7 +22,7 @@ export default function HomePage() {
         <TrustStrip />
         {catalog.loading ? (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-6">
               {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}

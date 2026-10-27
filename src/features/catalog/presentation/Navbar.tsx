@@ -16,13 +16,15 @@ export default function Navbar() {
   const setTab = (tab: 'shop' | 'orders' | 'admin') =>
     router.push(tab === 'shop' ? '/' : tab === 'orders' ? '/orders' : '/admin');
   const onOpenCart = () => router.push('/cart');
+  // Product, cart and checkout pages carry their own sticky action bar on mobile.
+  const hideBottomNav = ['/product', '/cart', '/checkout'].some((p) => pathname.startsWith(p));
   const onSignIn = signIn;
   const onSignOut = signOut;
 
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#EEEEEE] bg-[#FAF9F6]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <div
             onClick={() => setTab('shop')}
@@ -30,7 +32,7 @@ export default function Navbar() {
             id="brand-logo-trigger"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-9 w-auto sm:h-10" />
+            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-7 w-auto sm:h-10" />
           </div>
 
           {/* Navigation Tabs (desktop/tablet only — mobile uses the bottom nav bar) */}
@@ -128,7 +130,7 @@ export default function Navbar() {
               <button
                 id="sign-in-btn"
                 onClick={onSignIn}
-                className="flex items-center space-x-1.5 border border-black bg-black px-4.5 py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-[#333333]"
+                className="flex items-center space-x-1.5 border border-black bg-black px-3 py-1.5 sm:px-4.5 sm:py-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white hover:bg-[#333333]"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 <span>Sign In</span>
@@ -140,7 +142,7 @@ export default function Navbar() {
 
       {/* Mobile Bottom Navigation Bar (icon + label, mirrors the desktop tabs) */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-stretch border-t border-[#EEEEEE] bg-white/95 backdrop-blur-md sm:hidden"
+        className={`fixed bottom-0 left-0 right-0 z-40 items-stretch border-t border-[#EEEEEE] bg-white/95 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur-md sm:hidden ${hideBottomNav ? 'hidden' : 'flex'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         id="mobile-bottom-nav"
       >

@@ -206,7 +206,7 @@ export default function CheckoutForm() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" id="checkout-view-container">
+    <div className="mx-auto max-w-7xl px-4 py-5 pb-28 sm:py-8 sm:px-6 lg:px-8" id="checkout-view-container">
       <nav className="flex items-center gap-2 text-sm text-[#717171]">
         <button
           type="button"
@@ -221,13 +221,13 @@ export default function CheckoutForm() {
         <span className="text-black">Checkout</span>
       </nav>
 
-      <h1 className="mt-3 text-4xl font-bold text-black">Checkout</h1>
-      <p className="text-sm text-[#717171] mt-1 mb-6">Complete your order. Pay easily with Cash on Delivery.</p>
+      <h1 className="mt-3 text-2xl sm:text-4xl font-bold text-black">Checkout</h1>
+      <p className="text-xs sm:text-sm text-[#717171] mt-1 mb-4 sm:mb-6">Complete your order. Pay easily with Cash on Delivery.</p>
 
       {/* Optional sign-in nudge — guest checkout is fully supported, this is just a convenience offer */}
       {!user && (
         <div
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-4 mb-6"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-3 sm:p-4 mb-4 sm:mb-6"
           id="checkout-guest-signin-nudge"
         >
           <p className="text-xs text-[#717171] leading-relaxed">
@@ -248,9 +248,9 @@ export default function CheckoutForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start"
+        className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-4 sm:gap-6 items-start"
       >
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {error && (
             <div
               className="border border-red-200 bg-red-50 p-4 text-xs font-bold uppercase tracking-wider text-red-800"

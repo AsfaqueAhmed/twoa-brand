@@ -19,20 +19,26 @@ export default function CartItemRow({ item }: { item: CartItem }) {
   const itemKey = `${product.id}-${selectedSize || 'nosize'}-${selectedVariant?.id || 'novariant'}`;
 
   return (
-    <div className={`${CART_ROW_GRID} flex flex-col gap-4 py-5 border-b border-[#EEEEEE] last:border-b-0`} id={`cart-row-${itemKey}`}>
+    <div className={`${CART_ROW_GRID} flex flex-wrap items-center gap-x-3 gap-y-3 py-4 sm:py-5 border-b border-[#EEEEEE] last:border-b-0`} id={`cart-row-${itemKey}`}>
       {/* Product */}
-      <div className="flex gap-4 min-w-0">
+      <div className="flex w-full gap-3 sm:gap-4 min-w-0 sm:w-auto">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={selectedVariant?.image || product.image}
           alt={product.name}
-          className="h-24 w-20 shrink-0 object-cover bg-[#F5F5F5]"
+          className="h-24 w-[76px] sm:w-20 shrink-0 object-cover bg-[#F5F5F5]"
           referrerPolicy="no-referrer"
         />
         <div className="min-w-0 space-y-1">
-          <h3 className="text-sm font-bold text-black truncate">{product.name}</h3>
+          <h3 className="text-sm font-bold text-black line-clamp-2 sm:truncate">{product.name}</h3>
           {selectedVariant && <p className="text-xs text-[#717171]">Color: {selectedVariant.name}</p>}
           {selectedSize && <p className="text-xs text-[#717171]">Size: {selectedSize}</p>}
+          <p className="flex items-center gap-2 pt-0.5 text-sm font-bold text-black sm:hidden">
+            {formatCurrency(product.price)}
+            {percent !== undefined && (
+              <span className="text-xs font-normal text-[#717171] line-through">{formatCurrency(product.originalPrice!)}</span>
+            )}
+          </p>
           {variants.length > 1 && (
             <div className="flex gap-1.5 pt-1">
               {variants.map((v) => {
@@ -62,7 +68,7 @@ export default function CartItemRow({ item }: { item: CartItem }) {
       </div>
 
       {/* Price */}
-      <div className="flex items-center gap-2 sm:block">
+      <div className="hidden items-center gap-2 sm:block">
         <p className="text-sm font-bold text-black">{formatCurrency(product.price)}</p>
         {percent !== undefined && (
           <>
@@ -97,14 +103,14 @@ export default function CartItemRow({ item }: { item: CartItem }) {
       </div>
 
       {/* Line total */}
-      <p className="text-sm font-bold text-black">{formatCurrency(product.price * quantity)}</p>
+      <p className="ml-auto text-sm font-bold text-black sm:ml-0">{formatCurrency(product.price * quantity)}</p>
 
       {/* Remove */}
       <button
         type="button"
         aria-label={`Remove ${product.name}`}
         onClick={() => removeFromCart(product.id, selectedSize, selectedVariant)}
-        className="p-2 text-[#717171] hover:bg-[#F5F5F5] hover:text-black transition-colors w-fit"
+        className="p-2 text-[#717171] hover:bg-[#F5F5F5] hover:text-black transition-colors w-fit -mr-2 sm:mr-0"
         id={`remove-item-btn-${itemKey}`}
       >
         <Trash2 className="h-4 w-4" />

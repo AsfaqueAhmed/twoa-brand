@@ -201,7 +201,7 @@ export default function ProductDetailView({
   return (
     <div className="relative w-full bg-[#FAF9F6]" id="product-detail-view">
       {/* Header */}
-      <div className="flex items-center justify-between bg-[#FAF9F6] px-4 sm:px-6 py-4">
+      <div className="flex items-center justify-between bg-[#FAF9F6] px-4 sm:px-6 py-3 sm:py-4">
         <button
           type="button"
           onClick={onClose}
@@ -241,7 +241,7 @@ export default function ProductDetailView({
       </div>
 
       <div id="product-detail-scroll">
-        <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-8 px-4 sm:px-6 pb-8">
+        <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-5 sm:gap-8 px-4 sm:px-6 pb-2 sm:pb-8">
           {/* Left: gallery */}
           <div>
             <div className="flex gap-3">
@@ -268,11 +268,11 @@ export default function ProductDetailView({
           </div>
 
           {/* Right: info */}
-          <div className="space-y-5 min-w-0">
-            <h1 className="text-3xl font-bold text-black">{product.name}</h1>
+          <div className="space-y-4 sm:space-y-5 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-black leading-tight">{product.name}</h1>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-3xl font-bold text-black">{formatCurrency(product.price)}</span>
+              <span className="text-2xl sm:text-3xl font-bold text-black">{formatCurrency(product.price)}</span>
               {hasDiscount && discountPercent > 0 && (
                 <>
                   <span className="text-base font-semibold text-[#919191] line-through">
@@ -310,7 +310,7 @@ export default function ProductDetailView({
                         title={v.name}
                         aria-label={v.name}
                         aria-pressed={isSelected}
-                        className={`h-16 w-16 overflow-hidden ${
+                        className={`h-14 w-14 sm:h-16 sm:w-16 overflow-hidden ${
                           isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA] hover:border-black'
                         }`}
                         style={!v.image && v.colorCode ? { backgroundColor: v.colorCode } : undefined}
@@ -354,7 +354,7 @@ export default function ProductDetailView({
                           setSelectedSize(sz);
                           setQuantity(1);
                         }}
-                        className={`min-w-[56px] h-12 px-3 flex items-center justify-center text-sm font-semibold border transition-colors ${
+                        className={`min-w-[52px] sm:min-w-[56px] h-11 sm:h-12 px-3 flex items-center justify-center text-sm font-semibold border transition-colors ${
                           selectedSize === sz
                             ? 'bg-black text-white border-black'
                             : sizeStock <= 0
@@ -395,24 +395,24 @@ export default function ProductDetailView({
             )}
 
             {product.parentProduct && (
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-[#E4E1DA] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:z-auto sm:flex-row sm:items-end sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
                 <div>
-                  <span className="mb-2 block text-sm font-semibold text-black">Quantity</span>
-                  <div className="flex h-14 items-center border border-[#E4E1DA] bg-white">
+                  <span className="mb-2 hidden sm:block text-sm font-semibold text-black">Quantity</span>
+                  <div className="flex h-12 sm:h-14 items-center border border-[#E4E1DA] bg-white">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="flex h-full w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
+                      className="flex h-full w-10 sm:w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
                       id="modal-qty-minus"
                       aria-label="Decrease quantity"
                     >
                       −
                     </button>
-                    <span className="w-10 text-center text-sm font-bold text-black">{quantity}</span>
+                    <span className="w-8 sm:w-10 text-center text-sm font-bold text-black">{quantity}</span>
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, Math.min(availableStock, q + 1)))}
-                      className="flex h-full w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
+                      className="flex h-full w-10 sm:w-12 items-center justify-center text-lg text-black hover:bg-[#F5F5F5]"
                       id="modal-qty-plus"
                       aria-label="Increase quantity"
                     >
@@ -424,11 +424,11 @@ export default function ProductDetailView({
                   type="button"
                   onClick={handleAddToCart}
                   disabled={!selectedSize || availableStock <= 0}
-                  className="flex h-14 w-full flex-1 items-center justify-center gap-2 bg-black px-4 text-sm font-bold text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
+                  className="flex h-12 sm:h-14 w-full min-w-0 flex-1 items-center justify-center gap-2 bg-black px-3 sm:px-4 text-[13px] sm:text-sm font-bold text-white transition-colors hover:bg-[#333333] disabled:bg-[#B5B5B5] disabled:cursor-not-allowed"
                   id="modal-add-to-cart-action"
                 >
-                  <ShoppingBag className="h-5 w-5" />
-                  <span>
+                  <ShoppingBag className="h-5 w-5 shrink-0" />
+                  <span className="truncate">
                     {!selectedSize
                       ? 'Select a Size'
                       : availableStock <= 0
@@ -461,7 +461,7 @@ export default function ProductDetailView({
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 pb-10">
+        <div className="px-4 sm:px-6 pb-28 sm:pb-10">
           <RelatedProducts
             product={product}
             onSelect={onSelectRelated ?? ((p) => router.replace(`/product?id=${p.id}`))}

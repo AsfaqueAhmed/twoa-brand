@@ -9,7 +9,7 @@ interface Props {
 
 const LABEL = 'block text-sm text-black mb-1.5';
 const INPUT =
-  'w-full border border-[#EEEEEE] bg-[#FAF9F6] py-3 px-4 text-sm text-black placeholder-[#A1A1A1] focus:border-black focus:bg-white focus:outline-none transition-colors';
+  'w-full border border-[#EEEEEE] bg-[#FAF9F6] py-3 px-4 text-base sm:text-sm text-black placeholder-[#A1A1A1] focus:border-black focus:bg-white focus:outline-none transition-colors';
 
 export default function TrackLookupCard({ loading, error, onTrack }: Props) {
   const [orderNumber, setOrderNumber] = useState('');

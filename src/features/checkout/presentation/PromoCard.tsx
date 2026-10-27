@@ -48,7 +48,7 @@ export default function PromoCard({
           value={promoInput}
           onChange={(e) => onPromoInputChange(e.target.value)}
           placeholder="Enter promo code"
-          className="flex-1 min-w-0 border border-[#EEEEEE] bg-[#FAF9F6] py-3 px-4 text-sm text-black placeholder-[#A1A1A1] focus:border-black focus:bg-white focus:outline-none font-mono uppercase"
+          className="flex-1 min-w-0 border border-[#EEEEEE] bg-[#FAF9F6] py-3 px-4 text-base sm:text-sm text-black placeholder-[#A1A1A1] focus:border-black focus:bg-white focus:outline-none font-mono uppercase"
           id="promo-code-input"
         />
         <button

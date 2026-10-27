@@ -68,12 +68,12 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
           referrerPolicy="no-referrer"
           loading="lazy"
         />
-        <span className="absolute top-3 left-3 bg-black/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white">
+        <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/80 px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] text-white">
           {product.category}
         </span>
 
         {hasDiscount && !outOfStock && (
-          <span className="absolute top-3 right-3 bg-red-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white font-mono">
+          <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-red-600 px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.1em] text-white font-mono">
             {discountPercent}% OFF
           </span>
         )}
@@ -88,7 +88,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
 
         {hasVariants && (
           <div
-            className="absolute bottom-3 left-3 flex items-center gap-2 z-10"
+            className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 flex items-center gap-1.5 sm:gap-2 z-10"
             onClick={(e) => e.stopPropagation()}
           >
             {variants.map((v, idx) => {
@@ -100,7 +100,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
                   aria-label={v.name}
                   aria-pressed={isActive}
                   title={v.name}
-                  className={`relative h-8 w-8 p-[1.5px] bg-white overflow-hidden transition-all duration-200 ${
+                  className={`relative h-7 w-7 sm:h-8 sm:w-8 p-[1.5px] bg-white overflow-hidden transition-all duration-200 ${
                     isActive
                       ? 'border-2 border-black scale-105 shadow-sm'
                       : 'border border-black/10 hover:border-black/30'
@@ -127,12 +127,12 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
       </div>
 
       {/* Details */}
-      <div className="flex flex-1 flex-col pt-3 pb-1">
-        <h3 className="text-[14px] font-bold text-black line-clamp-1">{product.name}</h3>
-        <p className="mt-1 text-xs text-[#717171] line-clamp-2 leading-relaxed">{product.description}</p>
+      <div className="flex flex-1 flex-col pt-2.5 sm:pt-3 pb-1">
+        <h3 className="text-[13px] sm:text-[14px] font-bold text-black line-clamp-1">{product.name}</h3>
+        <p className="mt-1 hidden sm:block text-xs text-[#717171] line-clamp-2 leading-relaxed">{product.description}</p>
 
         {activeVariant && (
-          <div className="mt-2.5 flex items-center gap-2 text-xs text-[#717171]">
+          <div className="mt-1 sm:mt-2.5 flex items-center gap-2 text-[11px] sm:text-xs text-[#717171]">
             {activeVariant.colorCode && (
               <span
                 className="h-3 w-3 rounded-full border border-black/10 shrink-0"
@@ -145,7 +145,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
 
         {inStockSizes.length > 0 && (
           <div
-            className="mt-2.5 flex flex-wrap items-center gap-1.5"
+            className="mt-2 sm:mt-2.5 flex flex-wrap items-center gap-1 sm:gap-1.5"
             id={`product-card-sizes-${product.id}`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -158,7 +158,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
                   e.stopPropagation();
                   setPickedSize(sz);
                 }}
-                className={`inline-flex h-6 min-w-[28px] px-2 items-center justify-center text-[10px] font-bold font-mono transition-colors ${
+                className={`inline-flex h-6 min-w-[26px] px-1.5 sm:min-w-[28px] sm:px-2 items-center justify-center text-[10px] font-bold font-mono transition-colors ${
                   selectedSize === sz
                     ? 'bg-[#4A4A4A] text-white'
                     : 'bg-[#F0EEE9] text-black hover:bg-[#E4E1DA]'
@@ -170,8 +170,8 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
           </div>
         )}
 
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-[16px] font-bold text-black leading-tight">{formatCurrency(product.price)}</span>
+        <div className="mt-2 sm:mt-3 flex flex-wrap items-baseline gap-x-2">
+          <span className="text-[15px] sm:text-[16px] font-bold text-black leading-tight">{formatCurrency(product.price)}</span>
           {hasDiscount && product.originalPrice !== undefined && (
             <span className="text-[11px] text-[#919191] line-through font-semibold font-mono">
               {formatCurrency(product.originalPrice)}
@@ -183,7 +183,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
           id={`add-to-cart-btn-${product.id}`}
           disabled={outOfStock}
           onClick={(e) => onAddToCart(product, selectedSize, activeVariant, e)}
-          className="mt-3 flex h-10 w-full items-center justify-center gap-2 bg-black text-white text-[11px] font-bold uppercase tracking-[0.15em] transition-colors hover:bg-[#333333] disabled:cursor-not-allowed disabled:bg-[#E4E1DA] disabled:text-[#A1A1A1]"
+          className="mt-2.5 sm:mt-3 flex h-9 sm:h-10 w-full items-center justify-center gap-1.5 sm:gap-2 bg-black text-white text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-colors hover:bg-[#333333] disabled:cursor-not-allowed disabled:bg-[#E4E1DA] disabled:text-[#A1A1A1]"
         >
           <ShoppingBag className="h-4 w-4" />
           Add to Cart

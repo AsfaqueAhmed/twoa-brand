@@ -11,25 +11,26 @@ export default function CartPage() {
   const { items, count } = useCart();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-8 sm:space-y-10 pb-28 sm:pb-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-black">Shopping Cart</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-black">Shopping Cart</h1>
           <p className="text-sm text-[#717171] mt-1">
             {count} {count === 1 ? 'item' : 'items'} in your cart
           </p>
         </div>
         <Link
           href="/"
-          className="hidden sm:flex items-center gap-2 border border-[#EEEEEE] px-4 py-2.5 text-sm font-medium text-black hover:bg-[#F5F5F5]"
+          className="flex items-center gap-2 border border-[#EEEEEE] bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium text-black hover:bg-[#F5F5F5]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Continue Shopping
+          <span className="hidden sm:inline">Continue Shopping</span>
+          <span className="sm:hidden">Shop</span>
         </Link>
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center py-20 border border-[#EEEEEE]">
+        <div className="flex flex-col items-center justify-center text-center py-14 sm:py-20 border border-[#EEEEEE]">
           <div className="flex h-16 w-16 items-center justify-center border border-[#EEEEEE] bg-[#F5F5F5] text-[#717171] mb-5">
             <ShoppingBag className="h-6 w-6" />
           </div>

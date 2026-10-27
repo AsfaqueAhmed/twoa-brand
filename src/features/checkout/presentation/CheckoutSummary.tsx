@@ -30,9 +30,9 @@ export default function CheckoutSummary({
   onRemovePromo,
 }: Props) {
   return (
-    <aside className="border border-[#EEEEEE] bg-white p-5 sm:p-6 space-y-5 lg:sticky lg:top-28" id="checkout-summary">
+    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-28" id="checkout-summary">
       <div className="flex items-baseline justify-between gap-3 border-b border-[#EEEEEE] pb-4">
-        <h2 className="text-2xl font-bold text-black">
+        <h2 className="text-xl sm:text-2xl font-bold text-black">
           Order Summary <span className="text-sm font-normal text-[#717171]">({count} {count === 1 ? 'item' : 'items'})</span>
         </h2>
         <Link href="/cart" className="text-sm text-black underline underline-offset-2 shrink-0">
@@ -124,22 +124,31 @@ export default function CheckoutSummary({
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isPlacing}
-        className="flex w-full items-center justify-center gap-2 bg-black py-4 text-sm font-bold text-white hover:bg-[#333333] transition-colors disabled:bg-[#F5F5F5] disabled:text-[#A1A1A1] disabled:cursor-not-allowed"
-        id="place-order-submit-btn"
-      >
-        {isPlacing ? (
-          <span>Creating Order...</span>
-        ) : (
-          <>
-            <Lock className="h-4 w-4" />
-            <span>Place Order (Cash on Delivery)</span>
-            <ArrowRight className="h-4 w-4" />
-          </>
-        )}
-      </button>
+      {/* Mobile: pinned to the bottom of the screen with the running total. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-4 border-t border-[#EEEEEE] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:block sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="shrink-0 sm:hidden">
+          <p className="text-[11px] text-[#717171]">Total (COD)</p>
+          <p className="text-lg font-bold leading-tight text-black">{formatCurrency(grandTotal)}</p>
+        </div>
+        <button
+          type="submit"
+          disabled={isPlacing}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 bg-black py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#333333] disabled:cursor-not-allowed disabled:bg-[#F5F5F5] disabled:text-[#A1A1A1] sm:w-full sm:flex-none sm:py-4"
+          id="place-order-submit-btn"
+        >
+          {isPlacing ? (
+            <span>Creating Order...</span>
+          ) : (
+            <>
+              <Lock className="h-4 w-4 shrink-0" />
+              <span>
+                Place Order<span className="hidden sm:inline"> (Cash on Delivery)</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0" />
+            </>
+          )}
+        </button>
+      </div>
       <p className="text-center text-[11px] text-[#717171]">
         By placing an order, you agree to our Terms &amp; Conditions and Privacy Policy.
       </p>

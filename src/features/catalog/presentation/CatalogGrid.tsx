@@ -76,13 +76,13 @@ export default function CatalogGrid({
   }, [hasMore, loadMore, registerPagination]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6" id="shop-catalog-section">
-      <div className="mb-4 flex items-center gap-3 overflow-x-auto pb-1" id="category-selector">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" id="shop-catalog-section">
+      <div className="mb-3 sm:mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" id="category-selector">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`shrink-0 rounded-full px-6 py-2.5 text-xs font-bold tracking-wide transition-all duration-200 border ${
+            className={`shrink-0 rounded-full px-4 py-2 sm:px-6 sm:py-2.5 text-xs font-bold tracking-wide transition-all duration-200 border ${
               selectedCategory === cat
                 ? 'bg-black text-white border-black'
                 : 'bg-white border-[#E4E1DA] text-black hover:border-black'
@@ -95,14 +95,14 @@ export default function CatalogGrid({
 
       {selectedCategory !== 'All' && subcategories.length > 1 && (
         <div
-          className="mb-8 flex items-center gap-2 overflow-x-auto rounded-full bg-[#F0EEE9] p-1.5 animate-in fade-in duration-200"
+          className="mb-5 sm:mb-8 flex items-center gap-2 overflow-x-auto rounded-full bg-[#F0EEE9] p-1.5 animate-in fade-in duration-200"
           id="subcategory-selector"
         >
           {subcategories.map((sub) => (
             <button
               key={sub}
               onClick={() => setSelectedSubcategory(sub)}
-              className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`shrink-0 rounded-full px-4 sm:px-5 py-2 text-xs font-semibold transition-all duration-200 ${
                 selectedSubcategory === sub ? 'bg-black text-white' : 'text-[#4A4A4A] hover:text-black'
               }`}
             >
@@ -113,7 +113,7 @@ export default function CatalogGrid({
       )}
 
       {resultsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-6">
           {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
             <ProductCardSkeleton key={i} />
           ))}
@@ -126,7 +126,7 @@ export default function CatalogGrid({
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" id="product-grid">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-6" id="product-grid">
             {visibleProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -139,7 +139,7 @@ export default function CatalogGrid({
               />
             ))}
           </div>
-          <div ref={sentinelRef} className="flex justify-center py-10">
+          <div ref={sentinelRef} className="flex justify-center py-6 sm:py-10">
             {loadingMore && <Spinner />}
           </div>
         </>

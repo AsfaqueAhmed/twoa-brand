@@ -13,8 +13,8 @@ export default function OrderSummary() {
   const savings = computeSavings(items);
 
   return (
-    <aside className="border border-[#EEEEEE] bg-white p-6 space-y-5 lg:sticky lg:top-28" id="order-summary">
-      <h2 className="text-2xl font-bold text-black">Order Summary</h2>
+    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-28" id="order-summary">
+      <h2 className="text-xl sm:text-2xl font-bold text-black">Order Summary</h2>
 
       <div className="space-y-2 text-sm">
         <div className="flex justify-between text-[#717171]">
@@ -43,16 +43,25 @@ export default function OrderSummary() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => router.push('/checkout')}
-        className="flex w-full items-center justify-center gap-2 bg-black py-4 text-xs font-bold uppercase tracking-[0.2em] text-white hover:bg-[#333333] transition-colors"
-        id="proceed-to-checkout-btn"
-      >
-        <Lock className="h-4 w-4" />
-        <span>Proceed to Checkout</span>
-        <ArrowRight className="h-4 w-4" />
-      </button>
+      {/* Mobile: pinned to the bottom of the screen with the running total. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-4 border-t border-[#EEEEEE] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:static sm:block sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="shrink-0 sm:hidden">
+          <p className="text-[11px] text-[#717171]">Total</p>
+          <p className="text-lg font-bold leading-tight text-black">{formatCurrency(subtotal)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.push('/checkout')}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 bg-black py-3.5 text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#333333] sm:w-full sm:flex-none sm:py-4 sm:tracking-[0.2em]"
+          id="proceed-to-checkout-btn"
+        >
+          <Lock className="h-4 w-4" />
+          <span>
+            <span className="hidden sm:inline">Proceed to </span>Checkout
+          </span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
 
       <TrustBadges />
     </aside>
