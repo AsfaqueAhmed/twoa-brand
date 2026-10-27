@@ -167,8 +167,8 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       setError('Mobile shape must be between 1:2 and 2:1.');
       return;
     }
-    if (!ctaHref.trim() || !isSafeCtaHref(ctaHref)) {
-      setError('Banner link is required and must start with / or https://');
+    if (ctaHref.trim() && !isSafeCtaHref(ctaHref)) {
+      setError('Banner link must start with / or https://');
       return;
     }
     setBusy(true);
@@ -334,7 +334,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
             <input id={`${fid}-cta-label`} className={inputClass} value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} />
           </div>
           <div>
-            <label htmlFor={`${fid}-cta-href`} className={labelClass}>Banner link</label>
+            <label htmlFor={`${fid}-cta-href`} className={labelClass}>Banner link (optional)</label>
             <input
               id={`${fid}-cta-href`}
               className={inputClass}
@@ -344,6 +344,9 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
             />
           </div>
         </div>
+        <p className="-mt-2 text-[11px] text-[#717171]">
+          Leave the link empty for a banner that isn&apos;t clickable. The button only shows when there is a link.
+        </p>
         {error && <p role="alert" className="text-xs font-semibold text-red-600">{error}</p>}
         <div className="flex gap-3">
           <button
