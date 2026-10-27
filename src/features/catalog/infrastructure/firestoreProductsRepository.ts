@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { Product, ProductVariant } from '@/shared/domain/types';
+import { normalizeHighlights } from '@/features/product/domain/highlights';
 
 // Cursor is the last-seen product id — products are ordered by id for stable
 // keyset pagination (`.gt('id', cursor)` picks up where the previous page left off).
@@ -29,6 +30,8 @@ function toProduct(row: Record<string, any>): Product {
     parentProductId: row.parent_product_id || undefined,
     variants: Array.isArray(row.variants) ? row.variants.map(toVariant) : [],
     sizeChartId: row.size_chart_id || undefined,
+    gallery: Array.isArray(row.gallery) ? row.gallery.filter((u: unknown): u is string => typeof u === 'string' && !!u) : [],
+    highlights: normalizeHighlights(row.highlights),
   };
 }
 

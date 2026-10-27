@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
-import type { ProductVariant } from '@/shared/domain/types';
+import type { ProductHighlight, ProductVariant } from '@/shared/domain/types';
+import { normalizeHighlights } from '@/features/product/domain/highlights';
 
 export interface ProductPayload {
   id: string;
@@ -14,6 +15,9 @@ export interface ProductPayload {
   parentProductId: string | null;
   variants: ProductVariant[];
   sizeChartId: string | null;
+  // Optional: when omitted the stored values are left untouched by the upsert.
+  gallery?: string[];
+  highlights?: ProductHighlight[];
 }
 
 export async function saveProduct(payload: ProductPayload): Promise<void> {
@@ -33,6 +37,8 @@ export async function saveProduct(payload: ProductPayload): Promise<void> {
         ? payload.variants.map((v) => ({ id: v.id, name: v.name, colorCode: v.colorCode ?? null, image_url: v.image ?? null }))
         : null,
     size_chart_id: payload.sizeChartId,
+    ...(payload.gallery !== undefined ? { gallery: payload.gallery.filter(Boolean) } : {}),
+    ...(payload.highlights !== undefined ? { highlights: normalizeHighlights(payload.highlights) } : {}),
   });
   if (error) throw error;
 }
