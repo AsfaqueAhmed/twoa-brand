@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { RefreshCw, ShoppingBag, Search, Plus } from 'lucide-react';
-import type { Order, OrderStatus } from '@/shared/domain/types';
+import type { Order, OrderStatus, Product } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
+import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import AdminOrderCard from './AdminOrderCard';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 
@@ -14,6 +15,22 @@ export default function AdminOrderManager() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | 'all'>('all');
+
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllProducts()
+      .then((p) => {
+        if (!cancelled) setProducts(p);
+      })
+      .catch((err) => console.error('Error loading products for order thumbnails: ', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   const refreshOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -113,7 +130,7 @@ export default function AdminOrderManager() {
       ) : (
         <div className="space-y-3">
           {filteredOrders.map((ord) => (
-            <AdminOrderCard key={ord.id} order={ord} onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
+            <AdminOrderCard key={ord.id} order={ord} productsById={productsById} onStatusChange={(s) => handleAdminUpdateOrderStatus(ord.id, s)} />
           ))}
         </div>
       )}

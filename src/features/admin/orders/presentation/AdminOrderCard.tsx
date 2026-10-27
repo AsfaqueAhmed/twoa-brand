@@ -11,6 +11,7 @@ import OrderInfoCards from './OrderInfoCards';
 import OrderSummaryPanel from './OrderSummaryPanel';
 import OrderStatusUpdater from './OrderStatusUpdater';
 import OrderQuickActions from './OrderQuickActions';
+import OrderItemsPanel from './OrderItemsPanel';
 
 interface Props {
   order: Order;
@@ -20,9 +21,7 @@ interface Props {
   productsById?: Map<string, Product>;
 }
 
-const tag = 'rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-medium text-black';
-
-export default function AdminOrderCard({ order, onStatusChange, selected = false, onToggleSelected }: Props) {
+export default function AdminOrderCard({ order, onStatusChange, selected = false, onToggleSelected, productsById }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const count = orderItemCount(order);
@@ -130,37 +129,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
         <div className="mt-4 space-y-3 border-t border-[#F5F5F5] pt-4">
           <OrderInfoCards order={order} />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_320px]">
-            <section className="rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] p-4 text-xs">
-              <h4 className="mb-3 text-sm font-bold text-black">Order Items ({count})</h4>
-              <div className="divide-y divide-[#EEEEEE] rounded-lg border border-[#EEEEEE] bg-white p-4">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="flex min-w-0 items-center gap-3">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-14 w-14 shrink-0 rounded-md border border-[#EEEEEE] bg-[#F5F5F5] object-cover"
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="h-14 w-14 shrink-0 rounded-md bg-[#F5F5F5]" />
-                      )}
-                      <div className="min-w-0">
-                        <span className="block font-bold text-black">{item.name}</span>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {item.selectedVariant && <span className={tag}>{item.selectedVariant.name}</span>}
-                          {item.selectedSize && <span className={tag}>Size: {item.selectedSize}</span>}
-                          <span className={tag}>Qty: {item.quantity}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <span className="font-mono text-sm font-bold text-black">{formatCurrency(item.price * item.quantity)}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <OrderItemsPanel order={order} productsById={productsById} />
             <div className="space-y-3">
               <OrderSummaryPanel order={order} />
               <OrderStatusUpdater status={order.status} onStatusChange={onStatusChange} />
