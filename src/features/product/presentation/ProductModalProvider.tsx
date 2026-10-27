@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { PackageX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PackageX } from 'lucide-react';
 import type { Product } from '@/shared/domain/types';
 import { getProductById } from '@/features/product/application/getProductById';
 import { shouldLoadMore } from '@/features/product/domain/paginationTrigger';
@@ -24,6 +24,7 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
   const [productList, setProductList] = useState<Product[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushedHistory, setPushedHistory] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<{ hasMore: boolean; loadMore: () => void } | null>(null);
 
   const close = () => {
@@ -68,6 +69,16 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
     setProductId(next.id);
   };
 
+  const navigateTo = (next: Product) => {
+    window.history.replaceState(null, '', `/product?id=${next.id}`);
+    setProduct(next);
+    setProductId(next.id);
+  };
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [productId]);
+
   useEffect(() => {
     if (!productList || currentIndex === -1) return;
     const pagination = paginationRef.current;
@@ -109,39 +120,21 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
       {productId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
-          {hasPrevious && (
-            <button
-              onClick={() => goToOffset(-1)}
-              aria-label="Previous product"
-              id="product-modal-prev-btn"
-              className="fixed left-2 sm:left-6 top-1/2 -translate-y-1/2 z-[60] flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black shadow-lg hover:bg-white transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-          )}
-          {hasNext && (
-            <button
-              onClick={() => goToOffset(1)}
-              aria-label="Next product"
-              id="product-modal-next-btn"
-              className="fixed right-2 sm:right-6 top-1/2 -translate-y-1/2 z-[60] flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black shadow-lg hover:bg-white transition-colors"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          )}
-          <div className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-white overflow-y-auto overscroll-contain sm:overflow-hidden shadow-2xl">
+          <div ref={scrollRef} className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-6xl bg-[#FAF9F6] overflow-y-auto overscroll-contain shadow-2xl">
             {loading ? (
               <div className="flex justify-center py-32">
                 <Spinner />
               </div>
             ) : product ? (
               <ProductDetailView
+                key={product.id}
                 product={product}
                 onClose={close}
                 previousProduct={previousProduct}
                 nextProduct={nextProduct}
                 onNavigate={goToOffset}
                 positionLabel={positionLabel}
+                onSelectRelated={navigateTo}
               />
             ) : (
               <div className="p-8">
