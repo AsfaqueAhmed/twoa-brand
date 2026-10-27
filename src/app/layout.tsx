@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider';
 import { CartProvider } from '@/features/cart/presentation/CartProvider';
-import CartDrawer from '@/features/cart/presentation/CartDrawer';
 import { ProductModalProvider } from '@/features/product/presentation/ProductModalProvider';
 import MetaPixelScript from '@/shared/presentation/MetaPixelScript';
 
@@ -21,7 +20,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CartProvider>
             <ProductModalProvider>
               {children}
-              <CartDrawer />
             </ProductModalProvider>
           </CartProvider>
         </AuthProvider>

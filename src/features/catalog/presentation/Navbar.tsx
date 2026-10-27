@@ -8,14 +8,14 @@ import { useCart } from '@/features/cart/presentation/CartProvider';
 
 export default function Navbar() {
   const { user, authLoading, isAdmin, signIn, signOut } = useAuth();
-  const { count: cartCount, openCart } = useCart();
+  const { count: cartCount } = useCart();
   const pathname = usePathname();
   const router = useRouter();
   const currentTab: 'shop' | 'orders' | 'admin' =
     pathname.startsWith('/admin') ? 'admin' : pathname.startsWith('/orders') ? 'orders' : 'shop';
   const setTab = (tab: 'shop' | 'orders' | 'admin') =>
     router.push(tab === 'shop' ? '/' : tab === 'orders' ? '/orders' : '/admin');
-  const onOpenCart = openCart;
+  const onOpenCart = () => router.push('/cart');
   const onSignIn = signIn;
   const onSignOut = signOut;
 

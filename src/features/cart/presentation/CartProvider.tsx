@@ -23,9 +23,6 @@ interface CartContextValue {
   ) => void;
   subtotal: number;
   count: number;
-  isOpen: boolean;
-  openCart: () => void;
-  closeCart: () => void;
   clearCart: () => void;
 }
 
@@ -33,7 +30,6 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => loadCart());
-  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     saveCart(items);
@@ -64,9 +60,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems((prev) => changeVariant(prev, productId, selectedSize, oldVariant, newVariant)),
     subtotal: computeSubtotal(items),
     count: computeCartCount(items),
-    isOpen,
-    openCart: () => setIsOpen(true),
-    closeCart: () => setIsOpen(false),
     clearCart: () => setItems([]),
   };
 
