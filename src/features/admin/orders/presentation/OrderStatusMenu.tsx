@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, Pencil } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import type { OrderStatus } from '@/shared/domain/types';
 import { STATUS_LABELS, STATUS_ORDER } from '@/features/admin/analytics/domain/analytics';
+
+export const STATUS_DOT: Record<OrderStatus, string> = {
+  pending: 'bg-orange-400',
+  confirmed: 'bg-blue-500',
+  out_for_delivery: 'bg-indigo-500',
+  delivered: 'bg-emerald-500',
+  cancelled: 'bg-red-500',
+};
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
   pending: 'bg-amber-50 text-amber-800 border-amber-200',
@@ -21,6 +29,7 @@ interface Props {
 export default function OrderStatusMenu({ status, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -28,7 +37,10 @@ export default function OrderStatusMenu({ status, onChange }: Props) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -39,19 +51,19 @@ export default function OrderStatusMenu({ status, onChange }: Props) {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-flex items-center gap-1">
-      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[status]}`}>
-        {STATUS_LABELS[status]}
-      </span>
+    <div ref={ref} className="relative inline-flex">
       <button
+        ref={triggerRef}
         type="button"
         aria-label="Change status"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="rounded-md p-1 text-[#717171] hover:bg-[#F5F5F5] hover:text-black"
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${STATUS_STYLES[status]}`}
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
+        {STATUS_LABELS[status]}
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div role="menu" className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-lg">
@@ -62,11 +74,14 @@ export default function OrderStatusMenu({ status, onChange }: Props) {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                onChange(s);
+                if (s !== status) onChange(s);
               }}
               className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs font-semibold text-black hover:bg-[#F5F5F5]"
             >
-              {STATUS_LABELS[s]}
+              <span className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s]}`} />
+                {STATUS_LABELS[s]}
+              </span>
               {s === status && <Check className="h-3.5 w-3.5" />}
             </button>
           ))}
