@@ -30,12 +30,16 @@ export function formatAdminAddress(p: { street: string; thana: string; cityCorp:
   return [p.street.trim(), p.thana, p.cityCorp, p.district, p.division, 'Bangladesh'].filter(Boolean).join(', ');
 }
 
-export function buildAdminOrderItems(lines: DraftLine[]): { items: Record<string, any>[]; cartLines: StockLine[] } {
-  const items = lines.map((l) =>
+export function buildAdminOrderItemPayloads(lines: DraftLine[]): Record<string, any>[] {
+  return lines.map((l) =>
     l.kind === 'catalog'
       ? buildOrderItemPayload(l.item)
       : { productId: l.id, name: l.name.trim(), price: l.price, quantity: l.quantity, image_url: '' },
   );
+}
+
+export function buildAdminOrderItems(lines: DraftLine[]): { items: Record<string, any>[]; cartLines: StockLine[] } {
+  const items = buildAdminOrderItemPayloads(lines);
   const catalogItems = lines.flatMap((l) => (l.kind === 'catalog' ? [l.item] : []));
   return { items, cartLines: buildStockLines(catalogItems) };
 }

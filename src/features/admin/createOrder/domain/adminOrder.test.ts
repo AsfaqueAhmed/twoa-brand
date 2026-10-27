@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { CartItem } from '@/shared/domain/types';
 import {
   lineSubtotal, draftSubtotal, newCustomItemId, adminOrderTotal, formatAdminAddress,
-  buildAdminOrderItems, validateDraft, addCatalogLine, stockCapFor, type DraftLine,
+  buildAdminOrderItems, buildAdminOrderItemPayloads, validateDraft, addCatalogLine, stockCapFor, type DraftLine,
 } from './adminOrder';
 
 const product = { id: 'p1', name: 'Tee', description: '', price: 500, image: 'tee.png', category: 'c', rating: 0, parentProductId: 'pp1' };
@@ -106,5 +106,14 @@ describe('addCatalogLine stock cap', () => {
     const merged = addCatalogLine([withStock(3)], withStock(4).item);
     expect(merged[0].kind === 'catalog' && merged[0].item.quantity).toBe(7);
     expect(stockCapFor(withStock(1).item)).toBeUndefined();
+  });
+});
+
+describe('buildAdminOrderItemPayloads', () => {
+  it('matches buildAdminOrderItems items and tolerates a catalog line without parent or size', () => {
+    const lines = [catalog(2), custom(50, 3)];
+    expect(buildAdminOrderItemPayloads(lines)).toEqual(buildAdminOrderItems(lines).items);
+    const bare: DraftLine = { kind: 'catalog', item: { product: { ...product, parentProductId: undefined }, quantity: 1 } as CartItem };
+    expect(() => buildAdminOrderItemPayloads([bare])).not.toThrow();
   });
 });
