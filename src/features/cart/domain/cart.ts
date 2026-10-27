@@ -62,3 +62,39 @@ export function computeSubtotal(items: CartItem[]): number {
 export function computeCartCount(items: CartItem[]): number {
   return items.reduce((acc, item) => acc + item.quantity, 0);
 }
+
+export function computeSavings(items: CartItem[]): number {
+  return items.reduce((acc, { product, quantity }) => {
+    const original = product.originalPrice;
+    return original && original > product.price ? acc + (original - product.price) * quantity : acc;
+  }, 0);
+}
+
+export function discountPercent(product: Product): number | undefined {
+  const original = product.originalPrice;
+  if (!original || original <= product.price) return undefined;
+  return Math.round(((original - product.price) / original) * 100);
+}
+
+export function changeVariant(
+  items: CartItem[],
+  productId: string,
+  selectedSize: string | undefined,
+  oldVariant: ProductVariant | undefined,
+  newVariant: ProductVariant
+): CartItem[] {
+  if (oldVariant?.id === newVariant.id) return items;
+  const source = items.find((item) => matches(item, productId, selectedSize, oldVariant?.id));
+  if (!source) return items;
+
+  const target = items.find((item) => matches(item, productId, selectedSize, newVariant.id));
+  if (!target) {
+    return items.map((item) => (item === source ? { ...item, selectedVariant: newVariant } : item));
+  }
+  const stock = resolveAvailableStock(source.product, selectedSize);
+  if (stock <= 0) return items;
+  const mergedQty = Math.min(stock, target.quantity + source.quantity);
+  return items
+    .filter((item) => item !== source)
+    .map((item) => (item === target ? { ...item, quantity: mergedQty } : item));
+}
