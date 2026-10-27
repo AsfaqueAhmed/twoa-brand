@@ -24,7 +24,6 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
   const [productList, setProductList] = useState<Product[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushedHistory, setPushedHistory] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<{ hasMore: boolean; loadMore: () => void } | null>(null);
 
   const close = () => {
@@ -76,10 +75,6 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0 });
-  }, [productId]);
-
-  useEffect(() => {
     if (!productList || currentIndex === -1) return;
     const pagination = paginationRef.current;
     if (!pagination) return;
@@ -120,7 +115,7 @@ export function ProductModalProvider({ children }: { children: React.ReactNode }
       {productId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
-          <div ref={scrollRef} className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-6xl bg-[#FAF9F6] overflow-y-auto overscroll-contain shadow-2xl">
+          <div className="relative w-full h-full sm:h-[90vh] sm:max-w-6xl bg-[#FAF9F6] overflow-hidden shadow-2xl">
             {loading ? (
               <div className="flex justify-center py-32">
                 <Spinner />
