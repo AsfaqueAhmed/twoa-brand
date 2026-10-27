@@ -120,3 +120,11 @@ export async function cancelOrderAsCustomer(orderId: string, requesterUserId: st
   const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId, p_requester_user_id: requesterUserId });
   if (error) throw new Error(error.message);
 }
+
+// Public lookup by order number (last 8 chars of the id) + phone, via the
+// track_order RPC. Returns null when nothing matches both.
+export async function fetchOrderByNumberAndPhone(orderNumber: string, phone: string): Promise<Order | null> {
+  const { data, error } = await supabase.rpc('track_order', { p_order_number: orderNumber, p_phone: phone });
+  if (error) throw new Error(error.message);
+  return data && data.length > 0 ? toOrder(data[0]) : null;
+}
