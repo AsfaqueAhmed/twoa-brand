@@ -22,7 +22,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   useEffect(() => setDrawerOpen(false), [pathname]);
 
-  const renderGroup = (g: NavGroup) => {
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
+
+  const renderGroup = (g: NavGroup, onNavigate?: () => void) => {
     const Icon = g.icon;
     if (g.children) {
       const hasActive = g.children.some((c) => c.href === active);
@@ -31,24 +40,30 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div key={g.label}>
           <button
             type="button"
+            aria-expanded={open}
             onClick={() => setOpenGroups((s) => ({ ...s, [g.label]: !open }))}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm text-white/80 hover:bg-white/10"
           >
             <Icon className="h-4 w-4" />
             <span className="flex-1 text-left">{g.label}</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown aria-hidden="true" className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
           {open && (
             <div className="ml-4 border-l border-white/10 pl-3">
-              {g.children.map((c) => (
-                <Link
-                  key={c.href}
-                  href={c.href}
-                  className={`block rounded-md px-3 py-2 text-[13px] ${c.href === active ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'}`}
-                >
-                  {c.label}
-                </Link>
-              ))}
+              {g.children.map((c) => {
+                const isActive = c.href === active;
+                return (
+                  <Link
+                    key={c.href}
+                    href={c.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={onNavigate}
+                    className={`block rounded-md px-3 py-2 text-[13px] ${isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'}`}
+                  >
+                    {c.label}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -59,6 +74,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <Link
         key={g.label}
         href={g.href!}
+        aria-current={isActive ? 'page' : undefined}
+        onClick={onNavigate}
         className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm ${isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10'}`}
       >
         <Icon className="h-4 w-4" />
@@ -70,33 +87,47 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     );
   };
 
-  const sidebar = (
-    <nav className="flex h-full flex-col gap-1 overflow-y-auto bg-[#1B1B1B] p-3" aria-label="Admin navigation">
+  const sidebar = (label: string, onNavigate?: () => void) => (
+    <nav className="flex h-full flex-col gap-1 overflow-y-auto bg-[#1B1B1B] p-3" aria-label={label}>
       {NAV_SECTIONS.map((section, i) => (
         <div key={section.title ?? i} className="mb-2">
           {section.title && (
             <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-white/40">{section.title}</div>
           )}
-          {section.items.map(renderGroup)}
+          {section.items.map((g) => renderGroup(g, onNavigate))}
         </div>
       ))}
     </nav>
   );
 
+  const closeDrawer = () => setDrawerOpen(false);
+
   return (
     <div className="flex flex-1 bg-[#FAF8F4]">
       <aside className="hidden w-60 shrink-0 lg:block">
-        <div className="sticky top-0 h-[calc(100vh-4rem)]">{sidebar}</div>
+        <div className="sticky top-20 h-[calc(100vh-5rem)]">{sidebar('Admin navigation')}</div>
       </aside>
 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-64">{sidebar}</div>
+          <div className="absolute inset-0 bg-black/50" onClick={closeDrawer} />
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col">
+            <div className="flex justify-end bg-[#1B1B1B] px-3 pt-3">
+              <button
+                type="button"
+                onClick={closeDrawer}
+                aria-label="Close admin menu"
+                className="rounded-md p-2 text-white/80 hover:bg-white/10"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            {sidebar('Admin navigation (mobile)', closeDrawer)}
+          </div>
         </div>
       )}
 
-      <div className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">
+      <main className="min-w-0 flex-1 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">
         <button
           type="button"
           onClick={() => setDrawerOpen((o) => !o)}
@@ -106,7 +137,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           {drawerOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />} Menu
         </button>
         {children}
-      </div>
+      </main>
     </div>
   );
 }

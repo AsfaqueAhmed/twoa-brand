@@ -1,9 +1,9 @@
 import {
   Home, Package, Layers, ClipboardList, RotateCcw, Users, Ticket, Image as ImageIcon,
-  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, History, type LucideIcon,
+  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, type LucideIcon,
 } from 'lucide-react';
 
-export interface NavLeaf { label: string; href: string; icon?: LucideIcon; badge?: 'pendingOrders' }
+export interface NavLeaf { label: string; href: string }
 export interface NavGroup { label: string; icon: LucideIcon; href?: string; badge?: 'pendingOrders'; children?: NavLeaf[] }
 export interface NavSection { title?: string; items: NavGroup[] }
 
@@ -31,7 +31,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Coupons', icon: Ticket,
         children: [
           { label: 'All Coupons', href: '/admin/coupons' },
-          { label: 'Usage History', href: '/admin/coupons/usage', icon: History },
+          { label: 'Usage History', href: '/admin/coupons/usage' },
         ],
       },
       { label: 'Banners', icon: ImageIcon, href: '/admin/banners' },
