@@ -176,3 +176,21 @@ describe('nextStock', () => {
     expect(nextStock(5, 'remove', 9)).toBe(0);
   });
 });
+
+describe('stockBarPercent / distinctParentIds', () => {
+  it('computes bar width relative to the max', async () => {
+    const { stockBarPercent } = await import('./productList');
+    expect(stockBarPercent(null)).toBe(0);
+    expect(stockBarPercent(0)).toBe(0);
+    expect(stockBarPercent(30)).toBe(50);
+    expect(stockBarPercent(500)).toBe(100);
+  });
+
+  it('collects distinct parent ids and counts parentless products', async () => {
+    const { distinctParentIds } = await import('./productList');
+    const mk = (id: string, parentProductId?: string) => ({ id, parentProductId }) as never;
+    const res = distinctParentIds([mk('a', 'p1'), mk('b', 'p1'), mk('c'), mk('d', 'p2')], ['a', 'b', 'c']);
+    expect(res.parentIds).toEqual(['p1']);
+    expect(res.skipped).toBe(1);
+  });
+});

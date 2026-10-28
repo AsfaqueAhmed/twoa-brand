@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy, Split, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, RefreshCw, XCircle, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Product, ProductVariant, ParentProduct, ProductHighlight } from '@/shared/domain/types';
 import { MAX_GALLERY_IMAGES } from '@/features/product/domain/gallery';
@@ -21,8 +21,23 @@ import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/fire
 import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
-import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
-import AdminCard from '@/features/admin/presentation/AdminCard';
+import { pruneSelection } from '@/features/admin/orders/domain/orderView';
+import { setProductFeatured } from '../infrastructure/productBulkRepository';
+import {
+  DEFAULT_FILTERS,
+  activeFilterCount,
+  filterProducts,
+  paginate,
+  productStats,
+  sortProducts,
+  type ProductFilters,
+  type ProductSort,
+} from '../domain/productList';
+import ProductsHeader from './list/ProductsHeader';
+import ProductStatsRow from './list/ProductStatsRow';
+import ProductFilterBar from './list/ProductFilterBar';
+import ProductsTable from './list/ProductsTable';
+import ProductsPagination from './list/ProductsPagination';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -300,7 +315,7 @@ export default function InventoryManager() {
       await refreshProducts();
     } catch (err) {
       console.error('Error deleting product: ', err);
-      alert('Failed to delete product.');
+      setListError('Failed to delete product.');
     }
   };
 
@@ -380,7 +395,7 @@ export default function InventoryManager() {
       await refreshProducts();
     } catch (err: any) {
       console.error('Error splitting product into design variants: ', err);
-      alert(err.message || 'Failed to split product into separate designs.');
+      setListError(err.message || 'Failed to split product into separate designs.');
     } finally {
       setSplittingProductId(null);
     }
@@ -403,43 +418,70 @@ export default function InventoryManager() {
     ])
   ).sort();
 
-  // Search/Filters logic
-  const [productSearch, setProductSearch] = useState('');
-  const filteredInventory = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.id.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  const filterCategories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
 
-  // Client-side pagination — inventory is already loaded in full, this just windows the table.
-  const INVENTORY_PAGE_SIZE = 20;
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(filteredInventory.length / INVENTORY_PAGE_SIZE));
+  // List state: filters, sort, pagination and selection
+  const PAGE_SIZE = 20;
+  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS);
+  const [sort, setSort] = useState<ProductSort>('');
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [listError, setListError] = useState('');
+
+  const filtered = useMemo(() => sortProducts(filterProducts(products, filters), sort), [products, filters, sort]);
+  const pageData = paginate(filtered, page, PAGE_SIZE);
+  const stats = useMemo(() => productStats(products), [products]);
+
+  // Drop selected ids that no longer exist after a reload.
   useEffect(() => {
-    setCurrentPage(1);
-  }, [productSearch]);
-  const paginatedInventory = filteredInventory.slice(
-    (currentPage - 1) * INVENTORY_PAGE_SIZE,
-    currentPage * INVENTORY_PAGE_SIZE
-  );
+    setSelectedIds((prev) =>
+      pruneSelection(prev, products.map((p) => p.id))
+    );
+  }, [products]);
+
+  const pageIds = pageData.items.map((p) => p.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const someOnPageSelected = pageIds.some((id) => selectedIds.includes(id));
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleAllOnPage = () =>
+    setSelectedIds((prev) =>
+      allOnPageSelected ? prev.filter((id) => !pageIds.includes(id)) : Array.from(new Set([...prev, ...pageIds]))
+    );
+
+  const handleFilters = (f: ProductFilters) => {
+    setFilters(f);
+    setPage(1);
+  };
+  const handleSort = (s: ProductSort) => {
+    setSort(s);
+    setPage(1);
+  };
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSort('');
+    setPage(1);
+  };
+
+  // Optimistic featured toggle; reverts and reports inline on failure.
+  const handleToggleFeatured = async (p: Product, featured: boolean) => {
+    const apply = (value: boolean) =>
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, isFeatured: value } : x)));
+    apply(featured);
+    try {
+      await setProductFeatured(p.id, featured);
+    } catch (err: any) {
+      apply(!featured);
+      setListError(err.message || `Failed to update featured flag for "${p.name}".`);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <AdminPageHeader
-        title="Products"
-        subtitle="Manage your catalog, pricing and images."
-        actions={
-          <button
-            onClick={handleOpenCreateProduct}
-            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-            id="admin-add-product-btn"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add New Product</span>
-          </button>
-        }
-      />
+      <ProductsHeader onAdd={handleOpenCreateProduct} />
+
+      <ProductStatsRow stats={stats} />
 
       {productsLoading && products.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 border border-dashed border-[#EEEEEE]">
@@ -448,20 +490,15 @@ export default function InventoryManager() {
         </div>
       )}
 
-      {/* Search bar */}
-      <div className="bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#717171]" />
-          <input
-            type="text"
-            placeholder="Search inventory products..."
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-            className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
-            id="inventory-search-input"
-          />
-        </div>
-      </div>
+      <ProductFilterBar
+        filters={filters}
+        sort={sort}
+        categories={filterCategories}
+        activeCount={activeFilterCount(filters, sort)}
+        onFilters={handleFilters}
+        onSort={handleSort}
+        onReset={handleResetFilters}
+      />
 
       {/* Product Form Drawer/Modal overlay */}
       <AnimatePresence>
@@ -1165,187 +1202,42 @@ export default function InventoryManager() {
         )}
       </AnimatePresence>
 
-      {/* Catalog grid inside admin panel */}
-      <AdminCard className="overflow-x-auto p-0!">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Product</th>
-              <th className="py-4 px-6">Category</th>
-              <th className="py-4 px-6">Price</th>
-              <th className="py-4 px-6">Stock</th>
-              <th className="py-4 px-6">Variants</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {filteredInventory.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-[#717171] font-semibold">
-                  No products found matching your search. Please check search or add new!
-                </td>
-              </tr>
-            ) : (
-              paginatedInventory.map((p) => (
-                <tr key={p.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                  {/* Product title/image */}
-                  <td className="py-4 px-6 flex items-center space-x-3">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="h-11 w-11 object-cover bg-[#F5F5F5] border border-[#EEEEEE]"
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h4 className="font-bold text-black uppercase tracking-wide truncate max-w-[180px]">{p.name}</h4>
-                      <span className="font-mono text-[9px] text-[#919191]">{p.id}</span>
-                    </div>
-                  </td>
-
-                  {/* Category */}
-                  <td className="py-4 px-6">
-                    <span className="inline-block px-2 py-0.5 bg-[#F5F5F5] border border-[#EEEEEE] text-[9px] font-bold uppercase tracking-wider text-black">
-                      {p.category}
-                    </span>
-                    {p.subcategory && <span className="block text-[10px] text-[#717171] mt-0.5">{p.subcategory}</span>}
-                  </td>
-
-                  {/* Price */}
-                  <td className="py-4 px-6 font-mono font-bold text-black">
-                    {formatCurrency(p.price)}
-                    {p.originalPrice && (
-                      <span className="block text-[9px] text-[#919191] line-through font-normal">{formatCurrency(p.originalPrice)}</span>
-                    )}
-                  </td>
-
-                  {/* Stock (per size, sourced from the linked Parent Product) */}
-                  <td className="py-4 px-6">
-                    {(() => {
-                      const pp = parentProducts.find((x) => x.id === p.parentProductId);
-                      if (!pp) {
-                        return (
-                          <span className="font-mono font-bold px-2 py-0.5 border bg-red-50 text-red-800 border-red-200">
-                            No Parent Product
-                          </span>
-                        );
-                      }
-                      return (
-                        <div className="flex flex-wrap gap-1">
-                          {pp.sizeOrder.map((sz) => {
-                            const stock = pp.stockBySize[sz] ?? 0;
-                            return (
-                              <span
-                                key={sz}
-                                className={`font-mono font-bold px-1.5 py-0.5 border text-[10px] ${
-                                  stock === 0
-                                    ? 'bg-red-50 text-red-800 border-red-200'
-                                    : stock < 10
-                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                }`}
-                              >
-                                {sz}:{stock}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </td>
-
-                  {/* Variants & Sizes list summaries */}
-                  <td className="py-4 px-6">
-                    <div className="space-y-1">
-                      {(() => {
-                        const pp = parentProducts.find((x) => x.id === p.parentProductId);
-                        return (
-                          pp &&
-                          pp.sizeOrder.length > 0 && (
-                            <span className="block text-[10px] text-[#717171]">
-                              <strong className="text-black uppercase text-[9px]">Sizes:</strong> {pp.sizeOrder.join(', ')}
-                            </span>
-                          )
-                        );
-                      })()}
-                      {p.variants && p.variants.length > 0 && (
-                        <span className="block text-[10px] text-[#717171]">
-                          <strong className="text-black uppercase text-[9px]">Design Colors:</strong> {p.variants.length} options
-                        </span>
-                      )}
-                      {!parentProducts.find((x) => x.id === p.parentProductId) &&
-                        (!p.variants || p.variants.length === 0) && (
-                          <span className="text-[10px] italic text-[#919191]">Standard</span>
-                        )}
-                    </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                    <button
-                      onClick={() => handleOpenEditProduct(p)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Edit Product"
-                      id={`admin-edit-prod-btn-${p.id}`}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicateProduct(p)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Duplicate Product"
-                      id={`admin-duplicate-prod-btn-${p.id}`}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    {p.variants && p.variants.length > 0 && (
-                      <button
-                        onClick={() => handleSplitVariants(p)}
-                        disabled={splittingProductId === p.id}
-                        className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Split Design Variants Into Separate Products"
-                        id={`admin-split-prod-btn-${p.id}`}
-                      >
-                        {splittingProductId === p.id ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Split className="h-3.5 w-3.5" />
-                        )}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteProduct(p.id)}
-                      className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                      title="Delete Product"
-                      id={`admin-delete-prod-btn-${p.id}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </AdminCard>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center flex-wrap gap-1.5" id="inventory-pagination">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`min-w-[2.25rem] px-3 py-2 text-xs font-bold border transition-colors ${
-                page === currentPage
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white border-[#EEEEEE] text-[#717171] hover:border-black hover:text-black'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
+      {listError && (
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800">
+          <span>{listError}</span>
+          <button type="button" aria-label="Dismiss error" onClick={() => setListError('')}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
+
+      <div className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEEEEE] px-5 py-3.5">
+          <span className="text-sm text-[#555555]">{selectedIds.length} selected</span>
+          <ProductsPagination
+            from={pageData.from}
+            to={pageData.to}
+            total={pageData.total}
+            page={pageData.page}
+            totalPages={pageData.totalPages}
+            onPage={setPage}
+          />
+        </div>
+        <ProductsTable
+          products={pageData.items}
+          selectedIds={selectedIds}
+          onToggle={toggleSelected}
+          onToggleAllOnPage={toggleAllOnPage}
+          allOnPageSelected={allOnPageSelected}
+          someOnPageSelected={someOnPageSelected}
+          onEdit={handleOpenEditProduct}
+          onDuplicate={handleDuplicateProduct}
+          onSplit={handleSplitVariants}
+          onDelete={(p) => handleDeleteProduct(p.id)}
+          onToggleFeatured={handleToggleFeatured}
+          splittingProductId={splittingProductId}
+        />
+      </div>
 
       <ImageCropperModal
         isOpen={isCropperOpen}

@@ -103,3 +103,25 @@ export function nextStock(current: number, mode: StockAdjustMode, amount: number
   if (mode === 'add') return current + amount;
   return Math.max(0, current - amount);
 }
+
+// Stock bars are drawn relative to this many units; anything above fills the bar.
+export const STOCK_BAR_MAX = 60;
+
+export function stockBarPercent(total: number | null, max: number = STOCK_BAR_MAX): number {
+  if (total === null || total <= 0 || max <= 0) return 0;
+  return Math.min(100, Math.round((total / max) * 100));
+}
+
+// Stock is shared per parent product: returns the distinct parent ids of the
+// selected products plus how many selected products have no parent (skipped).
+export function distinctParentIds(products: Product[], selectedIds: string[]) {
+  const selected = new Set(selectedIds);
+  const parents = new Set<string>();
+  let skipped = 0;
+  for (const p of products) {
+    if (!selected.has(p.id)) continue;
+    if (p.parentProductId) parents.add(p.parentProductId);
+    else skipped += 1;
+  }
+  return { parentIds: [...parents], skipped };
+}
