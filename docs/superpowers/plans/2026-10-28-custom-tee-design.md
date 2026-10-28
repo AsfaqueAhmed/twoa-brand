@@ -137,7 +137,7 @@ describe('validateSelection', () => {
   it('accepts a valid selection', () => {
     expect(validateSelection(parents, full)).toEqual({ ok: true });
   });
-  it('resets to parent when its stock dropped to 0', () => {
+  it('resets to size when the chosen size no longer has stock anywhere', () => {
     const drained = parents.map((p) => (p.id === 'a' ? parent('a', 'T-Shirts', 'Graphic', { S: 0, M: 0, L: 2 }) : p));
     const result = validateSelection(drained, full);
     expect(result).toMatchObject({ ok: false, resetTo: 'size' });
@@ -190,13 +190,11 @@ function matching(parents: ParentProduct[], category: string, subcategory: strin
 }
 
 export function eligibleSizes(parents: ParentProduct[], category: string, subcategory: string): string[] {
-  const sizes: string[] = [];
-  for (const p of matching(parents, category, subcategory)) {
-    for (const s of p.sizeOrder) {
-      if (hasStock(p, s) && !sizes.includes(s)) sizes.push(s);
-    }
-  }
-  return sizes;
+  const matches = matching(parents, category, subcategory);
+  // Canonical order: first-seen across all matching parents' sizeOrder (including sold-out sizes), then filtered by stock.
+  const ordered: string[] = [];
+  for (const p of matches) for (const s of p.sizeOrder) if (!ordered.includes(s)) ordered.push(s);
+  return ordered.filter((s) => matches.some((p) => hasStock(p, s)));
 }
 
 export function eligibleParents(parents: ParentProduct[], category: string, subcategory: string, size: string): ParentProduct[] {
