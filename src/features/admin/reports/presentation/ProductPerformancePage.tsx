@@ -18,6 +18,7 @@ import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presenta
 import { filterByName, revenueShare } from '../domain/reportStats';
 import ReportRangeSelect from './ReportRangeSelect';
 import ReportError from './ReportError';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const PAGE_SIZE = 20;
 
@@ -82,7 +83,7 @@ export default function ProductPerformancePage() {
                         <td className="px-3">
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={p.image} alt="" className="h-10 w-10 rounded-lg border border-[#EEEEEE] object-cover" />
+                            <ThumbImage src={p.image} alt="" className="h-10 w-10 rounded-lg border border-[#EEEEEE] object-cover" />
                             <span className="font-medium text-black">{p.name}</span>
                           </div>
                         </td>

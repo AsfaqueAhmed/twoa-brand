@@ -7,6 +7,7 @@ import ProductStatusPill from './ProductStatusPill';
 import ProductRowMenu from './ProductRowMenu';
 import FeaturedSwitch from './FeaturedSwitch';
 import StockBar from './StockBar';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 export type ProductsListProps = {
   products: Product[];
@@ -110,7 +111,7 @@ export default function ProductsTable(props: ProductsListProps) {
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-4">
-                      <img
+                      <ThumbImage
                         src={p.image}
                         alt={p.name}
                         className="h-[66px] w-[52px] shrink-0 rounded-md border border-[#EEEEEE] bg-[#F5F5F5] object-cover"

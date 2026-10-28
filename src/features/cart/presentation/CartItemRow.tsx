@@ -6,6 +6,7 @@ import { resolveAvailableStock } from '@/shared/domain/stock';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { discountPercent } from '../domain/cart';
 import { useCart } from './CartProvider';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const CART_ROW_GRID =
   'sm:grid sm:grid-cols-[minmax(0,1fr)_110px_130px_100px_40px] sm:items-center sm:gap-4';
@@ -23,7 +24,7 @@ export default function CartItemRow({ item }: { item: CartItem }) {
       {/* Product */}
       <div className="flex w-full gap-3 sm:gap-4 min-w-0 sm:w-auto">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <ThumbImage
           src={selectedVariant?.image || product.image}
           alt={product.name}
           className="h-24 w-[76px] sm:w-20 shrink-0 object-cover bg-[#F5F5F5]"
@@ -55,7 +56,7 @@ export default function CartItemRow({ item }: { item: CartItem }) {
                   >
                     {v.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={v.image} alt={v.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      <ThumbImage src={v.image} alt={v.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <span className="block h-full w-full" style={{ backgroundColor: v.colorCode || '#EEEEEE' }} />
                     )}

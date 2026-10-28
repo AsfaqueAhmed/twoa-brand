@@ -10,6 +10,7 @@ import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { discountPercent } from '../domain/cart';
 import { pickRecommendations } from '../domain/recommendations';
 import { useCart } from './CartProvider';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 export default function CartRecommendations() {
   const { items } = useCart();
@@ -53,7 +54,7 @@ export default function CartRecommendations() {
             >
               <div className="relative aspect-[4/5] overflow-hidden bg-[#F5F5F5]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.image} alt={p.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
+                <ThumbImage src={p.image} alt={p.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                 {percent !== undefined && (
                   <span className="absolute top-2 left-2 bg-red-500 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
                     {percent}% off

@@ -6,6 +6,7 @@ import type { Order, Product } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { buildOrderImages, itemThumbnails } from '../domain/orderImages';
 import OrderImagesModal from './OrderImagesModal';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface Props {
   order: Order;
@@ -39,7 +40,7 @@ export default function OrderItemsPanel({ order, productsById }: Props) {
             <div key={idx} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
               <div className="flex shrink-0 gap-2">
                 {item.image ? (
-                  <img
+                  <ThumbImage
                     src={item.image}
                     alt={item.name}
                     className="h-28 w-28 rounded-md border border-[#EEEEEE] bg-[#F5F5F5] object-cover"
@@ -52,7 +53,7 @@ export default function OrderItemsPanel({ order, productsById }: Props) {
                 {thumbs.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     {thumbs.map((src, i) => (
-                      <img
+                      <ThumbImage
                         key={i}
                         src={src}
                         alt={`${item.name} ${i + 1}`}

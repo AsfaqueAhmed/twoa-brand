@@ -6,6 +6,7 @@ import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
 import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
 import StatusPill from '@/features/admin/presentation/ui/StatusPill';
 import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const FEED_URL = 'https://twoa-brand.web.app/product-feed.csv';
 
@@ -142,7 +143,7 @@ export default function ProductFeedManager() {
                 <td className="py-3 pl-5 pr-3">
                   <div className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ThumbImage
                       src={row.image_link}
                       alt={row.title}
                       className="h-10 w-10 rounded-lg border border-[#EEEEEE] bg-[#F5F5F5] object-cover"

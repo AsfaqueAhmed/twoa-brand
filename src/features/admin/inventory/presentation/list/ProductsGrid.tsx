@@ -5,6 +5,7 @@ import ProductStatusPill from './ProductStatusPill';
 import ProductRowMenu from './ProductRowMenu';
 import StockBar from './StockBar';
 import type { ProductsListProps } from './ProductsTable';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 export default function ProductsGrid(props: ProductsListProps) {
   const selected = new Set(props.selectedIds);
@@ -32,7 +33,7 @@ export default function ProductsGrid(props: ProductsListProps) {
           >
             <Star className={`h-4 w-4 ${p.isFeatured ? 'fill-amber-400 text-amber-500' : 'text-[#717171]'}`} />
           </button>
-          <img src={p.image} alt={p.name} className="aspect-[4/5] w-full bg-[#F5F5F5] object-cover" referrerPolicy="no-referrer" loading="lazy" />
+          <ThumbImage src={p.image} alt={p.name} className="aspect-[4/5] w-full bg-[#F5F5F5] object-cover" referrerPolicy="no-referrer" loading="lazy" />
           <div className="flex flex-1 flex-col gap-2 p-3.5">
             <div className="truncate text-sm font-semibold text-black">{p.name}</div>
             <div className="text-sm font-semibold text-black">

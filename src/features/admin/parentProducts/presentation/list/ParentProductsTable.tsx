@@ -6,6 +6,7 @@ import ProductStatusPill from '@/features/admin/inventory/presentation/list/Prod
 import StockBar from '@/features/admin/inventory/presentation/list/StockBar';
 import { parentCategoryLabel } from '../../domain/parentCategory';
 import { parentTotalStock } from '../../domain/parentList';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 type Props = {
   parents: ParentProduct[];
@@ -72,7 +73,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete,
                 <tr key={pp.id} className={TABLE_ROW}>
                   <td className="py-3 pl-5 pr-2">
                     {pp.image ? (
-                      <img
+                      <ThumbImage
                         src={pp.image}
                         alt={pp.name}
                         className="h-12 w-12 rounded-md border border-[#EEEEEE] bg-[#F5F5F5] object-cover"

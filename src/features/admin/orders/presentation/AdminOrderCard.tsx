@@ -12,6 +12,7 @@ import OrderSummaryPanel from './OrderSummaryPanel';
 import OrderStatusUpdater from './OrderStatusUpdater';
 import OrderQuickActions from './OrderQuickActions';
 import OrderItemsPanel from './OrderItemsPanel';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface Props {
   order: Order;
@@ -89,7 +90,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           <div className="flex gap-1.5">
             {thumbs.map((item, i) =>
               item.image ? (
-                <img
+                <ThumbImage
                   key={i}
                   src={item.image}
                   alt={item.name}
