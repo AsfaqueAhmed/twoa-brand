@@ -1,4 +1,5 @@
 import { Edit2 } from 'lucide-react';
+import { TABLE_BODY, TABLE_HEAD_ROW, TABLE_ROW } from '@/features/admin/presentation/ui/TableCard';
 import type { Product } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { productStatus, productTotalStock } from '../../domain/productList';
@@ -64,7 +65,7 @@ export default function ProductsTable(props: ProductsListProps) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[920px] border-collapse text-left">
         <thead>
-          <tr className="border-b border-[#EEEEEE] bg-[#FAF9F6] text-xs font-medium text-[#555555]">
+          <tr className={TABLE_HEAD_ROW}>
             <th className="w-12 py-3.5 pl-5 pr-2">
               <input
                 type="checkbox"
@@ -86,7 +87,7 @@ export default function ProductsTable(props: ProductsListProps) {
             <th className="px-3 py-3.5 pr-5">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#EEEEEE] text-sm text-[#1A1A1A]">
+        <tbody className={TABLE_BODY}>
           {products.length === 0 ? (
             <tr>
               <td colSpan={8} className="py-12 text-center font-semibold text-[#717171]">
@@ -97,7 +98,7 @@ export default function ProductsTable(props: ProductsListProps) {
             products.map((p) => {
               const total = productTotalStock(p);
               return (
-                <tr key={p.id} className={`transition-colors hover:bg-[#FAF9F6]/60 ${selected.has(p.id) ? 'bg-[#FAF9F6]' : ''}`}>
+                <tr key={p.id} className={`${TABLE_ROW} ${selected.has(p.id) ? 'bg-[#FAF9F6]' : ''}`}>
                   <td className="py-3 pl-5 pr-2">
                     <input
                       type="checkbox"

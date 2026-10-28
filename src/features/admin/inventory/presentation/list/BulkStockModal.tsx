@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { StockAdjustMode } from '../../domain/productList';
-import BulkModalShell from './BulkModalShell';
+import ModalShell from '@/features/admin/presentation/ui/ModalShell';
 
 type Props = {
   parentCount: number;
@@ -25,7 +25,7 @@ export default function BulkStockModal({ parentCount, skipped, busy, error, onAp
   const valid = /^\d+$/.test(amount.trim());
 
   return (
-    <BulkModalShell title="Update stock" onClose={onClose} busy={busy}>
+    <ModalShell title="Update stock" onClose={onClose} busy={busy}>
       <p className="mb-2 text-xs text-[#717171]">
         Stock is shared by every product of a parent product. The change is applied to every size of each parent product, so all products linked to it are affected.
       </p>
@@ -64,6 +64,6 @@ export default function BulkStockModal({ parentCount, skipped, busy, error, onAp
           {busy ? 'Updating...' : `Update ${parentCount} parent product${parentCount === 1 ? '' : 's'}`}
         </button>
       </div>
-    </BulkModalShell>
+    </ModalShell>
   );
 }

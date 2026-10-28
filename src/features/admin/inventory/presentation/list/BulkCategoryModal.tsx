@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
-import BulkModalShell from './BulkModalShell';
+import ModalShell from '@/features/admin/presentation/ui/ModalShell';
 
 type Props = {
   count: number;
@@ -21,7 +21,7 @@ export default function BulkCategoryModal({ count, categories, busy, error, onAp
   const subs = categories.find((c) => c.name === category)?.subcategories ?? [];
 
   return (
-    <BulkModalShell title="Change category" onClose={onClose} busy={busy}>
+    <ModalShell title="Change category" onClose={onClose} busy={busy}>
       <p className="mb-4 text-xs text-[#717171]">Applies to {count} selected product{count === 1 ? '' : 's'}.</p>
       {categories.length === 0 && <p className="mb-3 text-xs text-amber-700">No categories exist yet. Create one on the Categories page first.</p>}
       <label className="mb-1 block text-xs font-semibold text-[#555555]" htmlFor="bulk-category">Category</label>
@@ -46,6 +46,6 @@ export default function BulkCategoryModal({ count, categories, busy, error, onAp
           {busy ? 'Applying...' : 'Apply'}
         </button>
       </div>
-    </BulkModalShell>
+    </ModalShell>
   );
 }

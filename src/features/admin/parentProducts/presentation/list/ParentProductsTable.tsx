@@ -1,4 +1,5 @@
 import { Edit2, Trash2 } from 'lucide-react';
+import { TABLE_BODY, TABLE_HEAD_ROW, TABLE_ROW } from '@/features/admin/presentation/ui/TableCard';
 import type { ParentProduct } from '@/shared/domain/types';
 import { stockLevel, type ProductStatus } from '@/features/admin/inventory/domain/productList';
 import ProductStatusPill from '@/features/admin/inventory/presentation/list/ProductStatusPill';
@@ -40,7 +41,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete 
     <div className="overflow-x-auto">
       <table className="w-full min-w-[860px] border-collapse text-left">
         <thead>
-          <tr className="border-b border-[#EEEEEE] bg-[#FAF9F6] text-xs font-medium text-[#555555]">
+          <tr className={TABLE_HEAD_ROW}>
             <th className="w-20 py-3.5 pl-5 pr-2">Image</th>
             <th className="px-3 py-3.5">Parent Product</th>
             <th className="px-3 py-3.5">Sizes</th>
@@ -49,7 +50,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete 
             <th className="px-3 py-3.5 pr-5 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#EEEEEE] text-sm text-[#1A1A1A]">
+        <tbody className={TABLE_BODY}>
           {parents.length === 0 ? (
             <tr>
               <td colSpan={6} className="py-12 text-center font-semibold text-[#717171]">
@@ -64,7 +65,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete 
               const count = linked ? (linked.get(pp.id) ?? 0) : null;
               const blocked = count !== null && count > 0;
               return (
-                <tr key={pp.id} className="transition-colors hover:bg-[#FAF9F6]/60">
+                <tr key={pp.id} className={TABLE_ROW}>
                   <td className="py-3 pl-5 pr-2">
                     {pp.image ? (
                       <img

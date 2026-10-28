@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom';
 
 type Props = { title: string; onClose: () => void; busy?: boolean; children: React.ReactNode };
 
-// Portal dialog: Escape + backdrop close, focuses the first control on open.
-export default function BulkModalShell({ title, onClose, busy = false, children }: Props) {
+// Portal dialog: Escape + backdrop close (ignored while busy), focuses the first control on open.
+export default function ModalShell({ title, onClose, busy = false, children }: Props) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(busy);

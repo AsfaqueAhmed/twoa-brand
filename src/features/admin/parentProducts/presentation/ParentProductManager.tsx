@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Plus, XCircle, Upload, RefreshCw, X } from 'lucide-react';
+import { Plus, XCircle, Upload, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ParentProduct } from '@/shared/domain/types';
 import {
@@ -11,7 +11,9 @@ import {
 } from '../infrastructure/firestoreParentProductsAdminRepository';
 import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import { paginate } from '@/features/admin/inventory/domain/productList';
-import ProductsPagination from '@/features/admin/inventory/presentation/list/ProductsPagination';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import { TableCard } from '@/features/admin/presentation/ui/TableCard';
 import {
   DEFAULT_PARENT_FILTERS,
   activeParentFilterCount,
@@ -248,14 +250,7 @@ export default function ParentProductManager() {
         }}
       />
 
-      {listError && (
-        <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800">
-          <span>{listError}</span>
-          <button type="button" aria-label="Dismiss error" onClick={() => setListError('')}>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
 
       <AnimatePresence>
         {isEditing && (
@@ -437,9 +432,9 @@ export default function ParentProductManager() {
       </AnimatePresence>
 
       {!(loading && parentProducts.length === 0) && (
-        <div className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
+        <TableCard>
           <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
-            <ProductsPagination
+            <Pagination
               from={pageData.from}
               to={pageData.to}
               total={pageData.total}
@@ -449,7 +444,7 @@ export default function ParentProductManager() {
             />
           </div>
           <ParentProductsTable parents={pageData.items} linked={linked} onEdit={openEdit} onDelete={handleDelete} />
-        </div>
+        </TableCard>
       )}
 
       <ImageCropperModal

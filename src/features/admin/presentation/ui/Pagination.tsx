@@ -1,11 +1,11 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-type Props = { from: number; to: number; total: number; page: number; totalPages: number; onPage: (p: number) => void };
+type Props = { from: number; to: number; total: number; page: number; totalPages: number; onPage: (p: number) => void; id?: string };
 
-export default function ProductsPagination({ from, to, total, page, totalPages, onPage }: Props) {
+export default function Pagination({ from, to, total, page, totalPages, onPage, id }: Props) {
   const btn = 'rounded-lg border border-[#EEEEEE] bg-white p-2 text-black hover:border-black disabled:opacity-40 disabled:hover:border-[#EEEEEE]';
   return (
-    <div className="flex items-center gap-3" id="inventory-pagination">
+    <div className="flex items-center gap-3" id={id}>
       <span className="whitespace-nowrap text-xs text-[#717171]">
         Showing {from}-{to} of {total}
       </span>

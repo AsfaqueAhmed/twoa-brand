@@ -48,7 +48,9 @@ import ProductsGrid from './list/ProductsGrid';
 import ProductBulkToolbar, { type ProductViewMode } from './list/ProductBulkToolbar';
 import BulkCategoryModal from './list/BulkCategoryModal';
 import BulkStockModal from './list/BulkStockModal';
-import ProductsPagination from './list/ProductsPagination';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import { TableCard } from '@/features/admin/presentation/ui/TableCard';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -1264,16 +1266,9 @@ export default function InventoryManager() {
         )}
       </AnimatePresence>
 
-      {listError && (
-        <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800">
-          <span>{listError}</span>
-          <button type="button" aria-label="Dismiss error" onClick={() => setListError('')}>
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
 
-      <div className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
+      <TableCard>
         <ProductBulkToolbar
           selectedCount={selectedIds.length}
           allOnPageSelected={allOnPageSelected}
@@ -1291,7 +1286,8 @@ export default function InventoryManager() {
           onViewMode={setViewMode}
           busy={bulkBusy}
         >
-          <ProductsPagination
+          <Pagination
+            id="inventory-pagination"
             from={pageData.from}
             to={pageData.to}
             total={pageData.total}
@@ -1301,7 +1297,7 @@ export default function InventoryManager() {
           />
         </ProductBulkToolbar>
         {viewMode === 'grid' ? <ProductsGrid {...listProps} /> : <ProductsTable {...listProps} />}
-      </div>
+      </TableCard>
 
       {bulkModal === 'category' && (
         <BulkCategoryModal

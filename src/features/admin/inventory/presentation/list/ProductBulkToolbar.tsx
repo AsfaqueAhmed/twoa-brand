@@ -1,5 +1,5 @@
 import { LayoutGrid, List } from 'lucide-react';
-import DropdownMenu from './DropdownMenu';
+import DropdownMenu from '@/features/admin/presentation/ui/DropdownMenu';
 
 export type ProductViewMode = 'list' | 'grid';
 
