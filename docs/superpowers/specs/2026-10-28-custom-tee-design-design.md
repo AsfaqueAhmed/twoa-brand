@@ -4,7 +4,7 @@
 
 - **A. Picker (this spec):** `/custom-tee` four-step selection, ends at a hand-off screen.
 - **B. Parent view images:** admin uploads front/back/left/right images on a Parent Product (migration + admin UI + `ParentProduct` type). Prerequisite for studio views.
-- **C. Design Studio v2:** the reference layout (left tool rail, canvas, right panel): image + text layers, layers list (visibility, reorder), position/scale/align/flip, undo/redo, zoom/fullscreen, Front/Back/Left/Right views using phase B images.
+- **C. Design Studio (spec below, "Phase C"):** the reference layout (left tool rail, canvas, right panel): image + text layers, layers list (visibility, reorder), position/scale/align/flip, undo/redo, zoom/fullscreen. Front view only until phase B; the view tabs render from a `views` list that phase B extends.
 - **D. Commerce:** price source, Add to Cart, artwork upload storage, order persistence, Free Gallery.
 
 Parent/Product classification (category + subcategory required on parents, inherited by products) is **already implemented**.
@@ -44,3 +44,48 @@ The picker is a fixed-width (640px on desktop) modal, identical width for both s
 
 - Vitest for `selection.ts` (cascading resets, stock-0 exclusion, canonical size order, empty cases, revalidation after a stock drop, `isStepOneComplete`, `selectableParents`) and `cards.ts`.
 - Browser check: nav opens the popup on a non-custom page; stepper flow; Escape/backdrop/X close; reset and stock revalidation; mobile width.
+
+---
+
+# Phase C: Design Studio
+
+## Scope
+
+A full page `/custom-tee/studio` (under the site navbar), matching the approved reference: left tool rail + tool panel, center canvas, right product/controls panel. Front view only: the Front/Back/Left/Right tabs and thumbnails render from `buildViews()`, which returns only the front view today (parent image, or the selected color variant's image). Phase B later adds the other views.
+
+**Out of scope (shown as "coming soon", not faked):** Free Gallery tab (phase D), price and Add to Cart (phase D). **Not built:** a Settings tab. Phase B (view images, migration) is separate.
+
+## Entry and exit
+
+- The popup's Continue navigates to `/custom-tee/studio?tee=<parentId>&size=<size>` (and still writes `sessionStorage['custom-tee-selection']`). The studio reads the query params first, then the sessionStorage hand-off.
+- The studio loads parents via `useCustomTeeData`, and `resolveStudioTarget` requires an imaged parent with stock > 0 in that size. If there is no hand-off or the target is invalid it redirects to `/custom-tee` (which opens the popup).
+- A saved design (`sessionStorage['custom-tee-design']`) for the same parent is restored (layers, color, size).
+
+## Layers (domain, pure and tested)
+
+- `Layer` = image (`src` data URL, `aspect`) or text (`text` <= 60 chars, `fontFamily` from a fixed list, `color` hex). Common: `id`, `name`, `x`,`y` (center, 0..1 of the canvas), `scale` (image width as a fraction of canvas width; text font size = `scale * 0.2 * canvasWidth`), `rotation` (deg, normalized to (-180,180]), `flipX`, `flipY`, `visible`. Array order = z-order (last = top).
+- Operations: add, remove, update (clamped: scale 0.05..1.5, x/y 0..1), toggle visibility, flip, move up/down, reorder, align (left/center/right/top/middle/bottom using the layer's measured box).
+- Undo/redo: a generic `History<T>` (limit 50) with `live` (drag in progress, no history entry), `settle` (a finished gesture becomes one undo step), `commit` (discrete change), `undo`, `redo`.
+- Displayed scale percent: `scale / 0.4 * 100` (default layer = 100%).
+
+## Canvas and tools
+
+- Canvas is DOM-based (an `<img>` base plus absolutely positioned layers), not the canvas API. Drag to move; corner handles scale from the layer center; a top handle rotates. Click empty canvas to deselect. Delete removes the selected layer; Ctrl/Cmd+Z undo, Shift+Ctrl/Cmd+Z redo (ignored while typing in a field).
+- Zoom 50%-200% in 25% steps changes the canvas width; fullscreen uses the Fullscreen API on the studio root.
+- Design tab: upload (PNG/JPG/WebP, max 10 MB; drag-and-drop or click; multiple files). Images are downscaled to max 1600px and stored as data URLs. Images tab: uploaded asset library (click adds another layer). Text tab: add text, font (white custom dropdown), color; edits the selected text layer. Layers tab: the same layers list as the right panel.
+- Right panel: product card (parent name, SKU code, category/subcategory), Color swatches (from linked product variants; selecting one swaps the base image when the variant has an image), Size buttons (sizes with stock), Design Layers list (select, show/hide, delete, drag-to-reorder + up/down), Position & Scale (align x6, flip x2, scale slider + % box; disabled with no selection), Save Design, a disabled "Add to Cart (coming soon)".
+- Footer: the existing `TrustStrip`.
+
+## Save
+
+Save re-fetches stock and checks the chosen size is still eligible; on success it stores the design (`parentProductId`, `size`, `colorName`, `layers`) in `sessionStorage` (also refreshing the hand-off) and shows "Design saved for this session". Storage quota errors show a clear message. Nothing writes stock.
+
+## Structure
+
+- `domain/history.ts`, `domain/layers.ts`, `domain/design.ts`, `domain/studioTarget.ts`, `domain/views.ts` (all pure, tested).
+- `application/imageUpload.ts` (`fileToDataUrl`), `application/useStudioState.ts`.
+- `presentation/studio/`: `Canvas`, `StudioToolbar`, `ToolRail`, `DesignPanel`, `ImagesPanel`, `TextPanel`, `LayersList`, `ProductPanel`, `PositionScalePanel`, `StudioEditor`, `StudioPage`; route `src/app/custom-tee/studio/page.tsx`.
+
+## Testing
+
+Vitest for the five domain modules. Browser check: load from the popup, upload, drag/scale/rotate, text, layers (hide/reorder/delete), align/flip, undo/redo, zoom, save + reload restore, invalid hand-off redirect, stock-gone on Save, narrow width.
