@@ -30,7 +30,7 @@ export default function CheckoutSummary({
   onRemovePromo,
 }: Props) {
   return (
-    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-28" id="checkout-summary">
+    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-24" id="checkout-summary">
       <div className="flex items-baseline justify-between gap-3 border-b border-[#EEEEEE] pb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-black">
           Order Summary <span className="text-sm font-normal text-[#717171]">({count} {count === 1 ? 'item' : 'items'})</span>

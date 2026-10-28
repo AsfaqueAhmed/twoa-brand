@@ -200,7 +200,7 @@ function EditOrderForm({ order, products }: { order: Order; products: Product[] 
           )}
         </div>
 
-        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+        <div className="space-y-6 xl:sticky xl:top-20 xl:self-start">
           <AdminCard title="Pricing">
             <div className="space-y-4">
               <label className="block text-xs text-[#717171]">

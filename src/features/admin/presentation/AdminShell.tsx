@@ -105,7 +105,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex flex-1 bg-[#FAF8F4]">
       <aside className="hidden w-60 shrink-0 lg:block">
-        <div className="sticky top-20 h-[calc(100vh-5rem)]">{sidebar('Admin navigation')}</div>
+        <div className="sticky top-16 h-[calc(100vh-4rem)]">{sidebar('Admin navigation')}</div>
       </aside>
 
       {drawerOpen && (

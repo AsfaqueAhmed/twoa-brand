@@ -171,7 +171,7 @@ export default function CreateOrderPage() {
             </select>
           </AdminCard>
         </div>
-        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+        <div className="space-y-6 xl:sticky xl:top-20 xl:self-start">
           <PricingCard
             subtotal={subtotal}
             districtId={districtId}
