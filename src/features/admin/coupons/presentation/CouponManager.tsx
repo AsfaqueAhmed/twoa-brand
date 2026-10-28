@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, XCircle, Ticket, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Coupon, DiscountType } from '@/features/coupons/domain/coupon';
 import { divisions, districts } from '@/features/checkout/infrastructure/bangladeshAreas';
-import { formatCurrency } from '@/shared/lib/formatCurrency';
 import {
   listAllCoupons,
   createCoupon,
@@ -13,8 +12,23 @@ import {
   deleteCoupon,
   type CouponFormPayload,
 } from '../infrastructure/firestoreCouponAdminRepository';
-import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
-import AdminCard from '@/features/admin/presentation/AdminCard';
+import { paginate } from '@/features/admin/inventory/domain/productList';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import { TableCard } from '@/features/admin/presentation/ui/TableCard';
+import EmptyState from '@/shared/ui/EmptyState';
+import {
+  DEFAULT_COUPON_FILTERS,
+  activeCouponFilterCount,
+  couponStats,
+  filterCoupons,
+  type CouponFilters,
+} from '../domain/couponList';
+import CouponStatsRow from './list/CouponStatsRow';
+import CouponFilterBar from './list/CouponFilterBar';
+import CouponsTable from './list/CouponsTable';
+
+const PAGE_SIZE = 20;
 
 const DISCOUNT_TYPES: { value: DiscountType; label: string }[] = [
   { value: 'percentage', label: 'Percentage off' },
@@ -42,11 +56,21 @@ export default function CouponManager() {
   const [form, setForm] = useState<CouponFormPayload>(emptyForm);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [listError, setListError] = useState('');
+  const [filters, setFilters] = useState<CouponFilters>(DEFAULT_COUPON_FILTERS);
+  const [page, setPage] = useState(1);
+  const hasLoadedRef = useRef(false);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    // Only the first load shows the spinner; later reloads are silent.
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       setCoupons(await listAllCoupons());
+      hasLoadedRef.current = true;
+      setListError('');
+    } catch (err: any) {
+      console.error('Error fetching coupons: ', err);
+      setListError(err?.message || 'Failed to load coupons.');
     } finally {
       setLoading(false);
     }
@@ -111,38 +135,72 @@ export default function CouponManager() {
     }
   };
 
-  const handleDelete = async (code: string) => {
-    if (!window.confirm(`Delete coupon ${code}? This cannot be undone.`)) return;
-    await deleteCoupon(code);
-    await refresh();
+  const runListAction = async (action: () => Promise<unknown>, fallback: string) => {
+    try {
+      await action();
+      await refresh();
+    } catch (err: any) {
+      setListError(err?.message || fallback);
+    }
   };
 
-  const handleToggleActive = async (coupon: Coupon) => {
-    await updateCoupon(coupon.code, { isActive: !coupon.isActive });
-    await refresh();
+  const handleDelete = async (coupon: Coupon) => {
+    if (!window.confirm(`Delete coupon ${coupon.code}? This cannot be undone.`)) return;
+    await runListAction(() => deleteCoupon(coupon.code), 'Failed to delete coupon.');
   };
 
-  const handleToggleVisibility = async (coupon: Coupon) => {
-    await updateCoupon(coupon.code, { isPublic: !coupon.isPublic });
-    await refresh();
-  };
+  const handleToggleActive = (coupon: Coupon) =>
+    runListAction(() => updateCoupon(coupon.code, { isActive: !coupon.isActive }), 'Failed to update coupon.');
+
+  const handleToggleVisibility = (coupon: Coupon) =>
+    runListAction(() => updateCoupon(coupon.code, { isPublic: !coupon.isPublic }), 'Failed to update coupon.');
+
+  const stats = useMemo(() => couponStats(coupons), [coupons]);
+  const visible = useMemo(() => filterCoupons(coupons, filters), [coupons, filters]);
+  const pageData = paginate(visible, page, PAGE_SIZE);
+  const activeCount = activeCouponFilterCount(filters);
+  const firstLoad = loading && coupons.length === 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <AdminPageHeader
-        title="Coupons"
-        subtitle="Create and manage discount codes."
-        actions={
-          <button
-            onClick={openCreate}
-            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-            id="admin-add-coupon-btn"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add New Coupon</span>
-          </button>
-        }
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-black">Coupons</h1>
+          <p className="mt-1 text-sm text-[#717171]">Create and manage discount codes.</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-2 rounded-lg bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#333333]"
+          id="admin-add-coupon-btn"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Coupon</span>
+        </button>
+      </div>
+
+      <CouponStatsRow stats={stats} />
+
+      {firstLoad && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
+          <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
+          <p className="mt-3 text-xs font-semibold text-[#717171]">Loading coupons...</p>
+        </div>
+      )}
+
+      <CouponFilterBar
+        filters={filters}
+        activeCount={activeCount}
+        onFilters={(f) => {
+          setFilters(f);
+          setPage(1);
+        }}
+        onReset={() => {
+          setFilters(DEFAULT_COUPON_FILTERS);
+          setPage(1);
+        }}
       />
+
+      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
 
       <AnimatePresence>
         {isEditing && (
@@ -335,97 +393,34 @@ export default function CouponManager() {
         )}
       </AnimatePresence>
 
-      <AdminCard className="overflow-x-auto p-0!">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Code</th>
-              <th className="py-4 px-6">Discount</th>
-              <th className="py-4 px-6">Conditions</th>
-              <th className="py-4 px-6">Usage</th>
-              <th className="py-4 px-6">Status</th>
-              <th className="py-4 px-6">Visibility</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center text-[#717171] font-semibold">
-                  Loading coupons...
-                </td>
-              </tr>
-            ) : coupons.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center text-[#717171] font-semibold">
-                  No coupons yet. Add one to get started.
-                </td>
-              </tr>
-            ) : (
-              coupons.map((c) => (
-                <tr key={c.code} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                  <td className="py-4 px-6 font-mono font-bold">{c.code}</td>
-                  <td className="py-4 px-6">
-                    {c.discountType === 'percentage'
-                      ? `${c.value}% off`
-                      : c.discountType === 'flat'
-                        ? `${formatCurrency(c.value)} off`
-                        : 'Free shipping'}
-                  </td>
-                  <td className="py-4 px-6 text-[10px] text-[#717171]">
-                    {c.minOrderSubtotal ? `Min ${formatCurrency(c.minOrderSubtotal)}. ` : ''}
-                    {c.districtRestriction
-                      ? `District: ${districts.find((d) => d.id === c.districtRestriction)?.name || c.districtRestriction}. `
-                      : ''}
-                    {c.expiresAt ? `Expires ${new Date(c.expiresAt).toLocaleDateString()}.` : ''}
-                  </td>
-                  <td className="py-4 px-6 font-mono">
-                    {c.usageCount}
-                    {c.usageLimit ? ` / ${c.usageLimit}` : ''}
-                  </td>
-                  <td className="py-4 px-6">
-                    <button
-                      onClick={() => handleToggleActive(c)}
-                      className={`px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${
-                        c.isActive ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-[#F5F5F5] text-[#717171] border-[#EEEEEE]'
-                      }`}
-                    >
-                      {c.isActive ? 'Active' : 'Inactive'}
-                    </button>
-                  </td>
-                  <td className="py-4 px-6">
-                    <button
-                      onClick={() => handleToggleVisibility(c)}
-                      className={`px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${
-                        c.isPublic ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-[#F5F5F5] text-[#717171] border-[#EEEEEE]'
-                      }`}
-                      title={c.isPublic ? 'Shown at checkout' : 'Hidden — code entry only'}
-                    >
-                      {c.isPublic ? 'Public' : 'Private'}
-                    </button>
-                  </td>
-                  <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Edit Coupon"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c.code)}
-                      className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                      title="Delete Coupon"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </AdminCard>
+      {!firstLoad &&
+        (visible.length === 0 ? (
+          <EmptyState
+            icon={Ticket}
+            title={coupons.length === 0 ? 'No coupons yet' : 'No coupons found'}
+            description={coupons.length === 0 ? 'Create a coupon to get started.' : 'Try changing or resetting the filters.'}
+          />
+        ) : (
+          <TableCard>
+            <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
+              <Pagination
+                from={pageData.from}
+                to={pageData.to}
+                total={pageData.total}
+                page={pageData.page}
+                totalPages={pageData.totalPages}
+                onPage={setPage}
+              />
+            </div>
+            <CouponsTable
+              coupons={pageData.items}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+              onToggleVisibility={handleToggleVisibility}
+            />
+          </TableCard>
+        ))}
     </div>
   );
 }
