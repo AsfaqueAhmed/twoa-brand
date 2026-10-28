@@ -67,6 +67,13 @@ describe('list operations', () => {
     expect('src' in t).toBe(false);
     expect(updateLayer(base, 'a', { text: 'nope' }).find((l) => l.id === 'a')).not.toHaveProperty('text');
   });
+  it('updateLayer returns the same array when nothing changes; removeLayer likewise for unknown ids', () => {
+    expect(updateLayer(base, 'a', { x: base[0].x })).toBe(base);
+    expect(updateLayer(base, 'a', {})).toBe(base);
+    expect(updateLayer(base, 'nope', { x: 0.1 })).toBe(base);
+    expect(updateLayer(base, 'a', { x: 0.1 })).not.toBe(base);
+    expect(removeLayer(base, 'nope')).toBe(base);
+  });
   it('toggles visibility and flips', () => {
     expect(toggleVisible(base, 'a')[0].visible).toBe(false);
     expect(flipLayer(base, 'a', 'x')[0].flipX).toBe(true);

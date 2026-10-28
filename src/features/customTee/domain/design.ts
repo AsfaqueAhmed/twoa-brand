@@ -11,7 +11,8 @@ export const DESIGN_STORAGE_KEY = 'custom-tee-design';
 export const MAX_ARTWORK_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const LAYER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 export function validateArtworkFile(file: { type: string; size: number }): string | null {
@@ -26,7 +27,7 @@ export const serializeDesign = (d: StudioDesign): string => JSON.stringify(d);
 function parseLayer(v: unknown): Layer | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
-  if (typeof o.id !== 'string' || !o.id || typeof o.name !== 'string') return null;
+  if (typeof o.id !== 'string' || !LAYER_ID.test(o.id) || typeof o.name !== 'string') return null;
   if (!isNum(o.x) || !isNum(o.y) || !isNum(o.scale) || !isNum(o.rotation)) return null;
   const base = {
     id: o.id,
@@ -57,7 +58,16 @@ export function parseDesign(raw: string | null): StudioDesign | null {
   try {
     const v = JSON.parse(raw);
     if (!v || typeof v.parentProductId !== 'string' || typeof v.size !== 'string') return null;
-    const layers = Array.isArray(v.layers) ? v.layers.map(parseLayer).filter((l: Layer | null): l is Layer => l !== null) : [];
+    const seen = new Set<string>();
+    const layers: Layer[] = [];
+    if (Array.isArray(v.layers)) {
+      for (const raw of v.layers) {
+        const l = parseLayer(raw);
+        if (!l || seen.has(l.id)) continue;
+        seen.add(l.id);
+        layers.push(l);
+      }
+    }
     return {
       parentProductId: v.parentProductId,
       size: v.size,

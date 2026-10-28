@@ -50,7 +50,11 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
         return;
       }
       setNotice(null);
-      sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: current.parentId, size: current.size }));
+      try {
+        sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: current.parentId, size: current.size }));
+      } catch {
+        // storage full/unavailable: the studio also receives the tee and size via query params
+      }
       onClose();
       router.push(`/custom-tee/studio?tee=${encodeURIComponent(current.parentId)}&size=${encodeURIComponent(current.size)}`);
     } catch {

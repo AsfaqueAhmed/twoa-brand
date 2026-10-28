@@ -23,7 +23,8 @@ export function settle<T>(h: History<T>): History<T> {
 }
 
 // A discrete change: one undo step.
-export const commit = <T,>(h: History<T>, next: T): History<T> => settle(live(h, next));
+export const commit = <T,>(h: History<T>, next: T): History<T> =>
+  Object.is(next, h.present) && !h.pending ? h : settle(live(h, next));
 
 export function undo<T>(h: History<T>): History<T> {
   const s = settle(h);

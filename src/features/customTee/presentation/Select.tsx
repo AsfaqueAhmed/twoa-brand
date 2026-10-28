@@ -23,6 +23,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [pos, setPos] = useState<PanelPos | null>(null);
+  const [portalRoot, setPortalRoot] = useState<Element | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLUListElement>(null);
 
@@ -62,6 +63,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
     } else {
       setPos({ left: rect.left, width: rect.width, top: rect.bottom + 4, maxHeight: Math.min(PANEL_MAX_HEIGHT, below) });
     }
+    setPortalRoot(document.fullscreenElement ?? document.body); // inside fullscreen only that subtree is visible
     setActive(Math.max(0, options.indexOf(value)));
     setOpen(true);
   };
@@ -107,6 +109,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
       </button>
       {open &&
         pos &&
+        portalRoot &&
         createPortal(
           <ul
             ref={panelRef}
@@ -133,7 +136,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
               </li>
             ))}
           </ul>,
-          document.body,
+          portalRoot,
         )}
     </div>
   );

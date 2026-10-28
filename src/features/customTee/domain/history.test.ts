@@ -77,4 +77,9 @@ describe('history', () => {
     expect(h.past.length).toBe(HISTORY_LIMIT);
     expect(h.past[0]).toBe(10);
   });
+
+  it('commit of the identical present is a no-op', () => {
+    const h = createHistory({ a: 1 });
+    expect(commit(h, h.present)).toBe(h);
+  });
 });

@@ -48,6 +48,22 @@ describe('design serialization', () => {
     expect(parsed.layers).toHaveLength(1);
     expect(parsed.layers[0]).toMatchObject({ type: 'text', color: DEFAULT_TEXT_COLOR, fontFamily: FONT_OPTIONS[0].family });
   });
+  it('drops layers with unsafe or duplicate ids and non-6-digit colors', () => {
+    const raw = JSON.stringify({
+      parentProductId: 'p1',
+      size: 'M',
+      layers: [
+        { ...design.layers[0], id: 'a"b]' },
+        { ...design.layers[0], id: 'ok-1' },
+        { ...design.layers[0], id: 'ok-1', name: 'dup' },
+        { ...design.layers[1], id: 'short', color: '#abc' },
+      ],
+    });
+    const parsed = parseDesign(raw)!;
+    expect(parsed.layers.map((l) => l.id)).toEqual(['ok-1', 'short']);
+    expect(parsed.layers[0].name).toBe('a.png');
+    expect(parsed.layers[1]).toMatchObject({ color: DEFAULT_TEXT_COLOR });
+  });
   it('clamps out-of-range layer numbers', () => {
     const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layers: [{ ...design.layers[0], x: 5, scale: 99 }] });
     expect(parseDesign(raw)!.layers[0]).toMatchObject({ x: 1, scale: 1.5 });

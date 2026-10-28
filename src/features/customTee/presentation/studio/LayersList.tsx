@@ -34,8 +34,13 @@ export default function LayersList({ layers, selectedId, onSelect, onToggle, onR
           <li
             key={layer.id}
             draggable
-            onDragStart={() => {
+            onDragStart={(e) => {
               dragId.current = layer.id;
+              e.dataTransfer.setData('text/plain', layer.id);
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragEnd={() => {
+              dragId.current = null;
             }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {

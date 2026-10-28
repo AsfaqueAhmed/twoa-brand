@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import {
   AlignCenterHorizontal,
   AlignCenterVertical,
@@ -38,6 +39,11 @@ const MAX_PERCENT = scaleToPercent(MAX_SCALE);
 export default function PositionScalePanel({ layer, size, onAlign, onFlip, onScaleLive, onSettle }: Props) {
   const none = !layer;
   const percent = layer ? scaleToPercent(layer.scale) : 100;
+  const [text, setText] = useState(String(percent));
+  const boxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (document.activeElement !== boxRef.current) setText(String(percent));
+  }, [percent, layer?.id]);
 
   return (
     <div className="space-y-5">
@@ -75,12 +81,17 @@ export default function PositionScalePanel({ layer, size, onAlign, onFlip, onSca
               min={MIN_PERCENT}
               max={MAX_PERCENT}
               disabled={none}
-              value={percent}
+              ref={boxRef}
+              value={text}
               onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n) && n > 0) onScaleLive(percentToScale(n));
+                setText(e.target.value);
+                const n = e.target.value.trim() === '' ? NaN : Number(e.target.value);
+                if (Number.isFinite(n) && n >= MIN_PERCENT && n <= MAX_PERCENT) onScaleLive(percentToScale(n));
               }}
-              onBlur={onSettle}
+              onBlur={() => {
+                setText(String(percent));
+                onSettle();
+              }}
               className="w-12 bg-transparent text-sm text-black focus:outline-none disabled:text-[#CDCDCD]"
             />
             <span className="text-sm text-[#717171]">%</span>

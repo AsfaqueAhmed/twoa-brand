@@ -1,6 +1,6 @@
 // Reads an image file, downscales it so its longest edge is at most `maxEdge`, and returns a data URL.
-// PNG/WebP are re-encoded as PNG (keeps transparency); JPEG stays JPEG.
-export async function fileToDataUrl(file: File, maxEdge = 1600): Promise<{ src: string; aspect: number }> {
+// Fully opaque images are encoded as JPEG (small); images with any transparency stay PNG.
+export async function fileToDataUrl(file: File, maxEdge = 1200): Promise<{ src: string; aspect: number }> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -18,8 +18,16 @@ export async function fileToDataUrl(file: File, maxEdge = 1600): Promise<{ src: 
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not process that image.');
     ctx.drawImage(img, 0, 0, width, height);
-    const type = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
-    return { src: canvas.toDataURL(type, 0.9), aspect: width / height };
+    const { data } = ctx.getImageData(0, 0, width, height);
+    let hasAlpha = false;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 255) {
+        hasAlpha = true;
+        break;
+      }
+    }
+    const src = hasAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
+    return { src, aspect: width / height };
   } finally {
     URL.revokeObjectURL(url);
   }

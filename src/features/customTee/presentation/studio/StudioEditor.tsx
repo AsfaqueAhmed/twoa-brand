@@ -32,14 +32,21 @@ type Props = {
 type Status = { kind: 'ok' | 'error'; text: string } | null;
 
 const SECTION_TITLE = 'mb-3 text-[11px] font-bold uppercase tracking-widest text-black';
+const TEXT_INPUT_TYPES = ['text', 'search', 'number', 'email', 'url', 'tel', 'password'];
 const isTyping = (t: EventTarget | null) =>
-  t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  t instanceof HTMLElement &&
+  ((t instanceof HTMLInputElement && TEXT_INPUT_TYPES.includes(t.type)) ||
+    t.tagName === 'TEXTAREA' ||
+    t.tagName === 'SELECT' ||
+    t.isContentEditable);
 
 export default function StudioEditor({ parent, card, initialSize, initialColor, initialLayers, refreshParents }: Props) {
   const studio = useStudioState(initialLayers);
   const [tool, setTool] = useState<ToolTab>('design');
   const [size, setSize] = useState(initialSize);
-  const [colorName, setColorName] = useState<string | undefined>(initialColor ?? card.colors[0]?.name);
+  const [colorName, setColorName] = useState<string | undefined>(
+    initialColor && card.colors.some((c) => c.name === initialColor) ? initialColor : card.colors[0]?.name,
+  );
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<{ w: number; h: number } | null>(null);
@@ -62,27 +69,55 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     setUploadError(null);
     try {
       for (const file of Array.from(files)) {
-        const problem = validateArtworkFile(file);
-        if (problem) {
-          setUploadError(problem);
-          continue;
+        try {
+          const problem = validateArtworkFile(file);
+          if (problem) {
+            setUploadError(problem);
+            continue;
+          }
+          const { src, aspect } = await fileToDataUrl(file);
+          studio.addImage(studio.rememberAsset({ name: file.name, src, aspect }));
+        } catch (err) {
+          setUploadError(err instanceof Error ? err.message : 'Could not read that image.');
         }
-        const { src, aspect } = await fileToDataUrl(file);
-        studio.addImage(studio.rememberAsset({ name: file.name, src, aspect }));
       }
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Could not read that image.');
     } finally {
       setUploading(false);
     }
   };
 
+  // Dropping a file outside the drop zone must not make the browser navigate to it.
+  const onFilesRef = useRef(onFiles);
+  onFilesRef.current = onFiles;
+  useEffect(() => {
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types?.includes('Files');
+    const onOver = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      const handled = e.defaultPrevented; // the drop zone already took it
+      e.preventDefault();
+      if (!handled) void onFilesRef.current(e.dataTransfer?.files ?? null);
+    };
+    window.addEventListener('dragover', onOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
   const toggleFullscreen = () => {
     const el = rootRef.current;
     if (!el) return;
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void el.requestFullscreen?.();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else el.requestFullscreen?.()?.catch(() => {});
   };
+  const [fullscreenSupported, setFullscreenSupported] = useState(false);
+  useEffect(() => {
+    setFullscreenSupported(!!document.fullscreenEnabled);
+  }, []);
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onChange);
@@ -147,7 +182,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   );
 
   return (
-    <div ref={rootRef} className="bg-white">
+    <div ref={rootRef} className="overflow-auto bg-white">
       <div className="mx-auto grid max-w-[1500px] border-b border-[#EEEEEE] lg:grid-cols-[88px_300px_minmax(0,1fr)_360px]">
         <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1" />
 
@@ -178,6 +213,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             onZoom={setZoom}
             fullscreen={fullscreen}
             onFullscreen={toggleFullscreen}
+            fullscreenSupported={fullscreenSupported}
           />
           <div className="overflow-auto py-4">
             <Canvas

@@ -79,23 +79,35 @@ export function createTextLayer(init: { id: string; text: string; fontFamily?: s
 }
 
 export const addLayer = (layers: Layer[], layer: Layer): Layer[] => [...layers, layer];
-export const removeLayer = (layers: Layer[], id: string): Layer[] => layers.filter((l) => l.id !== id);
+export const removeLayer = (layers: Layer[], id: string): Layer[] =>
+  layers.some((l) => l.id === id) ? layers.filter((l) => l.id !== id) : layers;
+
+const shallowEqual = (a: object, b: object): boolean => {
+  const ak = Object.keys(a) as (keyof typeof a)[];
+  const bk = Object.keys(b);
+  return ak.length === bk.length && ak.every((k) => Object.is(a[k], (b as typeof a)[k]));
+};
 
 export function updateLayer(layers: Layer[], id: string, patch: LayerPatch): Layer[] {
   const { src, aspect, text, fontFamily, color, ...base } = patch;
-  return layers.map((l) => {
+  let changed = false;
+  const out = layers.map((l) => {
     if (l.id !== id) return l;
-    if (l.type === 'image') {
-      return clampLayer({ ...l, ...base, ...(src !== undefined ? { src } : {}), ...(aspect !== undefined ? { aspect } : {}) });
-    }
-    return clampLayer({
-      ...l,
-      ...base,
-      ...(text !== undefined ? { text } : {}),
-      ...(fontFamily !== undefined ? { fontFamily } : {}),
-      ...(color !== undefined ? { color } : {}),
-    });
+    const next =
+      l.type === 'image'
+        ? clampLayer({ ...l, ...base, ...(src !== undefined ? { src } : {}), ...(aspect !== undefined ? { aspect } : {}) })
+        : clampLayer({
+            ...l,
+            ...base,
+            ...(text !== undefined ? { text } : {}),
+            ...(fontFamily !== undefined ? { fontFamily } : {}),
+            ...(color !== undefined ? { color } : {}),
+          });
+    if (shallowEqual(l, next)) return l;
+    changed = true;
+    return next;
   });
+  return changed ? out : layers;
 }
 
 export const toggleVisible = (layers: Layer[], id: string): Layer[] =>

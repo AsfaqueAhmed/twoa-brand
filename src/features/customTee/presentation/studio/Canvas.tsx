@@ -51,7 +51,7 @@ export default function Canvas({ baseImage, baseAlt, layers, selectedId, zoom, o
       }
       return;
     }
-    const content = el.querySelector<HTMLElement>(`[data-layer-id="${selectedId}"] [data-layer-content]`);
+    const content = el.querySelector<HTMLElement>(`[data-layer-id="${CSS.escape(selectedId)}"] [data-layer-content]`);
     const layer = layers.find((l) => l.id === selectedId);
     if (!content || !layer || !el.offsetWidth || !el.offsetHeight) return;
     // Bounding box of the rotated layer, so aligning a rotated layer puts its visible edge on the canvas edge.
@@ -113,7 +113,7 @@ export default function Canvas({ baseImage, baseAlt, layers, selectedId, zoom, o
     <div
       ref={boxRef}
       className="relative mx-auto select-none"
-      style={{ width: `${Math.round(BASE_WIDTH_PX * zoom)}px`, maxWidth: zoom <= 1 ? '100%' : 'none', touchAction: 'none' }}
+      style={{ width: `${Math.round(BASE_WIDTH_PX * zoom)}px`, maxWidth: zoom <= 1 ? '100%' : 'none' }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onSelect(null);
       }}

@@ -22,13 +22,14 @@ export type Asset = { id: string; name: string; src: string; aspect: number };
 
 export function useStudioState(initialLayers: Layer[]) {
   const [history, setHistory] = useState<History<Layer[]>>(() => createHistory(initialLayers));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [rawSelectedId, setSelectedId] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const counter = useRef(0);
   const nextId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${counter.current++}`;
 
   const layers = history.present;
-  const selected = layers.find((l) => l.id === selectedId) ?? null;
+  const selected = layers.find((l) => l.id === rawSelectedId) ?? null;
+  const selectedId = selected ? selected.id : null; // validated: a stale id (e.g. after undo) is never exposed
 
   const change = useCallback((fn: (ls: Layer[]) => Layer[]) => setHistory((h) => commit(h, fn(h.present))), []);
 
@@ -67,6 +68,7 @@ export function useStudioState(initialLayers: Layer[]) {
     patchLive: (id: string, p: LayerPatch) => setHistory((h) => live(h, updateLayer(h.present, id, p))),
     settleGesture: () => setHistory((h) => settle(h)),
     remove: (id: string) => {
+      if (!layers.some((l) => l.id === id)) return;
       change((ls) => removeLayer(ls, id));
       setSelectedId((cur) => (cur === id ? null : cur));
     },

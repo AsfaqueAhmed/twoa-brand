@@ -15,6 +15,7 @@ type Props = {
   onZoom: (next: number) => void;
   fullscreen: boolean;
   onFullscreen: () => void;
+  fullscreenSupported: boolean;
 };
 
 const MIN_ZOOM = 0.5;
@@ -23,7 +24,7 @@ const STEP = 0.25;
 const GROUP = 'flex items-center gap-1 rounded-lg border border-[#EEEEEE] bg-white p-1';
 const ICON_BTN = 'flex h-8 w-8 items-center justify-center rounded-md text-black hover:bg-[#F5F5F5] disabled:cursor-not-allowed disabled:text-[#CDCDCD] disabled:hover:bg-transparent';
 
-export default function StudioToolbar({ canUndo, canRedo, onUndo, onRedo, views, activeView, onView, zoom, onZoom, fullscreen, onFullscreen }: Props) {
+export default function StudioToolbar({ canUndo, canRedo, onUndo, onRedo, views, activeView, onView, zoom, onZoom, fullscreen, onFullscreen, fullscreenSupported }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className={GROUP}>
@@ -60,9 +61,11 @@ export default function StudioToolbar({ canUndo, canRedo, onUndo, onRedo, views,
         <button type="button" aria-label="Zoom in" title="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoom(Math.min(MAX_ZOOM, zoom + STEP))} className={ICON_BTN}>
           <ZoomIn className="h-4 w-4" />
         </button>
+        {fullscreenSupported && (
         <button type="button" aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'} title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={onFullscreen} className={ICON_BTN}>
           {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DEFAULT_TEXT_COLOR, FONT_OPTIONS, MAX_TEXT_LENGTH, type LayerPatch, type TextLayer } from '../../domain/layers';
 import Select from '../Select';
 
@@ -22,6 +22,10 @@ const fontLabels = FONT_OPTIONS.map((f) => f.label);
 // Edits an existing text layer. Keyed by layer id so its draft resets when the selection changes.
 function TextEditor({ layer, onLiveChange, onSettle }: { layer: TextLayer; onLiveChange: Props['onLiveChange']; onSettle: () => void }) {
   const [draft, setDraft] = useState(layer.text);
+  // keep the box in sync after undo/redo changes the text from outside
+  useEffect(() => {
+    if (document.activeElement?.id !== 'text-edit') setDraft(layer.text);
+  }, [layer.text]);
   return (
     <div className="space-y-5">
       <div>
