@@ -1,0 +1,70 @@
+import { type Layer, FONT_OPTIONS, DEFAULT_TEXT_COLOR, MAX_TEXT_LENGTH, clampLayer } from './layers';
+
+export type StudioDesign = {
+  parentProductId: string;
+  size: string;
+  colorName?: string;
+  layers: Layer[];
+};
+
+export const DESIGN_STORAGE_KEY = 'custom-tee-design';
+export const MAX_ARTWORK_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+export function validateArtworkFile(file: { type: string; size: number }): string | null {
+  if (!ALLOWED_TYPES.includes(file.type)) return 'Please upload a PNG, JPG or WebP image.';
+  if (file.size > MAX_ARTWORK_BYTES) return 'Artwork must be 10 MB or smaller.';
+  return null;
+}
+
+export const serializeDesign = (d: StudioDesign): string => JSON.stringify(d);
+
+// Validates untrusted (sessionStorage) data: only data:image sources, known fonts, hex colors.
+function parseLayer(v: unknown): Layer | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.id !== 'string' || !o.id || typeof o.name !== 'string') return null;
+  if (!isNum(o.x) || !isNum(o.y) || !isNum(o.scale) || !isNum(o.rotation)) return null;
+  const base = {
+    id: o.id,
+    name: o.name.slice(0, 80),
+    x: o.x,
+    y: o.y,
+    scale: o.scale,
+    rotation: o.rotation,
+    flipX: o.flipX === true,
+    flipY: o.flipY === true,
+    visible: o.visible !== false,
+  };
+  if (o.type === 'image') {
+    if (typeof o.src !== 'string' || !o.src.startsWith('data:image/') || !isNum(o.aspect) || o.aspect <= 0) return null;
+    return clampLayer({ ...base, type: 'image' as const, src: o.src, aspect: o.aspect });
+  }
+  if (o.type === 'text') {
+    if (typeof o.text !== 'string' || !o.text || o.text.length > MAX_TEXT_LENGTH) return null;
+    const family = FONT_OPTIONS.find((f) => f.family === o.fontFamily)?.family ?? FONT_OPTIONS[0].family;
+    const color = typeof o.color === 'string' && HEX_COLOR.test(o.color) ? o.color : DEFAULT_TEXT_COLOR;
+    return clampLayer({ ...base, type: 'text' as const, text: o.text, fontFamily: family, color });
+  }
+  return null;
+}
+
+export function parseDesign(raw: string | null): StudioDesign | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v.parentProductId !== 'string' || typeof v.size !== 'string') return null;
+    const layers = Array.isArray(v.layers) ? v.layers.map(parseLayer).filter((l: Layer | null): l is Layer => l !== null) : [];
+    return {
+      parentProductId: v.parentProductId,
+      size: v.size,
+      colorName: typeof v.colorName === 'string' ? v.colorName : undefined,
+      layers,
+    };
+  } catch {
+    return null;
+  }
+}
