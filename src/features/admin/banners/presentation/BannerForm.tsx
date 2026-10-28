@@ -290,7 +290,7 @@ export default function BannerForm({ initial, nextPosition, onSaved, onCancel }:
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="h-14 w-24 object-cover border border-[#EEEEEE]" />
+          <img src={url} alt="" className="h-14 w-24 object-cover border border-[#EEEEEE]" loading="lazy" decoding="async" />
         ) : (
           <ImagePlus className="h-6 w-6 text-[#919191]" />
         )}

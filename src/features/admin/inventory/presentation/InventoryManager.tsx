@@ -675,6 +675,8 @@ export default function InventoryManager() {
                         alt="Primary Product Preview"
                         className="h-14 w-14 object-cover border border-[#EEEEEE]"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
                         }}
@@ -707,7 +709,7 @@ export default function InventoryManager() {
                     {productGallery.map((url, i) => (
                       <div key={`${url}-${i}`} className="w-20">
                         <div className="relative h-20 w-20 border border-[#EEEEEE] bg-[#FAF9F6]">
-                          <img src={url} alt={`Gallery image ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={url} alt={`Gallery image ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                           <button
                             type="button"
                             aria-label={`Remove gallery image ${i + 1}`}
@@ -1040,6 +1042,8 @@ export default function InventoryManager() {
                             alt="Variant Preview"
                             className="h-10 w-10 object-cover border border-[#EEEEEE]"
                             referrerPolicy="no-referrer"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
                             }}

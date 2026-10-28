@@ -267,6 +267,7 @@ export default function ImageCropperModal({
                       ref={imageRef}
                       src={imageSrc}
                       alt="Crop Source"
+                      decoding="async"
                       onLoad={handleImageLoaded}
                       draggable={false}
                       className="absolute origin-center max-w-none max-h-none pointer-events-none select-none"

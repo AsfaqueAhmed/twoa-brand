@@ -392,6 +392,8 @@ export default function ParentProductManager() {
                         alt="Parent product preview"
                         className="h-14 w-14 object-cover border border-[#EEEEEE]"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
                         }}

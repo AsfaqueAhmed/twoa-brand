@@ -245,6 +245,8 @@ export default function BannerManager() {
                         alt=""
                         style={{ aspectRatio: banner.desktopAspect > 0 ? banner.desktopAspect : 16 / 6 }}
                         className="h-14 max-w-40 rounded-lg border border-[#EEEEEE] object-cover"
+                      loading="lazy"
+                      decoding="async"
                       />
                     ) : (
                       <div className="flex h-14 w-28 items-center justify-center rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] text-[#919191]">

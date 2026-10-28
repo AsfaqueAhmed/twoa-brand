@@ -65,6 +65,7 @@ export default function OrderImagesModal({ images, onClose }: Props) {
                   className="aspect-square w-full rounded-lg border border-[#EEEEEE] bg-[#F5F5F5] object-cover"
                   referrerPolicy="no-referrer"
                   loading="lazy"
+                  decoding="async"
                 />
                 <figcaption className="truncate text-[11px] text-[#717171]">{img.label}</figcaption>
               </figure>
