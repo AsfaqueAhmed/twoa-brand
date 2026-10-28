@@ -9,6 +9,8 @@ export interface ParentProduct {
   id: string;
   name: string;
   image?: string; // optional representative image
+  category: string; // owned by the parent; copied onto every linked product (products.category). '' = uncategorized
+  subcategory?: string;
   sizeOrder: string[]; // canonical size list & display order, e.g. ['S', 'M', 'L', 'XL']
   stockBySize: Record<string, number>; // keys are exactly the entries in sizeOrder
 }

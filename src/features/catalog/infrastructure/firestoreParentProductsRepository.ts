@@ -8,7 +8,15 @@ function assembleParentProduct(row: Record<string, any>, stockRows: Record<strin
   for (const size of sizeOrder) {
     stockBySize[size] = stockBySizeMap.get(size) ?? 0;
   }
-  return { id: row.id, name: row.name || '', image: row.image || '', sizeOrder, stockBySize };
+  return {
+    id: row.id,
+    name: row.name || '',
+    image: row.image || '',
+    category: row.category || '',
+    subcategory: row.subcategory || '',
+    sizeOrder,
+    stockBySize,
+  };
 }
 
 export async function fetchParentProductById(id: string): Promise<ParentProduct | null> {
