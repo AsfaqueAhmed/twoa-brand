@@ -73,29 +73,29 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
     body = <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>;
   } else if (handedOff && card) {
     body = (
-      <div className="space-y-4">
-        <h2 className="text-center text-2xl font-bold text-black">Tee selected</h2>
+      <div className="flex flex-1 flex-col space-y-5">
+        <h2 className="text-center text-sm font-bold uppercase tracking-widest text-black">Tee selected</h2>
         <ul className="space-y-1 text-sm text-black">
           <li>Tee: {card.parent.name} (SKU {card.code})</li>
           <li>Category: {card.parent.category} / {card.parent.subcategory}</li>
           <li>Size: {handedOff.size}</li>
         </ul>
         {/* Phase C: the Design Studio opens here with this parent and size. */}
-        <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
+        <p className="bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
           The Design Studio is coming soon. Your selection is saved for this session.
         </p>
-        <div className="flex gap-3">
+        <div className="sticky bottom-0 mt-auto flex gap-3 bg-white pb-6 pt-8">
           <button
             type="button"
             onClick={() => setHandedOff(null)}
-            className="rounded-full border border-[#CDCDCD] px-6 py-3.5 text-sm font-bold text-black hover:border-black"
+            className="border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black"
           >
             Change tee
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-full bg-black px-6 py-3.5 text-sm font-bold text-white hover:bg-[#333333]"
+            className="flex-1 bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
           >
             Close
           </button>
@@ -106,7 +106,7 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
     body = (
       <>
         <Stepper step={step} />
-        {notice && <p role="alert" className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-800">{notice}</p>}
+        {notice && <p role="alert" className="mb-5 bg-amber-50 px-4 py-3 text-xs text-amber-800">{notice}</p>}
         {step === 1 ? (
           <SelectionStepOne parents={parents} selection={selection} onChange={onChange} onNext={() => setStep(2)} />
         ) : (
@@ -126,7 +126,7 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal onClose={onClose} title="Design your tee">
-      {!handedOff && <h2 className="mb-5 text-center text-2xl font-bold text-black">Design your tee</h2>}
+      {!handedOff && <h2 className="mb-6 text-center text-sm font-bold uppercase tracking-widest text-black">Design your tee</h2>}
       {body}
     </Modal>
   );

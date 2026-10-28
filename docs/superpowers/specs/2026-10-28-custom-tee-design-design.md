@@ -25,15 +25,15 @@ Customer-facing `/custom-tee`: pick a base tee via four dependent selections, th
 - `domain/selection.ts` (pure, tested): `eligibleCategories/Subcategories/Sizes/Parents`, `selectableParents`, `selectCategory/Subcategory/Size/Parent` reducers (each clears later steps), `isComplete`, `isStepOneComplete`, `validateSelection`.
 - `domain/cards.ts` (pure, tested): `buildParentCard`.
 - `application/useCustomTeeData.ts`: loads parents + products; `refreshParents()` re-reads stock.
-- `presentation/`: `Modal` (generic dialog shell), `Stepper`, `SelectionStepOne`, `SelectionStepTwo`, `ParentCard`, `CustomTeeModal` (orchestration), `CustomTeeProvider` (+ `useCustomTee`), `CustomTeeLanding`.
+- `presentation/`: `Modal` (generic dialog shell), `Select` (white custom dropdown), `Stepper`, `SelectionStepOne`, `SelectionStepTwo`, `ParentCard`, `CustomTeeModal` (orchestration), `CustomTeeProvider` (+ `useCustomTee`), `CustomTeeLanding`.
 - `src/app/custom-tee/page.tsx`: thin route rendering the landing page.
 
 ## Behavior (popup)
 
-The picker is a centered modal (bottom sheet on phones) with a close button, dimmed backdrop, Escape / backdrop-click to close, and body scroll locked while open. A two-step stepper sits at the top.
+The picker is a fixed-width (640px on desktop) modal, identical for both steps, styled like the storefront (sharp corners, white panels, uppercase tracking buttons); bottom sheet on phones with a close button, dimmed backdrop, Escape / backdrop-click to close, and body scroll locked while open. A two-step stepper sits at the top.
 
 1. **Step 1, Category & size:** Category -> Subcategory (only those with eligible parents) -> Size (only sizes with stock among matches). **Next** appears only when `isStepOneComplete`.
-2. **Step 2, Choose tee:** image cards (parent image, name, SKU code, colors, "Size M: N pcs"), **Back** to step 1, and **Continue to Design Studio** once a card is selected (`isComplete`).
+2. **Step 2, Choose tee:** a 4-per-row gallery that shows 2.5 rows and scrolls; image cards (parent image, name, SKU code, colors, "Size M: N pcs"), **Back** to step 1, and **Continue to Design Studio** once a card is selected (`isComplete`).
 3. Only parents with a non-empty image are shown; cards use the parent image only.
 4. Empty states: no subcategories; no sizes with stock; no matching parents.
 5. On Continue, inputs lock, stock is re-fetched and the selection revalidated. If invalid, the selection is truncated, a notice is shown, and the user returns to step 1 (or stays on step 2 if only the tee became unavailable). Selecting never changes stock.

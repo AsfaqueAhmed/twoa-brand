@@ -12,6 +12,7 @@ import {
   selectSize,
   isStepOneComplete,
 } from '../domain/selection';
+import Select from './Select';
 
 type Props = {
   parents: ParentProduct[];
@@ -20,10 +21,8 @@ type Props = {
   onNext: () => void;
 };
 
-const FIELD =
-  'w-full rounded-2xl border border-[#CDCDCD] bg-white py-3 px-4 text-sm text-black focus:border-black focus:outline-none';
-const LABEL = 'block text-[11px] font-bold uppercase tracking-wider text-[#555555] mb-1.5';
-const NOTE = 'rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
+const LABEL = 'mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
+const NOTE = 'bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
 
 export default function SelectionStepOne({ parents, selection, onChange, onNext }: Props) {
   const categories = useMemo(() => eligibleCategories(parents), [parents]);
@@ -34,73 +33,73 @@ export default function SelectionStepOne({ parents, selection, onChange, onNext 
   );
 
   return (
-    <div className="space-y-5">
-      <div>
-        <label className={LABEL} htmlFor="tee-category">Category</label>
-        <select
-          id="tee-category"
-          className={FIELD}
-          value={selection.category}
-          onChange={(e) => onChange(selectCategory(selection, e.target.value))}
-        >
-          <option value="">Select a category</option>
-          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {categories.length === 0 && <p className={`${NOTE} mt-2`}>No tees are available right now.</p>}
+    <div className="flex flex-1 flex-col">
+      <div className="space-y-6">
+        <div>
+          <label className={LABEL} htmlFor="tee-category">Category</label>
+          <Select
+            id="tee-category"
+            value={selection.category}
+            options={categories}
+            placeholder="Select a category"
+            onChange={(v) => onChange(selectCategory(selection, v))}
+          />
+          {categories.length === 0 && <p className={`${NOTE} mt-2`}>No tees are available right now.</p>}
+        </div>
+
+        {selection.category && (
+          <div>
+            <label className={LABEL} htmlFor="tee-subcategory">Subcategory</label>
+            <Select
+              id="tee-subcategory"
+              value={selection.subcategory}
+              options={subcategories}
+              placeholder="Select a subcategory"
+              onChange={(v) => onChange(selectSubcategory(selection, v))}
+            />
+            {subcategories.length === 0 && (
+              <p className={`${NOTE} mt-2`}>No subcategories with available stock in {selection.category} yet.</p>
+            )}
+          </div>
+        )}
+
+        {selection.subcategory && (
+          <div>
+            <span className={LABEL}>Size</span>
+            {sizes.length === 0 ? (
+              <p className={NOTE}>No matching tees have eligible stock in any size.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={selection.size === s}
+                    onClick={() => onChange(selectSize(selection, s))}
+                    className={`min-w-14 border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      selection.size === s ? 'border-black bg-black text-white' : 'border-[#EEEEEE] bg-white text-black hover:border-black'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {selection.category && (
-        <div>
-          <label className={LABEL} htmlFor="tee-subcategory">Subcategory</label>
-          <select
-            id="tee-subcategory"
-            className={FIELD}
-            value={selection.subcategory}
-            onChange={(e) => onChange(selectSubcategory(selection, e.target.value))}
+      <div className="sticky bottom-0 mt-auto bg-white pb-6 pt-8">
+        {isStepOneComplete(selection) && (
+          <button
+            type="button"
+            onClick={onNext}
+            className="w-full bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
           >
-            <option value="">Select a subcategory</option>
-            {subcategories.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          {subcategories.length === 0 && (
-            <p className={`${NOTE} mt-2`}>No subcategories with available stock in {selection.category} yet.</p>
-          )}
-        </div>
-      )}
-
-      {selection.subcategory && (
-        <div>
-          <span className={LABEL}>Size</span>
-          {sizes.length === 0 ? (
-            <p className={NOTE}>No matching tees have eligible stock in any size.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {sizes.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  aria-pressed={selection.size === s}
-                  onClick={() => onChange(selectSize(selection, s))}
-                  className={`min-w-12 rounded-full border px-4 py-2 text-sm font-semibold ${
-                    selection.size === s ? 'border-black bg-black text-white' : 'border-[#CDCDCD] bg-white text-black hover:border-black'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isStepOneComplete(selection) && (
-        <button
-          type="button"
-          onClick={onNext}
-          className="w-full rounded-full bg-black px-6 py-3.5 text-sm font-bold text-white hover:bg-[#333333]"
-        >
-          Next
-        </button>
-      )}
+            Next
+          </button>
+        )}
+      </div>
     </div>
   );
 }
