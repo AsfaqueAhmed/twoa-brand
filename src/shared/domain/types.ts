@@ -5,10 +5,16 @@ export interface ProductVariant {
   colorCode?: string;   // optional hex code for styling color swatches
 }
 
+export interface ParentImage {
+  title: string; // e.g. 'Front', 'Back'
+  url: string;
+}
+
 export interface ParentProduct {
   id: string;
   name: string;
   image?: string; // optional representative image
+  images?: ParentImage[]; // titled images in display order; `image` mirrors images[0].url
   category: string; // owned by the parent; copied onto every linked product (products.category). '' = uncategorized
   subcategory?: string;
   sizeOrder: string[]; // canonical size list & display order, e.g. ['S', 'M', 'L', 'XL']

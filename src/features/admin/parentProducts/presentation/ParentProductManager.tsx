@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Plus, XCircle, Upload, RefreshCw } from 'lucide-react';
+import { Plus, XCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { ParentProduct } from '@/shared/domain/types';
+import type { ParentProduct, ParentImage } from '@/shared/domain/types';
 import {
   fetchParentProducts,
   saveParentProduct,
@@ -33,6 +33,8 @@ import ParentFilterBar from './list/ParentFilterBar';
 import ParentProductsTable from './list/ParentProductsTable';
 import { uploadProductImage } from '@/features/admin/inventory/infrastructure/productImageUpload';
 import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
+import ParentImagesField from './ParentImagesField';
+import { getParentImages, MAX_PARENT_IMAGES, nextImageTitle, primaryImageUrl, sanitizeParentImages } from '@/features/catalog/domain/parentImages';
 
 interface SizeRow {
   size: string;
@@ -42,7 +44,7 @@ interface SizeRow {
 interface FormState {
   id: string;
   name: string;
-  image: string;
+  images: ParentImage[];
   category: string;
   subcategory: string;
   rows: SizeRow[];
@@ -50,7 +52,7 @@ interface FormState {
 
 const PAGE_SIZE = 20;
 
-const emptyForm: FormState = { id: '', name: '', image: '', category: '', subcategory: '', rows: [] };
+const emptyForm: FormState = { id: '', name: '', images: [], category: '', subcategory: '', rows: [] };
 
 export default function ParentProductManager() {
   const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
@@ -127,7 +129,7 @@ export default function ParentProductManager() {
   const failedEmpty = loadFailed && !hasData && !loading;
 
   const openCreate = () => {
-    setForm({ id: `parent-${Date.now()}`, name: '', image: '', category: '', subcategory: '', rows: [{ size: '', stock: 0 }] });
+    setForm({ id: `parent-${Date.now()}`, name: '', images: [], category: '', subcategory: '', rows: [{ size: '', stock: 0 }] });
     setIsEditingExistingId(null);
     setPreviousSizeOrder([]);
     setError('');
@@ -138,7 +140,7 @@ export default function ParentProductManager() {
     setForm({
       id: pp.id,
       name: pp.name,
-      image: pp.image || '',
+      images: getParentImages(pp),
       category: pp.category || '',
       subcategory: pp.subcategory || '',
       rows: pp.sizeOrder.map((size) => ({ size, stock: pp.stockBySize[size] ?? 0 })),
@@ -172,11 +174,16 @@ export default function ParentProductManager() {
   };
 
   const handleCropComplete = async (compressedDataUrl: string) => {
+    const formId = form.id;
     setIsUploadingImage(true);
     setError('');
     try {
-      const url = await uploadProductImage(`parent-products/${form.id}/${Date.now()}`, compressedDataUrl);
-      setForm((prev) => ({ ...prev, image: url }));
+      const url = await uploadProductImage(`parent-products/${formId}/${Date.now()}`, compressedDataUrl);
+      setForm((prev) =>
+        prev.id === formId && prev.images.length < MAX_PARENT_IMAGES && !prev.images.some((i) => i.url === url)
+          ? { ...prev, images: [...prev.images, { title: nextImageTitle(prev.images), url }] }
+          : prev,
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to upload image.');
     } finally {
@@ -216,13 +223,15 @@ export default function ParentProductManager() {
     setIsSaving(true);
     setError('');
     try {
+      const images = sanitizeParentImages(form.images);
       const sizeOrder = labels;
       const stockBySize = Object.fromEntries(form.rows.map((r) => [r.size.trim(), r.stock]));
       await saveParentProduct(
         {
           id: form.id,
           name: form.name.trim(),
-          image: form.image.trim(),
+          image: primaryImageUrl(images),
+          images,
           category: form.category.trim(),
           subcategory: form.subcategory.trim(),
           sizeOrder,
@@ -329,7 +338,8 @@ export default function ParentProductManager() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="text-[#717171] hover:text-black border border-[#EEEEEE] p-1.5"
+                  disabled={isUploadingImage}
+                  className="text-[#717171] hover:text-black border border-[#EEEEEE] p-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <XCircle className="h-4.5 w-4.5" />
                 </button>
@@ -362,53 +372,12 @@ export default function ParentProductManager() {
                   onBusyChange={setIsPersistingCategory}
                 />
 
-                {/* Image */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                    Image (Paste URL or Upload Directly)
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="text"
-                      value={form.image}
-                      onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
-                      placeholder="Paste image URL (or upload directly)"
-                      className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsCropperOpen(true)}
-                      disabled={isUploadingImage}
-                      className="bg-black hover:bg-[#333333] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 transition-colors flex items-center justify-center space-x-1.5 shrink-0 disabled:bg-[#717171] disabled:cursor-not-allowed"
-                    >
-                      {isUploadingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                      <span>{isUploadingImage ? 'Uploading…' : 'Upload & Crop'}</span>
-                    </button>
-                  </div>
-                  {form.image && (
-                    <div className="mt-3 flex items-center space-x-3 bg-[#FAF9F6] p-2.5 border border-[#EEEEEE]">
-                      <img
-                        src={form.image}
-                        alt="Parent product preview"
-                        className="h-14 w-14 object-cover border border-[#EEEEEE]"
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
-                        }}
-                      />
-                      <span className="flex-1 min-w-0 truncate text-[10px] font-mono font-semibold text-black">{form.image}</span>
-                      <button
-                        type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
-                        className="text-red-600 hover:text-red-800 text-[10px] font-bold uppercase tracking-wider px-2"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <ParentImagesField
+                  images={form.images}
+                  onChange={(images) => setForm((prev) => ({ ...prev, images }))}
+                  onUpload={() => setIsCropperOpen(true)}
+                  uploading={isUploadingImage}
+                />
 
                 {/* Size + stock rows */}
                 <div className="border-t border-[#EEEEEE] pt-5">
@@ -479,13 +448,14 @@ export default function ParentProductManager() {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="border border-[#EEEEEE] hover:border-black text-black text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-colors"
+                    disabled={isUploadingImage}
+                    className="border border-[#EEEEEE] hover:border-black text-black text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving || isPersistingCategory}
+                    disabled={isSaving || isPersistingCategory || isUploadingImage}
                     className="bg-black hover:bg-[#333333] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors disabled:bg-[#717171]"
                   >
                     {isSaving ? 'Saving...' : 'Save Parent Product'}

@@ -1,6 +1,8 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { ParentProduct } from '@/shared/domain/types';
 import { categoryColumns } from '../domain/parentCategory';
+import { getParentImages, primaryImageUrl, sanitizeParentImages } from '@/features/catalog/domain/parentImages';
+import { isMissingImagesColumnError } from '../domain/imagesColumnError';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
 
 export async function fetchParentProducts(): Promise<ParentProduct[]> {
@@ -19,9 +21,16 @@ export async function cascadeCategoryToProducts(parentIds: string[], category: s
 
 export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: string[]): Promise<void> {
   const cols = categoryColumns(pp.category, pp.subcategory);
-  const { error: parentError } = await supabase
-    .from('parent_products')
-    .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder, ...cols });
+  const images = sanitizeParentImages(pp.images ?? getParentImages(pp));
+  const row = { id: pp.id, name: pp.name, image: primaryImageUrl(images), size_order: pp.sizeOrder, ...cols };
+  let { error: parentError } = await supabase.from('parent_products').upsert({ ...row, images });
+  if (parentError && isMissingImagesColumnError(parentError)) {
+    // Migration not applied yet: the legacy `image` column carries a single image.
+    if (images.length > 1) {
+      throw new Error('Saving several images needs the database migration 20261028000300_parent_product_images.sql to be applied first.');
+    }
+    ({ error: parentError } = await supabase.from('parent_products').upsert(row));
+  }
   if (parentError) throw parentError;
 
   const stockRows = pp.sizeOrder.map((size) => ({ parent_id: pp.id, size, stock: Number(pp.stockBySize[size]) || 0 }));
