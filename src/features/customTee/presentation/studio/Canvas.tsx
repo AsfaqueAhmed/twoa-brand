@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { type Layer, type LayerPatch, TEXT_FONT_FRACTION, normalizeRotation, scaleToPercent } from '../../domain/layers';
 import { expandToGroups, isSingleUnit } from '../../domain/grouping';
 import { type Box, type CanvasPx, type Size, boxCenter, boxesIntersect, layerBox, rotateLayersAround, scaleLayersAround, unionBox } from '../../domain/geometry';
@@ -56,6 +56,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
   const [spaceDown, setSpaceDown] = useState(false);
 
   const applyViewport = (next: Viewport) => {
+    vpRef.current = next; // update right away: rapid wheel/pinch events fire several times per frame, before React re-renders
     setVp(next);
     onZoomChange(next.zoom);
   };
@@ -377,7 +378,6 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                   ) : isEditing ? (
                     <TextEditor
                       initial={layer.text}
-                      width={Math.max(40, (sizes[layer.id]?.w ?? 0.2) * stagePx.w + 24)}
                       onDone={(value, commit) => {
                         setEditingId(null);
                         if (commit) onCommitText(layer.id, value);
@@ -471,7 +471,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 export default Canvas;
 
 // In-place text editor: a textarea that inherits the layer's font styling. Enter adds a line; blur commits; Escape cancels.
-function TextEditor({ initial, width, onDone }: { initial: string; width: number; onDone: (value: string, commit: boolean) => void }) {
+function TextEditor({ initial, onDone }: { initial: string; onDone: (value: string, commit: boolean) => void }) {
   const [value, setValue] = useState(initial);
   const ref = useRef<HTMLTextAreaElement>(null);
   const finished = useRef(false);
@@ -479,6 +479,13 @@ function TextEditor({ initial, width, onDone }: { initial: string; width: number
     ref.current?.focus();
     ref.current?.select();
   }, []);
+  // Size the field from its own content (never from the measured layer, which would feed back and grow it).
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.width = '1px';
+    el.style.width = `${el.scrollWidth + 3}px`;
+  }, [value]);
   const finish = (commit: boolean) => {
     if (finished.current) return;
     finished.current = true;
@@ -498,7 +505,6 @@ function TextEditor({ initial, width, onDone }: { initial: string; width: number
       onPointerDown={(e) => e.stopPropagation()}
       rows={Math.max(1, value.split('\n').length)}
       style={{
-        width,
         font: 'inherit',
         letterSpacing: 'inherit',
         color: 'inherit',
