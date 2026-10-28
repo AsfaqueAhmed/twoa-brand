@@ -33,7 +33,7 @@ export default function SelectionStepOne({ parents, selection, onChange, onNext 
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-[360px] flex-1 flex-col">
       <div className="space-y-6">
         <div>
           <label className={LABEL} htmlFor="tee-category">Category</label>

@@ -30,7 +30,7 @@ Customer-facing `/custom-tee`: pick a base tee via four dependent selections, th
 
 ## Behavior (popup)
 
-The picker is a fixed-width (640px on desktop) modal, identical for both steps, styled like the storefront (8px corners, white panels, uppercase tracking buttons); bottom sheet on phones with a close button, dimmed backdrop, Escape / backdrop-click to close, and body scroll locked while open. A two-step stepper sits at the top.
+The picker is a fixed-width (640px on desktop) modal, identical width for both steps with a height that follows the content and animates between steps, styled like the storefront (8px corners, white panels, uppercase tracking buttons); bottom sheet on phones with a close button, dimmed backdrop, Escape / backdrop-click to close, and body scroll locked while open. A two-step stepper sits at the top.
 
 1. **Step 1, Category & size:** Category -> Subcategory (only those with eligible parents) -> Size (only sizes with stock among matches). **Next** appears only when `isStepOneComplete`.
 2. **Step 2, Choose tee:** a 4-per-row gallery that shows 2.5 rows and scrolls; image cards (parent image, name, SKU code, colors, "Size M: N pcs"), **Back** to step 1, and **Continue to Design Studio** once a card is selected (`isComplete`).
