@@ -402,6 +402,19 @@ export default function MobileCanvas({
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => {
+              const currentIndex = views.findIndex((v) => v.id === activeViewId);
+              const nextIndex = (currentIndex + 1) % views.length;
+              if (views[nextIndex]) onSelectView(views[nextIndex].id);
+            }}
+            title="Switch view"
+            aria-label="Add or switch view angle"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-zinc-300 text-zinc-400 hover:border-black hover:text-black active:scale-95 transition"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
