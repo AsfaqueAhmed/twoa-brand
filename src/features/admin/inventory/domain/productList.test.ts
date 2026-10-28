@@ -11,6 +11,7 @@ import {
   paginate,
   productStats,
   activeFilterCount,
+  nextStock,
   type ProductFilters,
 } from './productList';
 
@@ -162,5 +163,16 @@ describe('activeFilterCount', () => {
     expect(activeFilterCount(DEFAULT_FILTERS, '')).toBe(0);
     expect(activeFilterCount(f({ search: 'x', category: 'Hats', status: 'active', stock: 'low' }), 'name')).toBe(5);
     expect(activeFilterCount(f({ category: 'Hats' }), '')).toBe(1);
+  });
+});
+
+describe('nextStock', () => {
+  it('sets, adds and removes', () => {
+    expect(nextStock(5, 'set', 12)).toBe(12);
+    expect(nextStock(5, 'add', 3)).toBe(8);
+    expect(nextStock(5, 'remove', 3)).toBe(2);
+  });
+  it('floors at 0 when removing', () => {
+    expect(nextStock(5, 'remove', 9)).toBe(0);
   });
 });

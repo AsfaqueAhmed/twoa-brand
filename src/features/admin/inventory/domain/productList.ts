@@ -95,3 +95,11 @@ export function productStats(products: Product[]) {
 export function activeFilterCount(f: ProductFilters, sort: ProductSort): number {
   return [f.search.trim(), f.category, f.status, f.stock, sort].filter(Boolean).length;
 }
+
+export type StockAdjustMode = 'set' | 'add' | 'remove';
+
+export function nextStock(current: number, mode: StockAdjustMode, amount: number): number {
+  if (mode === 'set') return amount;
+  if (mode === 'add') return current + amount;
+  return Math.max(0, current - amount);
+}

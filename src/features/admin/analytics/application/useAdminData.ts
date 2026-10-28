@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Order, Product } from '@/shared/domain/types';
 import { fetchAllOrders } from '@/features/orders/infrastructure/firestoreOrdersRepository';
-import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
 
 export function useAdminData(opts: { products?: boolean } = {}) {
@@ -22,7 +22,7 @@ export function useAdminData(opts: { products?: boolean } = {}) {
       try {
         const [o, p, pp] = await Promise.all([
           fetchAllOrders(),
-          withProducts ? fetchAllProducts() : Promise.resolve([] as Product[]),
+          withProducts ? fetchAllProductsForAdmin() : Promise.resolve([] as Product[]),
           withProducts ? fetchAllParentProducts() : Promise.resolve([]),
         ]);
         if (cancelled) return;

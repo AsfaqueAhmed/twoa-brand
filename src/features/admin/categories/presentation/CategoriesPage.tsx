@@ -7,7 +7,7 @@ import AdminCard from '@/features/admin/presentation/AdminCard';
 import EmptyState from '@/shared/ui/EmptyState';
 import Spinner from '@/shared/ui/Spinner';
 import { isValidCategoryName } from '@/features/admin/inventory/domain/category';
-import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
   fetchCategories, persistNewCategory, persistNewSubcategory, type CategoryDoc,
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
@@ -45,7 +45,7 @@ export default function CategoriesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [c, p] = await Promise.all([fetchCategories(), fetchAllProducts()]);
+        const [c, p] = await Promise.all([fetchCategories(), fetchAllProductsForAdmin()]);
         if (cancelled) return;
         setCategories(c);
         setProducts(p);

@@ -6,7 +6,7 @@ import { RefreshCw, ShoppingBag, Search, Plus } from 'lucide-react';
 import type { Order, OrderStatus, Product } from '@/shared/domain/types';
 import { listAllOrders } from '../application/listAllOrders';
 import { updateOrderStatusAsAdmin } from '../application/updateOrderStatusAsAdmin';
-import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import { toggleSelected, shortOrderId, pruneSelection } from '../domain/orderView';
 import BulkToolbar from './BulkToolbar';
 import AdminOrderCard from './AdminOrderCard';
@@ -22,7 +22,7 @@ export default function AdminOrderManager() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchAllProducts()
+    fetchAllProductsForAdmin()
       .then((p) => {
         if (!cancelled) setProducts(p);
       })

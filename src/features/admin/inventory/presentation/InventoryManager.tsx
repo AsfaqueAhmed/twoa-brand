@@ -7,7 +7,7 @@ import type { Product, ProductVariant, ParentProduct, ProductHighlight } from '@
 import { MAX_GALLERY_IMAGES } from '@/features/product/domain/gallery';
 import { HIGHLIGHT_ICON_KEYS, MAX_HIGHLIGHTS } from '@/features/product/domain/highlights';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
   fetchCategories,
   persistNewCategory,
@@ -31,7 +31,7 @@ export default function InventoryManager() {
   const refreshProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      setProducts(await fetchAllProducts());
+      setProducts(await fetchAllProductsForAdmin());
     } finally {
       setProductsLoading(false);
     }
