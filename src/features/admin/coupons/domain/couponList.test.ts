@@ -42,6 +42,27 @@ describe('couponStatus', () => {
   });
 });
 
+describe('couponStatus edge cases', () => {
+  it('treats usageLimit 0 as limit reached', () => {
+    expect(couponStatus(make({ usageLimit: 0 }), NOW)).toBe('limit');
+    expect(usageSummary(make({ usageLimit: 0 }))).toEqual({ used: 0, limit: 0, pct: 0 });
+  });
+  it('expired wins over limit reached', () => {
+    expect(couponStatus(make({ expiresAt: '2026-01-01T00:00:00Z', usageLimit: 1, usageCount: 1 }), NOW)).toBe('expired');
+  });
+  it('is not expired exactly at the expiry instant', () => {
+    expect(couponStatus(make({ expiresAt: NOW.toISOString() }), NOW)).toBe('active');
+    expect(couponStatus(make({ expiresAt: new Date(NOW.getTime() - 1).toISOString() }), NOW)).toBe('expired');
+  });
+});
+
+describe('filterCoupons status filters', () => {
+  it('filters limit and inactive', () => {
+    expect(filterCoupons(list, { ...DEFAULT_COUPON_FILTERS, status: 'limit' }, NOW).map((c) => c.code)).toEqual(['FULL']);
+    expect(filterCoupons(list, { ...DEFAULT_COUPON_FILTERS, status: 'inactive' }, NOW).map((c) => c.code)).toEqual(['OFF']);
+  });
+});
+
 describe('filterCoupons', () => {
   it('filters by search, status, type', () => {
     expect(filterCoupons(list, { ...DEFAULT_COUPON_FILTERS, search: ' li ' }, NOW).map((c) => c.code)).toEqual(['LIVE']);

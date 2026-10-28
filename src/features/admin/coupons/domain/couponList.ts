@@ -48,6 +48,8 @@ export function couponStats(coupons: Coupon[], now: Date = new Date()) {
   return { total: coupons.length, active, expired, redemptions };
 }
 
+export const TYPE_LABEL: Record<DiscountType, string> = { percentage: 'Percentage', flat: 'Flat', free_shipping: 'Free shipping' };
+
 function formatAmount(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 type Props = { from: number; to: number; total: number; page: number; totalPages: number; onPage: (p: number) => void; id?: string };
 
 export default function Pagination({ from, to, total, page, totalPages, onPage, id }: Props) {
+  if (total === 0) return null;
   const btn = 'rounded-lg border border-[#EEEEEE] bg-white p-2 text-black hover:border-black disabled:opacity-40 disabled:hover:border-[#EEEEEE]';
   return (
     <div className="flex items-center gap-3" id={id}>

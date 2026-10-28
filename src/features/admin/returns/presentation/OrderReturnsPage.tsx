@@ -54,6 +54,8 @@ export default function OrderReturnsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState<ReturnFilters>(DEFAULT_RETURN_FILTERS);
   const [page, setPage] = useState(1);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [error]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,15 +135,15 @@ export default function OrderReturnsPage() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       {firstLoad ? (
         <div className="flex justify-center py-24"><Spinner /></div>
-      ) : error ? (
-        <div className="space-y-2">
-          <ErrorBanner message={error} onDismiss={() => setError(null)} />
-          <button type="button" onClick={load} className="text-xs font-bold underline">Retry</button>
-        </div>
-      ) : returns.length === 0 ? (
-        <EmptyState icon={RotateCcw} title="No returns yet" description="Logged returns will appear here." />
       ) : (
         <>
+          {error && !(returns.length > 0 && dismissed) && (
+            <ErrorBanner message={error} onRetry={load} onDismiss={returns.length > 0 ? () => setDismissed(true) : undefined} />
+          )}
+          {returns.length === 0 ? (
+            !error && <EmptyState icon={RotateCcw} title="No returns yet" description="Logged returns will appear here." />
+          ) : (
+            <>
           <StatsRow>
             {STATUSES.map((s) => (
               <StatCard key={s} icon={ICON[s]} label={RETURN_STATUS_LABELS[s]} value={stats[s]} tone={TONE[s]} />
@@ -198,6 +200,8 @@ export default function OrderReturnsPage() {
               <Pagination from={pageData.from} to={pageData.to} total={pageData.total} page={pageData.page} totalPages={pageData.totalPages} onPage={setPage} />
             </div>
           </TableCard>
+            </>
+          )}
         </>
       )}
       {showForm && (

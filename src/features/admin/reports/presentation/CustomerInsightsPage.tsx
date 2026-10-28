@@ -8,24 +8,18 @@ import Spinner from '@/shared/ui/Spinner';
 import { useAdminData } from '@/features/admin/analytics/application/useAdminData';
 import { lastNDays, customerInsights } from '@/features/admin/analytics/domain/analytics';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
-import { paginate } from '@/features/admin/inventory/domain/productList';
 import StatCard from '@/features/admin/presentation/ui/StatCard';
 import StatsRow from '@/features/admin/presentation/ui/StatsRow';
-import Pagination from '@/features/admin/presentation/ui/Pagination';
 import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
 import { repeatRate } from '../domain/reportStats';
 import ReportRangeSelect from './ReportRangeSelect';
 import ReportError from './ReportError';
 
-const PAGE_SIZE = 20;
-
 export default function CustomerInsightsPage() {
   const { orders, loading, error, reload } = useAdminData();
   const [days, setDays] = useState(7);
-  const [page, setPage] = useState(1);
   const firstLoad = loading && orders.length === 0;
   const insights = useMemo(() => customerInsights(orders, lastNDays(days)), [orders, days]);
-  const pageData = paginate(insights.topSpenders, page, PAGE_SIZE);
   const active = insights.newCustomers + insights.returningCustomers;
 
   return (
@@ -33,19 +27,21 @@ export default function CustomerInsightsPage() {
       <AdminPageHeader
         title="Customer Insights"
         subtitle="New versus returning customers and top spenders."
-        actions={<ReportRangeSelect days={days} onChange={(d) => { setDays(d); setPage(1); }} />}
+        actions={<ReportRangeSelect days={days} onChange={setDays} />}
       />
       {firstLoad ? (
         <div className="flex justify-center py-24"><Spinner /></div>
       ) : (
         <>
-          <ReportError error={error} onRetry={reload} />
+          <ReportError error={error} onRetry={reload} hasData={orders.length > 0} />
+          {!(error && orders.length === 0) && (
           <StatsRow>
             <StatCard icon={<UserPlus className="h-5 w-5" />} label="New customers" value={insights.newCustomers} />
             <StatCard icon={<Repeat className="h-5 w-5" />} label="Returning customers" value={insights.returningCustomers} />
             <StatCard icon={<Users className="h-5 w-5" />} label="Active customers" value={active} />
             <StatCard icon={<Percent className="h-5 w-5" />} label="Repeat rate" value={`${repeatRate(insights.newCustomers, insights.returningCustomers)}%`} caption="Returning of active" />
           </StatsRow>
+          )}
           {insights.topSpenders.length === 0 ? (
             !error && <EmptyState icon={Users} title="No customer activity" description="No customers ordered in this period." />
           ) : (
@@ -55,7 +51,7 @@ export default function CustomerInsightsPage() {
                 minWidth="min-w-[480px]"
                 head={<><Th className="pl-5">Name</Th><Th>Orders</Th><Th className="pr-5 text-right">Total spent</Th></>}
               >
-                {pageData.items.map((c) => (
+                {insights.topSpenders.map((c) => (
                   <tr key={c.key} className={TABLE_ROW}>
                     <td className="py-3 pl-5 pr-3 font-medium text-black">{c.name}</td>
                     <td className="px-3">{c.orderCount}</td>
@@ -63,9 +59,6 @@ export default function CustomerInsightsPage() {
                   </tr>
                 ))}
               </TableScroll>
-              <div className="flex justify-end border-t border-[#EEEEEE] p-4">
-                <Pagination from={pageData.from} to={pageData.to} total={pageData.total} page={pageData.page} totalPages={pageData.totalPages} onPage={setPage} />
-              </div>
             </TableCard>
           )}
         </>

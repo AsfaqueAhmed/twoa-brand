@@ -44,6 +44,8 @@ export default function BannerManager() {
   const [filters, setFilters] = useState<BannerFilters>(DEFAULT_BANNER_FILTERS);
   const [page, setPage] = useState(1);
   const [reordering, setReordering] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [error]);
   const bannersRef = useRef<HomeBanner[]>([]);
   bannersRef.current = banners;
 
@@ -82,6 +84,7 @@ export default function BannerManager() {
   };
 
   const handleToggle = async (banner: HomeBanner) => {
+    if (reordering) return;
     setBusyId(banner.id);
     try {
       await updateBanner(banner.id, { isActive: !banner.isActive });
@@ -94,6 +97,7 @@ export default function BannerManager() {
   };
 
   const handleDelete = async (banner: HomeBanner) => {
+    if (reordering) return;
     if (!window.confirm(`Delete banner "${banner.headline || 'Untitled'}"? This cannot be undone.`)) return;
     setBusyId(banner.id);
     try {
@@ -107,6 +111,9 @@ export default function BannerManager() {
     }
   };
 
+  const anyBusy = busyId !== null || reordering;
+  const hasData = banners.length > 0;
+  const failedEmpty = !!error && !hasData && !initialLoading;
   const stats = bannerStats(banners);
   const activeCount = activeBannerFilterCount(filters);
   const visible = filterBanners(banners, filters);
@@ -136,14 +143,18 @@ export default function BannerManager() {
         }
       />
 
+      {!initialLoading && !failedEmpty && (
       <StatsRow>
         <StatCard icon={<ImageIcon className="h-5 w-5" />} label="Total banners" value={stats.total} />
         <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="Live" value={stats.live} tone="green" caption="shown on home page" />
         <StatCard icon={<EyeOff className="h-5 w-5" />} label="Hidden" value={stats.hidden} tone="gray" caption="inactive" />
         <StatCard icon={<Link2 className="h-5 w-5" />} label="With a link" value={stats.withLink} />
       </StatsRow>
+      )}
 
-      {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+      {error && !(hasData && dismissed) && (
+        <ErrorBanner message={error} onRetry={refresh} onDismiss={hasData ? () => setDismissed(true) : undefined} />
+      )}
 
       {editing !== null && (
         <BannerForm
@@ -158,6 +169,7 @@ export default function BannerManager() {
         />
       )}
 
+      {!failedEmpty && (
       <FilterBar activeCount={activeCount} onReset={() => updateFilters(DEFAULT_BANNER_FILTERS)}>
         <FilterSearch
           id="admin-banner-search"
@@ -175,8 +187,9 @@ export default function BannerManager() {
           <option value="hidden">Hidden</option>
         </FilterSelect>
       </FilterBar>
+      )}
 
-      {initialLoading ? (
+      {failedEmpty ? null : initialLoading ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
           <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
           <p className="mt-3 text-xs font-semibold text-[#717171]">Loading banners...</p>
@@ -268,10 +281,10 @@ export default function BannerManager() {
                     <div className="flex items-center justify-end gap-1.5">
                       {canReorder && (
                         <>
-                          <button type="button" aria-label="Move up" title="Move up" className={ICON_BTN} disabled={busy || reordering || index <= 0} onClick={() => handleMove(banner, -1)}>
+                          <button type="button" aria-label="Move up" title="Move up" className={ICON_BTN} disabled={anyBusy || index <= 0} onClick={() => handleMove(banner, -1)}>
                             <ArrowUp className="h-3.5 w-3.5" />
                           </button>
-                          <button type="button" aria-label="Move down" title="Move down" className={ICON_BTN} disabled={busy || reordering || index >= banners.length - 1} onClick={() => handleMove(banner, 1)}>
+                          <button type="button" aria-label="Move down" title="Move down" className={ICON_BTN} disabled={anyBusy || index >= banners.length - 1} onClick={() => handleMove(banner, 1)}>
                             <ArrowDown className="h-3.5 w-3.5" />
                           </button>
                         </>

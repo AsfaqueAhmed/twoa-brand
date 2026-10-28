@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CustomerSummary } from '@/features/admin/analytics/domain/analytics';
-import { type CustomerSort as CustomerFiltersSort, DEFAULT_CUSTOMER_FILTERS, activeCustomerFilterCount, customerInitials, customerStats, filterCustomers, isGuestCustomer } from './customerList';
+import { type CustomerSort, DEFAULT_CUSTOMER_FILTERS, activeCustomerFilterCount, customerInitials, customerStats, filterCustomers, isGuestCustomer } from './customerList';
 
 const c = (o: Partial<CustomerSummary>): CustomerSummary => ({
   key: 'user:1', name: 'Ann Lee', email: 'ann@x.com', phone: '0170', orderCount: 1, totalSpent: 100,
@@ -22,6 +22,20 @@ describe('customerList', () => {
     expect(customerInitials('Bob')).toBe('B');
     expect(customerInitials('  ')).toBe('?');
   });
+  it('initials handle multiple spaces and 3+ words (first + last)', () => {
+    expect(customerInitials('ann    lee')).toBe('AL');
+    expect(customerInitials('  ann   marie   lee ')).toBe('AL');
+  });
+  it('initials handle non-Latin and astral names', () => {
+    expect(customerInitials('山田 太郎')).toBe('山太');
+    expect(customerInitials('علي أحمد')).toBe('عأ');
+    expect(customerInitials('😀 Smile')).toBe('😀S');
+    expect(customerInitials('𝒜lice')).toBe('𝒜');
+  });
+  it('whitespace-only search does not filter', () => {
+    expect(filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, search: '   ' })).toHaveLength(3);
+    expect(activeCustomerFilterCount({ ...DEFAULT_CUSTOMER_FILTERS, search: '   ' })).toBe(0);
+  });
   it('searches name, email, phone', () => {
     expect(filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, search: 'amy@' }).map((x) => x.key)).toEqual(['u3']);
     expect(filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, search: '222' }).map((x) => x.key)).toEqual(['guest:2']);
@@ -31,7 +45,7 @@ describe('customerList', () => {
     expect(filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, type: 'registered' })).toHaveLength(2);
   });
   it('sorts', () => {
-    const keys = (sort: CustomerFiltersSort) => filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, sort }).map((x) => x.key);
+    const keys = (sort: CustomerSort) => filterCustomers(list, { ...DEFAULT_CUSTOMER_FILTERS, sort }).map((x) => x.key);
     expect(keys('spent-desc')).toEqual(['guest:2', 'u1', 'u3']);
     expect(keys('orders-desc')).toEqual(['u1', 'u3', 'guest:2']);
     expect(keys('latest')).toEqual(['u3', 'u1', 'guest:2']);

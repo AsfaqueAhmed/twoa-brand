@@ -18,8 +18,9 @@ export function isGuestCustomer(c: Pick<CustomerSummary, 'key'>): boolean {
 export function customerInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return '?';
-  const first = words[0][0];
-  const last = words.length > 1 ? words[words.length - 1][0] : '';
+  // Array.from splits by code point so astral characters never become lone surrogates.
+  const first = Array.from(words[0])[0];
+  const last = words.length > 1 ? Array.from(words[words.length - 1])[0] : '';
   return (first + last).toUpperCase();
 }
 

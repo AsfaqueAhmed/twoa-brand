@@ -45,6 +45,8 @@ export default function SizeChartManager() {
   const [usageNotice, setUsageNotice] = useState('');
   const [filters, setFilters] = useState<SizeChartFilters>(DEFAULT_SIZE_CHART_FILTERS);
   const [page, setPage] = useState(1);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [listError]);
 
   const refresh = useCallback(async () => {
     // Charts and product usage load independently: a usage failure never hides the charts.
@@ -60,6 +62,7 @@ export default function SizeChartManager() {
       setUsageNotice('');
     } else {
       setCounts(null);
+      setFilters((f) => (f.usage ? { ...f, usage: '' } : f));
       setUsageNotice('Could not load products, so chart usage is unavailable right now.');
     }
     setLoading(false);
@@ -162,17 +165,23 @@ export default function SizeChartManager() {
   const handleDelete = async (chart: SizeChart) => {
     // Server-side style guard: re-check usage with fresh product data before deleting.
     let current = counts;
+    let usageChecked = true;
     try {
       current = linkedProductCounts(await fetchAllProductsForAdmin());
       setCounts(current);
     } catch {
-      // fall back to the last known counts
+      // fall back to the last known counts, if any
+      usageChecked = false;
     }
     if (current && current[chart.id] > 0) {
       setListError(`"${chart.name}" is used by ${current[chart.id]} product(s). Unassign it from those products first.`);
       return;
     }
-    if (!window.confirm(`Delete size chart "${chart.name}"? This cannot be undone.`)) return;
+    const prompt =
+      !usageChecked && current === null
+        ? `Usage could not be checked, so "${chart.name}" may still be used by products. Delete size chart "${chart.name}" anyway? This cannot be undone.`
+        : `Delete size chart "${chart.name}"? This cannot be undone.`;
+    if (!window.confirm(prompt)) return;
     try {
       await deleteSizeChart(chart.id);
       await refresh();
@@ -189,6 +198,8 @@ export default function SizeChartManager() {
     setFilters(f);
     setPage(1);
   };
+  const hasData = charts.length > 0;
+  const failedEmpty = !!listError && !hasData && !loading;
   const dash = (n: number | null) => (n === null ? '—' : n);
 
   return (
@@ -208,12 +219,14 @@ export default function SizeChartManager() {
         }
       />
 
+      {!loading && !failedEmpty && (
       <StatsRow>
         <StatCard icon={<Ruler className="h-5 w-5" />} label="Total charts" value={stats.total} />
         <StatCard icon={<Rows3 className="h-5 w-5" />} label="Total size rows" value={stats.sizeRows} />
         <StatCard icon={<PackageCheck className="h-5 w-5" />} label="Charts in use" value={dash(stats.inUse)} tone="green" caption="linked to products" />
         <StatCard icon={<PackageX className="h-5 w-5" />} label="Unused charts" value={dash(stats.unused)} tone="gray" />
       </StatsRow>
+      )}
 
       {usageNotice && (
         <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
@@ -221,6 +234,7 @@ export default function SizeChartManager() {
         </div>
       )}
 
+      {!failedEmpty && (
       <FilterBar activeCount={activeCount} onReset={() => updateFilters(DEFAULT_SIZE_CHART_FILTERS)}>
         <FilterSearch
           id="admin-sizechart-search"
@@ -239,8 +253,11 @@ export default function SizeChartManager() {
           <option value="unused">Unused</option>
         </FilterSelect>
       </FilterBar>
+      )}
 
-      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
+      {listError && !(hasData && dismissed) && (
+        <ErrorBanner message={listError} onRetry={refresh} onDismiss={hasData ? () => setDismissed(true) : undefined} />
+      )}
 
       <AnimatePresence>
         {isEditing && (
@@ -434,7 +451,7 @@ export default function SizeChartManager() {
         )}
       </AnimatePresence>
 
-      {loading ? (
+      {failedEmpty ? null : loading ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
           <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
           <p className="mt-3 text-xs font-semibold text-[#717171]">Loading size charts...</p>

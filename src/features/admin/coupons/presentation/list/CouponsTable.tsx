@@ -2,7 +2,8 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { TABLE_ROW, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
 import type { Coupon } from '@/features/coupons/domain/coupon';
 import { districts } from '@/features/checkout/infrastructure/bangladeshAreas';
-import { couponStatus, formatCouponValue } from '../../domain/couponList';
+import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { TYPE_LABEL, couponStatus, formatCouponValue } from '../../domain/couponList';
 import CouponStatusPill from './CouponStatusPill';
 import UsageBar from './UsageBar';
 
@@ -13,8 +14,6 @@ type Props = {
   onToggleActive: (c: Coupon) => void;
   onToggleVisibility: (c: Coupon) => void;
 };
-
-const TYPE_LABEL = { percentage: 'Percentage', flat: 'Flat', free_shipping: 'Free shipping' } as const;
 
 export default function CouponsTable({ coupons, onEdit, onDelete, onToggleActive, onToggleVisibility }: Props) {
   const now = new Date();
@@ -42,7 +41,7 @@ export default function CouponsTable({ coupons, onEdit, onDelete, onToggleActive
             <div className="font-semibold text-black">{formatCouponValue(c)}</div>
             <div className="text-[11px] text-[#919191]">{TYPE_LABEL[c.discountType]}</div>
           </td>
-          <td className="px-3 py-3">{c.minOrderSubtotal ? `৳${c.minOrderSubtotal}` : '—'}</td>
+          <td className="px-3 py-3">{c.minOrderSubtotal ? formatCurrency(c.minOrderSubtotal) : '—'}</td>
           <td className="px-3 py-3">
             {c.districtRestriction ? (districts.find((d) => d.id === c.districtRestriction)?.name ?? c.districtRestriction) : '—'}
           </td>
@@ -54,6 +53,8 @@ export default function CouponsTable({ coupons, onEdit, onDelete, onToggleActive
             <button
               type="button"
               onClick={() => onToggleVisibility(c)}
+              aria-pressed={c.isPublic}
+              aria-label={`${c.isPublic ? 'Make private' : 'Make public'} ${c.code}`}
               title={c.isPublic ? 'Shown at checkout (click to make private)' : 'Hidden, code entry only (click to make public)'}
               className={`rounded-md border px-2 py-0.5 text-xs font-medium ${
                 c.isPublic ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-[#EEEEEE] bg-[#F5F5F5] text-[#717171]'
@@ -63,9 +64,21 @@ export default function CouponsTable({ coupons, onEdit, onDelete, onToggleActive
             </button>
           </td>
           <td className="px-3 py-3">
-            <button type="button" onClick={() => onToggleActive(c)} title={c.isActive ? 'Click to deactivate' : 'Click to activate'}>
+            <div className="flex items-center gap-2">
               <CouponStatusPill status={couponStatus(c, now)} />
-            </button>
+              <button
+                type="button"
+                onClick={() => onToggleActive(c)}
+                aria-pressed={c.isActive}
+                aria-label={`${c.isActive ? 'Deactivate' : 'Activate'} ${c.code}`}
+                title={c.isActive ? 'Click to deactivate' : 'Click to activate'}
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                  c.isActive ? 'border-green-200 bg-green-50 text-green-700' : 'border-[#EEEEEE] bg-[#F5F5F5] text-[#717171]'
+                }`}
+              >
+                {c.isActive ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
           </td>
           <td className="px-3 py-3 pr-5">
             <div className="flex items-center justify-end gap-1.5">

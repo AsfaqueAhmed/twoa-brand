@@ -47,13 +47,13 @@ export default function ProductPerformancePage() {
         <div className="flex justify-center py-24"><Spinner /></div>
       ) : (
         <>
-          <ReportError error={error} onRetry={reload} />
+          <ReportError error={error} onRetry={reload} hasData={orders.length > 0} />
           {all.length === 0 ? (
             !error && <EmptyState icon={Package} title="No sales in this period" description="Try a longer date range." />
           ) : (
             <>
               <StatsRow>
-                <StatCard icon={<Package className="h-5 w-5" />} label="Products sold" value={all.length} />
+                <StatCard icon={<Package className="h-5 w-5" />} label="Products" value={all.length} />
                 <StatCard icon={<Layers className="h-5 w-5" />} label="Units sold" value={totals.units} />
                 <StatCard icon={<Coins className="h-5 w-5" />} label="Revenue" value={formatCurrency(totals.revenue)} />
                 <StatCard icon={<Trophy className="h-5 w-5" />} label="Top product" value={all[0].name} caption={`${all[0].sold} units`} />

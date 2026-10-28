@@ -54,7 +54,9 @@ export default function SalesReportPage() {
         <div className="flex justify-center py-24"><Spinner /></div>
       ) : (
         <>
-          <ReportError error={error} onRetry={reload} />
+          <ReportError error={error} onRetry={reload} hasData={orders.length > 0} />
+          {!(error && orders.length === 0) && (
+            <>
           <StatsRow>
             <StatCard icon={<ShoppingCart className="h-5 w-5" />} label="Orders" value={view.cur.totalOrders} caption={changeCaption(view.change.orders)} />
             <StatCard icon={<Coins className="h-5 w-5" />} label="Sales" value={formatCurrency(view.cur.totalSales)} caption={changeCaption(view.change.sales)} />
@@ -82,6 +84,8 @@ export default function SalesReportPage() {
               <Pagination from={pageData.from} to={pageData.to} total={pageData.total} page={pageData.page} totalPages={pageData.totalPages} onPage={setPage} />
             </div>
           </TableCard>
+            </>
+          )}
         </>
       )}
     </div>

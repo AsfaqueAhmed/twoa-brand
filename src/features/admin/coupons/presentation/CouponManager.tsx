@@ -160,6 +160,10 @@ export default function CouponManager() {
   const pageData = paginate(visible, page, PAGE_SIZE);
   const activeCount = activeCouponFilterCount(filters);
   const firstLoad = loading && coupons.length === 0;
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [listError]);
+  const hasData = coupons.length > 0;
+  const failedEmpty = !!listError && !hasData;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -178,7 +182,7 @@ export default function CouponManager() {
         </button>
       </div>
 
-      <CouponStatsRow stats={stats} />
+      {!firstLoad && !failedEmpty && <CouponStatsRow stats={stats} />}
 
       {firstLoad && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
@@ -187,6 +191,7 @@ export default function CouponManager() {
         </div>
       )}
 
+      {!failedEmpty && (
       <CouponFilterBar
         filters={filters}
         activeCount={activeCount}
@@ -199,8 +204,11 @@ export default function CouponManager() {
           setPage(1);
         }}
       />
+      )}
 
-      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
+      {listError && !(hasData && dismissed) && (
+        <ErrorBanner message={listError} onRetry={refresh} onDismiss={hasData ? () => setDismissed(true) : undefined} />
+      )}
 
       <AnimatePresence>
         {isEditing && (
@@ -393,7 +401,7 @@ export default function CouponManager() {
         )}
       </AnimatePresence>
 
-      {!firstLoad &&
+      {!firstLoad && !failedEmpty &&
         (visible.length === 0 ? (
           <EmptyState
             icon={Ticket}

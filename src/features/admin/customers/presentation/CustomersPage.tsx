@@ -55,11 +55,8 @@ export default function CustomersPage() {
         <div className="flex justify-center py-24"><Spinner /></div>
       ) : (
         <>
-          {error && !dismissed && (
-            <div className="space-y-2">
-              <ErrorBanner message={error} onDismiss={() => setDismissed(true)} />
-              <button type="button" onClick={reload} className="text-xs font-bold underline">Retry</button>
-            </div>
+          {error && !(customers.length > 0 && dismissed) && (
+            <ErrorBanner message={error} onRetry={reload} onDismiss={customers.length > 0 ? () => setDismissed(true) : undefined} />
           )}
           {customers.length === 0 && !error ? (
             <EmptyState icon={Users} title="No customers yet" description="Customers appear here after their first order." />

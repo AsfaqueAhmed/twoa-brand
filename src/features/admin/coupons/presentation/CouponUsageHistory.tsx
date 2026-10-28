@@ -18,6 +18,7 @@ import {
   filterUsageCoupons,
   formatCouponValue,
   sortByUsage,
+  TYPE_LABEL,
   usageStats,
   type UsageSort,
 } from '../domain/couponList';
@@ -25,7 +26,6 @@ import CouponStatusPill from './list/CouponStatusPill';
 import UsageBar from './list/UsageBar';
 
 const PAGE_SIZE = 20;
-const TYPE_LABEL = { percentage: 'Percentage', flat: 'Flat', free_shipping: 'Free shipping' } as const;
 
 export default function CouponUsageHistory() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -58,6 +58,10 @@ export default function CouponUsageHistory() {
   const pageData = paginate(visible, page, PAGE_SIZE);
   const activeCount = (search.trim() ? 1 : 0) + (sort !== 'usage-desc' ? 1 : 0);
   const firstLoad = loading && coupons.length === 0;
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [error]);
+  const hasData = coupons.length > 0;
+  const failedEmpty = !!error && !hasData;
   const now = new Date();
 
   return (
@@ -67,6 +71,7 @@ export default function CouponUsageHistory() {
         <p className="mt-1 text-sm text-[#717171]">How often each coupon has been redeemed.</p>
       </div>
 
+      {!firstLoad && !failedEmpty && (
       <StatsRow>
         <StatCard icon={<Ticket className="h-5 w-5" />} label="Coupons Used" value={stats.used} caption={`of ${coupons.length} coupons`} />
         <StatCard icon={<BarChart3 className="h-5 w-5" />} label="Total Redemptions" value={stats.redemptions} />
@@ -78,6 +83,7 @@ export default function CouponUsageHistory() {
         />
         <StatCard icon={<TicketX className="h-5 w-5" />} label="Coupons Never Used" value={stats.neverUsed} tone="amber" />
       </StatsRow>
+      )}
 
       {firstLoad && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
@@ -86,6 +92,7 @@ export default function CouponUsageHistory() {
         </div>
       )}
 
+      {!failedEmpty && (
       <FilterBar
         activeCount={activeCount}
         onReset={() => {
@@ -115,10 +122,13 @@ export default function CouponUsageHistory() {
           <option value="code">Sort: Code</option>
         </FilterSelect>
       </FilterBar>
+      )}
 
-      {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+      {error && !(hasData && dismissed) && (
+        <ErrorBanner message={error} onRetry={reload} onDismiss={hasData ? () => setDismissed(true) : undefined} />
+      )}
 
-      {!firstLoad &&
+      {!firstLoad && !failedEmpty &&
         (visible.length === 0 ? (
           <EmptyState
             icon={Ticket}

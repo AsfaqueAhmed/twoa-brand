@@ -63,6 +63,9 @@ export default function ParentProductManager() {
   const [filters, setFilters] = useState<ParentFilters>(DEFAULT_PARENT_FILTERS);
   const [sort, setSort] = useState<ParentSort>('');
   const [page, setPage] = useState(1);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [listError]);
   const hasLoadedRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -72,6 +75,7 @@ export default function ParentProductManager() {
     if (parentsRes.status === 'fulfilled') {
       setParentProducts(parentsRes.value);
       hasLoadedRef.current = true;
+      setLoadFailed(false);
       if (productsRes.status === 'fulfilled') {
         setLinked(linkedProductCounts(productsRes.value));
         setListError('');
@@ -82,6 +86,7 @@ export default function ParentProductManager() {
       }
     } else {
       console.error('Error fetching parent products: ', parentsRes.reason);
+      setLoadFailed(true);
       setListError('Failed to load parent products.');
     }
     setLoading(false);
@@ -98,6 +103,8 @@ export default function ParentProductManager() {
   );
   const pageData = paginate(visible, page, PAGE_SIZE);
   const activeCount = activeParentFilterCount(filters, sort);
+  const hasData = parentProducts.length > 0;
+  const failedEmpty = loadFailed && !hasData && !loading;
 
   const openCreate = () => {
     setForm({ id: `parent-${Date.now()}`, name: '', image: '', rows: [{ size: '', stock: 0 }] });
@@ -196,7 +203,11 @@ export default function ParentProductManager() {
 
   const handleDelete = async (pp: ParentProduct) => {
     if ((linked?.get(pp.id) ?? 0) > 0) return;
-    if (!window.confirm(`Delete parent product "${pp.name}"? This cannot be undone.`)) return;
+    const prompt =
+      linked === null
+        ? `Linked product counts could not be loaded. Delete "${pp.name}" anyway? It will be refused if products still use it.`
+        : `Delete parent product "${pp.name}"? This cannot be undone.`;
+    if (!window.confirm(prompt)) return;
     try {
       await deleteParentProduct(pp.id, pp.sizeOrder);
       await refresh();
@@ -222,7 +233,7 @@ export default function ParentProductManager() {
         </button>
       </div>
 
-      <ParentStatsRow stats={stats} />
+      {!loading && !failedEmpty && <ParentStatsRow stats={stats} />}
 
       {loading && parentProducts.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
@@ -231,6 +242,7 @@ export default function ParentProductManager() {
         </div>
       )}
 
+      {!failedEmpty && (
       <ParentFilterBar
         filters={filters}
         sort={sort}
@@ -249,8 +261,11 @@ export default function ParentProductManager() {
           setPage(1);
         }}
       />
+      )}
 
-      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
+      {listError && !(!failedEmpty && dismissed) && (
+        <ErrorBanner message={listError} onRetry={refresh} onDismiss={failedEmpty ? undefined : () => setDismissed(true)} />
+      )}
 
       <AnimatePresence>
         {isEditing && (
@@ -431,7 +446,7 @@ export default function ParentProductManager() {
         )}
       </AnimatePresence>
 
-      {!(loading && parentProducts.length === 0) && (
+      {!(loading && parentProducts.length === 0) && !failedEmpty && (
         <TableCard>
           <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
             <Pagination
@@ -443,7 +458,12 @@ export default function ParentProductManager() {
               onPage={setPage}
             />
           </div>
-          <ParentProductsTable parents={pageData.items} linked={linked} onEdit={openEdit} onDelete={handleDelete} />
+          <ParentProductsTable
+            parents={pageData.items}
+            emptyText={hasData ? 'No parent products found.' : 'No parent products yet.'}
+            linked={linked} onEdit={openEdit}
+            onDelete={handleDelete}
+          />
         </TableCard>
       )}
 

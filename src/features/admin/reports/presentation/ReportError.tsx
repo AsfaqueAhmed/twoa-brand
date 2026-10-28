@@ -3,14 +3,10 @@
 import { useEffect, useState } from 'react';
 import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
 
-export default function ReportError({ error, onRetry }: { error: string | null | undefined; onRetry: () => void }) {
+/** Without data the banner cannot be dismissed so Retry stays reachable. */
+export default function ReportError({ error, onRetry, hasData = false }: { error: string | null | undefined; onRetry: () => void; hasData?: boolean }) {
   const [dismissed, setDismissed] = useState(false);
   useEffect(() => setDismissed(false), [error]);
-  if (!error || dismissed) return null;
-  return (
-    <div className="space-y-2">
-      <ErrorBanner message={error} onDismiss={() => setDismissed(true)} />
-      <button type="button" onClick={onRetry} className="text-xs font-bold underline">Retry</button>
-    </div>
-  );
+  if (!error || (hasData && dismissed)) return null;
+  return <ErrorBanner message={error} onRetry={onRetry} onDismiss={hasData ? () => setDismissed(true) : undefined} />;
 }

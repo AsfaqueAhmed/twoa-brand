@@ -12,6 +12,8 @@ type Props = {
   linked: Map<string, number> | null;
   onEdit: (pp: ParentProduct) => void;
   onDelete: (pp: ParentProduct) => void;
+  /** Shown when there are no rows. */
+  emptyText?: string;
 };
 
 function SizeChips({ pp }: { pp: ParentProduct }) {
@@ -36,7 +38,7 @@ function SizeChips({ pp }: { pp: ParentProduct }) {
   );
 }
 
-export default function ParentProductsTable({ parents, linked, onEdit, onDelete }: Props) {
+export default function ParentProductsTable({ parents, linked, onEdit, onDelete, emptyText = 'No parent products found.' }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[860px] border-collapse text-left">
@@ -54,7 +56,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete 
           {parents.length === 0 ? (
             <tr>
               <td colSpan={6} className="py-12 text-center font-semibold text-[#717171]">
-                No parent products found.
+                {emptyText}
               </td>
             </tr>
           ) : (
@@ -106,14 +108,25 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete 
                       </button>
                       <button
                         type="button"
-                        onClick={() => onDelete(pp)}
-                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          onDelete(pp);
+                        }}
+                        aria-disabled={blocked}
+                        aria-describedby={blocked ? `delete-reason-${pp.id}` : undefined}
                         title={blocked ? `Unlink its ${count} products first` : 'Delete Parent Product'}
                         aria-label={`Delete ${pp.name}`}
-                        className="rounded-lg border border-red-200 bg-white p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                        className={`rounded-lg border border-red-200 bg-white p-2 text-red-600 transition-colors hover:bg-red-50 ${
+                          blocked ? 'cursor-not-allowed opacity-40 hover:bg-white' : ''
+                        }`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
+                      {blocked && (
+                        <span id={`delete-reason-${pp.id}`} className="sr-only">
+                          Cannot delete: {count} linked product{count === 1 ? '' : 's'} still use this parent product. Unlink them first.
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
