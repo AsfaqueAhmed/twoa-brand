@@ -149,9 +149,9 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   return (
     <div ref={rootRef} className="bg-white">
       <div className="mx-auto grid max-w-[1500px] border-b border-[#EEEEEE] lg:grid-cols-[88px_300px_minmax(0,1fr)_360px]">
-        <ToolRail active={tool} onChange={setTool} />
+        <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1" />
 
-        <aside className="border-b border-[#EEEEEE] p-5 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
+        <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
           {tool === 'design' && <DesignPanel onFiles={onFiles} busy={uploading} error={uploadError} />}
           {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} />}
           {tool === 'text' && (
@@ -165,7 +165,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           )}
         </aside>
 
-        <section className="flex min-w-0 flex-col gap-4 bg-[#F5F5F5] p-4 sm:p-6">
+        <section className="order-1 flex min-w-0 flex-col gap-4 bg-[#F5F5F5] p-4 sm:p-6 lg:order-3">
           <StudioToolbar
             canUndo={studio.canUndo}
             canRedo={studio.canRedo}
@@ -208,7 +208,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           </div>
         </section>
 
-        <aside className="space-y-6 border-t border-[#EEEEEE] p-5 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-l lg:border-t-0">
+        <aside className="order-4 space-y-6 border-t border-[#EEEEEE] p-5 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-l lg:border-t-0">
           <ProductPanel
             card={card}
             image={view?.image}

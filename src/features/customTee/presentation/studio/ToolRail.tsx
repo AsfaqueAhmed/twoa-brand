@@ -11,9 +11,9 @@ const TABS = [
   { id: 'layers', label: 'Layers', icon: Layers },
 ] as const;
 
-export default function ToolRail({ active, onChange }: { active: ToolTab; onChange: (t: ToolTab) => void }) {
+export default function ToolRail({ active, onChange, className = '' }: { active: ToolTab; onChange: (t: ToolTab) => void; className?: string }) {
   return (
-    <nav aria-label="Studio tools" className="flex gap-1 border-b border-[#EEEEEE] p-2 lg:flex-col lg:border-b-0 lg:border-r">
+    <nav aria-label="Studio tools" className={`flex gap-1 border-b border-[#EEEEEE] p-2 lg:flex-col lg:border-b-0 lg:border-r ${className}`}>
       {TABS.map(({ id, label, icon: Icon }) => (
         <button
           key={id}

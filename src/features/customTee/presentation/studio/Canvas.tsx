@@ -41,7 +41,7 @@ export default function Canvas({ baseImage, baseAlt, layers, selectedId, zoom, o
     return () => observer.disconnect();
   }, []);
 
-  // Report the selected layer's unrotated box (as canvas fractions) for the align controls.
+  // Report the selected layer's rotated bounding box (as canvas fractions) for the align controls.
   useEffect(() => {
     const el = boxRef.current;
     if (!selectedId || !el) {
@@ -52,9 +52,14 @@ export default function Canvas({ baseImage, baseAlt, layers, selectedId, zoom, o
       return;
     }
     const content = el.querySelector<HTMLElement>(`[data-layer-id="${selectedId}"] [data-layer-content]`);
-    if (!content || !el.offsetWidth || !el.offsetHeight) return;
-    const w = content.offsetWidth / el.offsetWidth;
-    const h = content.offsetHeight / el.offsetHeight;
+    const layer = layers.find((l) => l.id === selectedId);
+    if (!content || !layer || !el.offsetWidth || !el.offsetHeight) return;
+    // Bounding box of the rotated layer, so aligning a rotated layer puts its visible edge on the canvas edge.
+    const rad = (layer.rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const w = (content.offsetWidth * cos + content.offsetHeight * sin) / el.offsetWidth;
+    const h = (content.offsetWidth * sin + content.offsetHeight * cos) / el.offsetHeight;
     const key = `${w.toFixed(4)}:${h.toFixed(4)}`;
     if (key !== lastSize.current) {
       lastSize.current = key;
