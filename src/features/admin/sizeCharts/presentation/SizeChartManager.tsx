@@ -1,12 +1,33 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, XCircle, Ruler, Rows3, PackageCheck, PackageX, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { SizeChart } from '@/shared/domain/types';
 import { fetchSizeCharts, saveSizeChart, deleteSizeChart } from '../infrastructure/firestoreSizeChartsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
-import AdminCard from '@/features/admin/presentation/AdminCard';
+import { paginate } from '@/features/admin/inventory/domain/productList';
+import StatCard from '@/features/admin/presentation/ui/StatCard';
+import StatsRow from '@/features/admin/presentation/ui/StatsRow';
+import FilterBar from '@/features/admin/presentation/ui/FilterBar';
+import { FilterSearch, FilterSelect } from '@/features/admin/presentation/ui/FilterControls';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
+import EmptyState from '@/shared/ui/EmptyState';
+import {
+  DEFAULT_SIZE_CHART_FILTERS,
+  activeSizeChartFilterCount,
+  columnChips,
+  filterSizeCharts,
+  linkedProductCounts,
+  sizeChartStats,
+  type SizeChartFilters,
+  type SizeChartUsageFilter,
+} from '../domain/sizeChartList';
+
+const PAGE_SIZE = 20;
 
 const emptyForm: SizeChart = { id: '', name: '', columns: [], rows: [] };
 
@@ -19,14 +40,29 @@ export default function SizeChartManager() {
   const [newColumnInput, setNewColumnInput] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [listError, setListError] = useState('');
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [usageNotice, setUsageNotice] = useState('');
+  const [filters, setFilters] = useState<SizeChartFilters>(DEFAULT_SIZE_CHART_FILTERS);
+  const [page, setPage] = useState(1);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      setCharts(await fetchSizeCharts());
-    } finally {
-      setLoading(false);
+    // Charts and product usage load independently: a usage failure never hides the charts.
+    const [chartsResult, productsResult] = await Promise.allSettled([fetchSizeCharts(), fetchAllProductsForAdmin()]);
+    if (chartsResult.status === 'fulfilled') {
+      setCharts(chartsResult.value);
+      setListError('');
+    } else {
+      setListError(chartsResult.reason?.message || 'Failed to load size charts.');
     }
+    if (productsResult.status === 'fulfilled') {
+      setCounts(linkedProductCounts(productsResult.value));
+      setUsageNotice('');
+    } else {
+      setCounts(null);
+      setUsageNotice('Could not load products, so chart usage is unavailable right now.');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -124,20 +160,46 @@ export default function SizeChartManager() {
   };
 
   const handleDelete = async (chart: SizeChart) => {
+    // Server-side style guard: re-check usage with fresh product data before deleting.
+    let current = counts;
+    try {
+      current = linkedProductCounts(await fetchAllProductsForAdmin());
+      setCounts(current);
+    } catch {
+      // fall back to the last known counts
+    }
+    if (current && current[chart.id] > 0) {
+      setListError(`"${chart.name}" is used by ${current[chart.id]} product(s). Unassign it from those products first.`);
+      return;
+    }
     if (!window.confirm(`Delete size chart "${chart.name}"? This cannot be undone.`)) return;
-    await deleteSizeChart(chart.id);
-    await refresh();
+    try {
+      await deleteSizeChart(chart.id);
+      await refresh();
+    } catch (err: any) {
+      setListError(err?.message || 'Failed to delete size chart.');
+    }
   };
+
+  const stats = sizeChartStats(charts, counts);
+  const activeCount = activeSizeChartFilterCount(filters);
+  const visible = filterSizeCharts(charts, filters, counts);
+  const pageData = paginate(visible, page, PAGE_SIZE);
+  const updateFilters = (f: SizeChartFilters) => {
+    setFilters(f);
+    setPage(1);
+  };
+  const dash = (n: number | null) => (n === null ? '—' : n);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <AdminPageHeader
         title="Size Charts"
-        subtitle="Reusable size chart templates."
+        subtitle="Reusable size chart templates for your products."
         actions={
           <button
             onClick={openCreate}
-            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#333333]"
             id="admin-add-sizechart-btn"
           >
             <Plus className="h-4 w-4" />
@@ -145,6 +207,40 @@ export default function SizeChartManager() {
           </button>
         }
       />
+
+      <StatsRow>
+        <StatCard icon={<Ruler className="h-5 w-5" />} label="Total charts" value={stats.total} />
+        <StatCard icon={<Rows3 className="h-5 w-5" />} label="Total size rows" value={stats.sizeRows} />
+        <StatCard icon={<PackageCheck className="h-5 w-5" />} label="Charts in use" value={dash(stats.inUse)} tone="green" caption="linked to products" />
+        <StatCard icon={<PackageX className="h-5 w-5" />} label="Unused charts" value={dash(stats.unused)} tone="gray" />
+      </StatsRow>
+
+      {usageNotice && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
+          {usageNotice}
+        </div>
+      )}
+
+      <FilterBar activeCount={activeCount} onReset={() => updateFilters(DEFAULT_SIZE_CHART_FILTERS)}>
+        <FilterSearch
+          id="admin-sizechart-search"
+          value={filters.search}
+          onChange={(search) => updateFilters({ ...filters, search })}
+          placeholder="Search by chart name..."
+        />
+        <FilterSelect
+          aria-label="Usage"
+          value={filters.usage}
+          disabled={counts === null}
+          onChange={(e) => updateFilters({ ...filters, usage: e.target.value as SizeChartUsageFilter })}
+        >
+          <option value="">Usage: All</option>
+          <option value="used">In use</option>
+          <option value="unused">Unused</option>
+        </FilterSelect>
+      </FilterBar>
+
+      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
 
       <AnimatePresence>
         {isEditing && (
@@ -338,57 +434,90 @@ export default function SizeChartManager() {
         )}
       </AnimatePresence>
 
-      <AdminCard className="overflow-x-auto p-0!">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Name</th>
-              <th className="py-4 px-6">Columns</th>
-              <th className="py-4 px-6">Rows</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
-                  Loading size charts...
-                </td>
-              </tr>
-            ) : charts.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
-                  No size charts yet. Add one to get started.
-                </td>
-              </tr>
-            ) : (
-              charts.map((c) => (
-                <tr key={c.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                  <td className="py-4 px-6 font-bold text-black uppercase tracking-wide">{c.name}</td>
-                  <td className="py-4 px-6 text-[10px] text-[#717171]">{c.columns.join(', ')}</td>
-                  <td className="py-4 px-6 font-mono">{c.rows.length}</td>
-                  <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Edit Size Chart"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c)}
-                      className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                      title="Delete Size Chart"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
+          <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
+          <p className="mt-3 text-xs font-semibold text-[#717171]">Loading size charts...</p>
+        </div>
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={Ruler}
+          title={charts.length === 0 ? 'No size charts yet' : 'No size charts found'}
+          description={charts.length === 0 ? 'Add one to get started.' : 'Try changing or resetting the filters.'}
+        />
+      ) : (
+        <TableCard>
+          <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
+            <Pagination
+              from={pageData.from}
+              to={pageData.to}
+              total={pageData.total}
+              page={pageData.page}
+              totalPages={pageData.totalPages}
+              onPage={setPage}
+            />
+          </div>
+          <TableScroll
+            minWidth="min-w-[860px]"
+            head={
+              <>
+                <Th className="pl-5">Name</Th>
+                <Th>Measurements</Th>
+                <Th>Rows</Th>
+                <Th>Linked products</Th>
+                <Th className="pr-5 text-right">Actions</Th>
+              </>
+            }
+          >
+            {pageData.items.map((c) => {
+              const chips = columnChips(c.columns);
+              const linked = counts ? (counts[c.id] ?? 0) : null;
+              const locked = linked !== null && linked > 0;
+              return (
+                <tr key={c.id} className={TABLE_ROW}>
+                  <td className="py-3 pl-5 pr-3 font-semibold text-black">{c.name}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {chips.shown.map((col) => (
+                        <span key={col} className="rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-2 py-0.5 text-xs text-[#555555]">
+                          {col}
+                        </span>
+                      ))}
+                      {chips.extra > 0 && <span className="text-xs font-medium text-[#717171]">+{chips.extra}</span>}
+                      {c.columns.length === 0 && '—'}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 font-mono">{c.rows.length}</td>
+                  <td className="px-3 py-3">{dash(linked)}</td>
+                  <td className="px-3 py-3 pr-5">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(c)}
+                        title="Edit Size Chart"
+                        aria-label={`Edit ${c.name}`}
+                        className="rounded-lg border border-[#EEEEEE] bg-white p-2 text-black transition-colors hover:border-black"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(c)}
+                        disabled={locked}
+                        title={locked ? `Used by ${linked} product(s); unassign it first` : 'Delete Size Chart'}
+                        aria-label={`Delete ${c.name}`}
+                        className="rounded-lg border border-red-200 bg-white p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </AdminCard>
+              );
+            })}
+          </TableScroll>
+        </TableCard>
+      )}
     </div>
   );
 }
