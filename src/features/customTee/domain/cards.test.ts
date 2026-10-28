@@ -17,7 +17,7 @@ const product = (over: Partial<Product>): Product => ({
 });
 
 describe('buildParentCard', () => {
-  it('derives code, stock, deduped photos and colors from linked products only', () => {
+  it('derives code, stock, parent-only photos and colors from linked products', () => {
     const products = [
       product({ id: '1', parentProductId: 'abc123def', image: 'p.jpg', gallery: ['g1.jpg', ''], variants: [{ id: 'v1', name: 'Forest Green', colorCode: '#0a0' }] }),
       product({ id: '2', parentProductId: 'abc123def', image: 'b.jpg', variants: [{ id: 'v2', name: 'forest green' }, { id: 'v3', name: 'Black' }] }),
@@ -26,7 +26,7 @@ describe('buildParentCard', () => {
     const card = buildParentCard(parent, products, 'M');
     expect(card.code).toBe('123DEF');
     expect(card.stock).toBe(45);
-    expect(card.photos).toEqual(['p.jpg', 'g1.jpg', 'b.jpg']);
+    expect(card.photos).toEqual(['p.jpg']);
     expect(card.colors.map((c) => c.name)).toEqual(['Forest Green', 'Black']);
   });
   it('gives distinct codes to parents whose ids share a prefix', () => {
@@ -35,6 +35,10 @@ describe('buildParentCard', () => {
     expect(a.code).toBe('282522');
     expect(b.code).toBe('290001');
     expect(a.code).not.toBe(b.code);
+  });
+  it('ignores linked product images and galleries for photos', () => {
+    const card = buildParentCard(parent, [product({ id: '1', parentProductId: 'abc123def', image: 'x.jpg', gallery: ['y.jpg'] })], 'M');
+    expect(card.photos).toEqual(['p.jpg']);
   });
   it('handles a parent with no linked products', () => {
     const card = buildParentCard({ ...parent, image: '' }, [], 'M');

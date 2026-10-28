@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ParentProduct, Product } from '@/shared/domain/types';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
+import { selectableParents } from '../domain/selection';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 
 export function useCustomTeeData() {
@@ -16,7 +17,7 @@ export function useCustomTeeData() {
     Promise.all([fetchAllParentProducts(), fetchAllProducts()])
       .then(([pp, prods]) => {
         if (cancelled) return;
-        setParents(pp);
+        setParents(selectableParents(pp));
         setProducts(prods);
       })
       .catch((err) => {
@@ -32,7 +33,7 @@ export function useCustomTeeData() {
 
   // Re-reads stock; used before opening the studio and before saving.
   const refreshParents = useCallback(async () => {
-    const fresh = await fetchAllParentProducts();
+    const fresh = selectableParents(await fetchAllParentProducts());
     setParents(fresh);
     return fresh;
   }, []);

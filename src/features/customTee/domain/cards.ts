@@ -11,15 +11,7 @@ export interface ParentCardData {
 export function buildParentCard(parent: ParentProduct, products: Product[], size: string): ParentCardData {
   const linked = products.filter((p) => p.parentProductId === parent.id);
 
-  const photos: string[] = [];
-  const addPhoto = (url?: string) => {
-    if (url && !photos.includes(url)) photos.push(url);
-  };
-  addPhoto(parent.image);
-  for (const p of linked) {
-    addPhoto(p.image);
-    (p.gallery ?? []).forEach(addPhoto);
-  }
+  const photos: string[] = parent.image ? [parent.image] : [];
 
   const colors: ProductVariant[] = [];
   const seen = new Set<string>();

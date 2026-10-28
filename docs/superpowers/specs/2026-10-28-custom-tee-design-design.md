@@ -17,7 +17,7 @@ Customer-facing `/custom-tee`: pick a base tee via four dependent selections, th
 
 - No schema change, no migration.
 - Eligibility from existing `ParentProduct` (`category`, `subcategory`, `sizeOrder`, `stockBySize`) via `fetchAllParentProducts`.
-- Card extras derived from products linked by `parentProductId`: photos (parent `image` + linked product `image`/`gallery`), colors (union of linked `variants`), SKU shown as a short code from the parent id (parents have no SKU field).
+- Card extras derived from products linked by `parentProductId`: photos (the parent's own `image` only; linked product images/galleries are not used). Only parents with a non-empty `image` are shown in the picker, colors (union of linked `variants`), SKU shown as a short code from the parent id (parents have no SKU field).
 - Eligible = `stockBySize[size] > 0`. Parents without a subcategory are not reachable in this flow (subcategory is a required step).
 
 ## Structure (`src/features/customTee/`)
@@ -31,7 +31,7 @@ Customer-facing `/custom-tee`: pick a base tee via four dependent selections, th
 ## Behavior
 
 1. Category → Subcategory (only those with eligible parents) → Size (only sizes with stock among matches) → image cards (photo, name, SKU code, colors, "Size M: N pcs").
-2. Selecting a card updates a preview panel with a photo gallery.
+2. Selecting a card updates a preview panel showing the parent's image. Parents without an image are never listed and never make a category, subcategory or size selectable.
 3. **Continue to Design Studio** is hidden until all four selections validate.
 4. Empty states: no subcategories; no sizes with stock; no matching parents.
 5. On Continue, stock is re-fetched and the selection revalidated. If invalid, the user stays on the picker, later steps are cleared and a message is shown. Selecting never changes stock.

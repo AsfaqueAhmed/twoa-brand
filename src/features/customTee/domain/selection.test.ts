@@ -12,6 +12,7 @@ import {
   selectParent,
   isComplete,
   validateSelection,
+  selectableParents,
 } from './selection';
 
 const parent = (id: string, category: string, subcategory: string, stockBySize: Record<string, number>): ParentProduct => ({
@@ -91,5 +92,13 @@ describe('validateSelection', () => {
   it('resets to the first missing step for an incomplete selection', () => {
     expect(validateSelection(parents, { ...full, parentId: '' })).toMatchObject({ ok: false, resetTo: 'parent' });
     expect(validateSelection(parents, EMPTY_SELECTION)).toMatchObject({ ok: false, resetTo: 'category' });
+  });
+});
+
+describe('selectableParents', () => {
+  it('keeps imaged parents and drops empty, whitespace-only and undefined images', () => {
+    const withImg = (id: string, image?: string): ParentProduct => ({ ...parent(id, 'T-Shirts', 'Graphic', { M: 1 }), image });
+    const out = selectableParents([withImg('a', 'a.jpg'), withImg('b', ''), withImg('c', '   '), withImg('d', undefined), withImg('e', ' e.jpg ')]);
+    expect(out.map((p) => p.id)).toEqual(['a', 'e']);
   });
 });

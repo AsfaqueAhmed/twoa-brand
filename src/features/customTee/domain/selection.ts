@@ -3,6 +3,11 @@ import type { ParentProduct } from '@/shared/domain/types';
 export type Selection = { category: string; subcategory: string; size: string; parentId: string };
 export type SelectionStep = 'category' | 'subcategory' | 'size' | 'parent';
 
+/** Only parents with a non-empty image may appear in the picker. */
+export function selectableParents(parents: ParentProduct[]): ParentProduct[] {
+  return parents.filter((p) => !!p.image && p.image.trim() !== '');
+}
+
 export const EMPTY_SELECTION: Selection = { category: '', subcategory: '', size: '', parentId: '' };
 
 const hasStock = (p: ParentProduct, size: string) => (p.stockBySize[size] ?? 0) > 0;
