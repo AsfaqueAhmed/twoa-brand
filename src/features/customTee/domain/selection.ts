@@ -54,6 +54,7 @@ export const selectSize = (sel: Selection, size: string): Selection => ({ ...sel
 export const selectParent = (sel: Selection, parentId: string): Selection => ({ ...sel, parentId });
 
 export const isComplete = (sel: Selection): boolean => !!(sel.category && sel.subcategory && sel.size && sel.parentId);
+export const isStepOneComplete = (sel: Selection): boolean => !!(sel.category && sel.subcategory && sel.size);
 
 export type SelectionValidation = { ok: true } | { ok: false; resetTo: SelectionStep; reason: string };
 

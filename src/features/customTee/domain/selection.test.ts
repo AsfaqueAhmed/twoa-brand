@@ -11,6 +11,7 @@ import {
   selectSize,
   selectParent,
   isComplete,
+  isStepOneComplete,
   validateSelection,
   selectableParents,
 } from './selection';
@@ -106,6 +107,19 @@ describe('validateSelection', () => {
   it('resets to the first missing step for an incomplete selection', () => {
     expect(validateSelection(parents, { ...full, parentId: '' })).toMatchObject({ ok: false, resetTo: 'parent' });
     expect(validateSelection(parents, EMPTY_SELECTION)).toMatchObject({ ok: false, resetTo: 'category' });
+  });
+});
+
+describe('isStepOneComplete', () => {
+  const base = { category: 'T-Shirts', subcategory: 'Graphic', size: 'M', parentId: '' };
+  it('is true with category, subcategory and size, even without a parent', () => {
+    expect(isStepOneComplete(base)).toBe(true);
+    expect(isStepOneComplete({ ...base, parentId: 'a' })).toBe(true);
+  });
+  it('is false when any of the three is blank', () => {
+    expect(isStepOneComplete({ ...base, category: '' })).toBe(false);
+    expect(isStepOneComplete({ ...base, subcategory: '' })).toBe(false);
+    expect(isStepOneComplete({ ...base, size: '' })).toBe(false);
   });
 });
 
