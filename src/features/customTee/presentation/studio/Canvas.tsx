@@ -324,7 +324,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       aria-hidden="true"
       onPointerDown={(e) => onHandlePointerDown(e, kind)}
       onLostPointerCapture={endDrag}
-      style={{ position: 'absolute', width: px(12), height: px(12), background: '#fff', border: `${px(1.5)}px solid #000`, borderRadius: kind === 'rotate' ? '50%' : px(2), cursor, touchAction: 'none', pointerEvents: 'auto', ...extra }}
+      style={{ position: 'absolute', width: px(12), height: px(12), background: '#fff', border: `${px(1)}px solid #000`, borderRadius: kind === 'rotate' ? '50%' : px(2), cursor, touchAction: 'none', pointerEvents: 'auto', ...extra }}
     />
   );
 
@@ -384,7 +384,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                   transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
                   cursor: isEditing ? 'text' : 'move',
                   touchAction: 'none',
-                  outline: isSelected ? `${px(1.5)}px ${showHandles && single ? 'dashed' : 'solid'} #000` : hoverId === layer.id && !drag.current ? `${px(1)}px solid rgba(0,0,0,.45)` : 'none',
+                  outline: isSelected ? `${px(1)}px ${showHandles && single ? 'dashed' : 'solid'} #000` : hoverId === layer.id && !drag.current ? `${px(1)}px solid rgba(0,0,0,.45)` : 'none',
                 }}
               >
                 <div
@@ -427,7 +427,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                     {handle({ right: 0, top: 0, transform: 'translate(50%,-50%)' }, 'nesw-resize', 'scale')}
                     {handle({ left: 0, bottom: 0, transform: 'translate(-50%,50%)' }, 'nesw-resize', 'scale')}
                     {handle({ right: 0, bottom: 0, transform: 'translate(50%,50%)' }, 'nwse-resize', 'scale')}
-                    <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: px(-22), width: px(1.5), height: px(18), background: '#000', transform: 'translateX(-50%)' }} />
+                    <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: px(-22), width: px(1), height: px(18), background: '#000', transform: 'translateX(-50%)' }} />
                     {handle({ left: '50%', top: px(-34), transform: 'translateX(-50%)' }, 'grab', 'rotate')}
                   </>
                 )}
@@ -445,7 +445,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
               top: `${selectionBox.top * 100}%`,
               width: `${(selectionBox.right - selectionBox.left) * 100}%`,
               height: `${(selectionBox.bottom - selectionBox.top) * 100}%`,
-              outline: `${px(1.5)}px dashed #000`,
+              outline: `${px(1)}px dashed #000`,
             }}
           >
             {showHandles && (
@@ -454,7 +454,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                 {handle({ right: 0, top: 0, transform: 'translate(50%,-50%)' }, 'nesw-resize', 'scale')}
                 {handle({ left: 0, bottom: 0, transform: 'translate(-50%,50%)' }, 'nesw-resize', 'scale')}
                 {handle({ right: 0, bottom: 0, transform: 'translate(50%,50%)' }, 'nwse-resize', 'scale')}
-                <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: px(-22), width: px(1.5), height: px(18), background: '#000', transform: 'translateX(-50%)' }} />
+                <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: px(-22), width: px(1), height: px(18), background: '#000', transform: 'translateX(-50%)' }} />
                 {handle({ left: '50%', top: px(-34), transform: 'translateX(-50%)' }, 'grab', 'rotate')}
               </div>
             )}
@@ -469,8 +469,8 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
             className="pointer-events-none absolute"
             style={
               g.axis === 'x'
-                ? { left: `${g.position * 100}%`, top: 0, bottom: 0, width: px(1), background: '#000', boxShadow: `0 0 0 ${px(0.75)}px rgba(255,255,255,.9)` }
-                : { top: `${g.position * 100}%`, left: 0, right: 0, height: px(1), background: '#000', boxShadow: `0 0 0 ${px(0.75)}px rgba(255,255,255,.9)` }
+                ? { left: `${g.position * 100}%`, top: 0, bottom: 0, width: px(0.75), background: '#000', boxShadow: `0 0 0 ${px(0.4)}px rgba(255,255,255,.85)` }
+                : { top: `${g.position * 100}%`, left: 0, right: 0, height: px(0.75), background: '#000', boxShadow: `0 0 0 ${px(0.4)}px rgba(255,255,255,.85)` }
             }
           />
         ))}
