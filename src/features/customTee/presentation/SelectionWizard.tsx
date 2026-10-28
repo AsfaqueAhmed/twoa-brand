@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ParentProduct, Product } from '@/shared/domain/types';
 import {
   type Selection,
@@ -34,6 +34,7 @@ const NOTE = 'rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
 
 export default function SelectionWizard({ parents, products, selection, onChange, onContinue, notice, busy }: Props) {
   const [galleryIndex, setGalleryIndex] = useState(0);
+  useEffect(() => setGalleryIndex(0), [selection.parentId]);
 
   const categories = useMemo(() => eligibleCategories(parents), [parents]);
   const subcategories = useMemo(() => eligibleSubcategories(parents, selection.category), [parents, selection.category]);
@@ -159,7 +160,8 @@ export default function SelectionWizard({ parents, products, selection, onChange
           <div className="mt-3 flex gap-2 overflow-x-auto">
             {chosen.photos.map((url, i) => (
               <button
-                key={url}
+                key={`${url}-${i}`}
+                aria-current={i === galleryIndex}
                 type="button"
                 aria-label={`Photo ${i + 1}`}
                 onClick={() => setGalleryIndex(i)}
