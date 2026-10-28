@@ -7,18 +7,17 @@ import {
   type Layer,
   type LayerPatch,
   addLayer,
-  alignLayer,
   createImageLayer,
   createTextLayer,
   flipLayer,
-  moveLayer,
-  removeLayer,
-  reorderLayer,
   toggleVisible,
   updateLayer,
 } from '../domain/layers';
+import { expandToGroups, groupLayers, moveUnit as moveUnitDomain, removeLayers, reorderUnit as reorderUnitDomain, ungroupLayers } from '../domain/grouping';
+import { type CanvasPx, type Size, alignLayers, distributeLayers, moveLayersBy } from '../domain/geometry';
 
 export type Asset = { id: string; name: string; src: string; aspect: number };
+export type TextInit = Omit<Parameters<typeof createTextLayer>[0], 'id'>;
 
 type ByView = Record<string, Layer[]>;
 const EMPTY: Layer[] = [];
@@ -31,17 +30,21 @@ const mapView = (rec: ByView, viewId: string, fn: (ls: Layer[]) => Layer[]): ByV
 
 export function useStudioState(initialLayersByView: ByView, viewId: string) {
   const [history, setHistory] = useState<History<ByView>>(() => createHistory(initialLayersByView));
-  const [rawSelectedId, setSelectedId] = useState<string | null>(null);
+  const [rawSelection, setRawSelection] = useState<string[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const counter = useRef(0);
   const nextId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${counter.current++}`;
 
   const layersByView = history.present;
   const layers = layersByView[viewId] ?? EMPTY;
-  const selected = layers.find((l) => l.id === rawSelectedId) ?? null;
-  const selectedId = selected ? selected.id : null; // validated: a stale id (e.g. after undo) is never exposed
+  // Validated against the active view's layers: a stale id (after undo, or on another view) is never exposed.
+  const selectedIds = rawSelection.filter((id) => layers.some((l) => l.id === id));
+  const selected = selectedIds.length === 1 ? (layers.find((l) => l.id === selectedIds[0]) ?? null) : null;
 
-  const change = useCallback((fn: (ls: Layer[]) => Layer[]) => setHistory((h) => commit(h, mapView(h.present, viewId, fn))), [viewId]);
+  const change = useCallback(
+    (fn: (ls: Layer[]) => Layer[]) => setHistory((h) => commit(h, mapView(h.present, viewId, fn))),
+    [viewId],
+  );
 
   const rememberAsset = useCallback((a: Omit<Asset, 'id'>): Asset => {
     const asset = { ...a, id: `asset-${Date.now().toString(36)}-${counter.current++}` };
@@ -49,49 +52,74 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
     return asset;
   }, []);
 
-  const addImage = useCallback((a: Asset) => {
-    const layer = createImageLayer({ id: nextId('layer'), name: a.name, src: a.src, aspect: a.aspect });
-    setHistory((h) => commit(h, mapView(h.present, viewId, (ls) => addLayer(ls, layer))));
-    setSelectedId(layer.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewId]);
+  const addAndSelect = useCallback(
+    (layer: Layer) => {
+      setHistory((h) => commit(h, mapView(h.present, viewId, (ls) => addLayer(ls, layer))));
+      setRawSelection([layer.id]);
+    },
+    [viewId],
+  );
 
-  const addText = useCallback((text: string, fontFamily: string, color: string) => {
-    const layer = createTextLayer({ id: nextId('layer'), text, fontFamily, color });
-    setHistory((h) => commit(h, mapView(h.present, viewId, (ls) => addLayer(ls, layer))));
-    setSelectedId(layer.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewId]);
+  const addImage = useCallback(
+    (a: Asset) => addAndSelect(createImageLayer({ id: nextId('layer'), name: a.name, src: a.src, aspect: a.aspect })),
+    [addAndSelect], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const addText = useCallback(
+    (init: TextInit) => addAndSelect(createTextLayer({ id: nextId('layer'), ...init })),
+    [addAndSelect], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const applyPatches = (ls: Layer[], patches: Record<string, LayerPatch>): Layer[] => {
+    let out = ls;
+    for (const [id, p] of Object.entries(patches)) out = updateLayer(out, id, p);
+    return out;
+  };
+
+  const removeIds = (ids: string[]) => {
+    if (!layers.some((l) => ids.includes(l.id))) return;
+    change((ls) => removeLayers(ls, ids));
+    setRawSelection((cur) => cur.filter((id) => !ids.includes(id)));
+  };
 
   return {
     layers,
     layersByView,
-    selectedId,
+    selectedIds,
     selected,
     assets,
     canUndo: canUndo(history),
     canRedo: canRedo(history),
-    select: setSelectedId,
+    select: (ids: string[]) => setRawSelection(ids),
+    selectAll: () => setRawSelection(layers.filter((l) => l.visible).map((l) => l.id)),
     rememberAsset,
     addImage,
     addText,
     patch: (id: string, p: LayerPatch) => change((ls) => updateLayer(ls, id, p)),
+    patchMany: (ids: string[], p: LayerPatch) => change((ls) => applyPatches(ls, Object.fromEntries(ids.map((id) => [id, p])))),
     patchLive: (id: string, p: LayerPatch) => setHistory((h) => live(h, mapView(h.present, viewId, (ls) => updateLayer(ls, id, p)))),
+    patchManyLive: (patches: Record<string, LayerPatch>) => setHistory((h) => live(h, mapView(h.present, viewId, (ls) => applyPatches(ls, patches)))),
     settleGesture: () => setHistory((h) => settle(h)),
-    remove: (id: string) => {
-      if (!layers.some((l) => l.id === id)) return;
-      change((ls) => removeLayer(ls, id));
-      setSelectedId((cur) => (cur === id ? null : cur));
-    },
-    toggle: (id: string) => change((ls) => toggleVisible(ls, id)),
-    flip: (id: string, axis: 'x' | 'y') => change((ls) => flipLayer(ls, id, axis)),
-    align: (id: string, size: { w: number; h: number }, edge: AlignEdge) =>
-      setHistory((h) => {
-        const layer = (h.present[viewId] ?? EMPTY).find((l) => l.id === id);
-        return layer ? commit(h, mapView(h.present, viewId, (ls) => updateLayer(ls, id, alignLayer(layer, size, edge)))) : h;
+    nudge: (ids: string[], dx: number, dy: number) => change((ls) => moveLayersBy(ls, ids, dx, dy)),
+    removeSelected: () => removeIds(selectedIds),
+    removeIds,
+    setVisible: (ids: string[], visible: boolean) =>
+      change((ls) => {
+        let out = ls;
+        for (const l of ls) if (ids.includes(l.id) && l.visible !== visible) out = toggleVisible(out, l.id);
+        return out;
       }),
-    move: (id: string, dir: 'up' | 'down') => change((ls) => moveLayer(ls, id, dir)),
-    reorder: (id: string, toIndex: number) => change((ls) => reorderLayer(ls, id, toIndex)),
+    flip: (id: string, axis: 'x' | 'y') => change((ls) => flipLayer(ls, id, axis)),
+    group: () => {
+      const id = nextId('group');
+      change((ls) => groupLayers(ls, selectedIds, id));
+      setRawSelection((cur) => expandToGroups(layers, cur));
+    },
+    ungroup: () => change((ls) => ungroupLayers(ls, selectedIds)),
+    align: (edge: AlignEdge, sizes: Record<string, Size>, canvas: CanvasPx) => change((ls) => alignLayers(ls, selectedIds, sizes, edge, canvas)),
+    distribute: (axis: 'horizontal' | 'vertical', sizes: Record<string, Size>, canvas: CanvasPx) =>
+      change((ls) => distributeLayers(ls, selectedIds, sizes, axis, canvas)),
+    moveUnit: (id: string, dir: 'up' | 'down') => change((ls) => moveUnitDomain(ls, id, dir)),
+    reorderUnit: (id: string, toUnitIndex: number) => change((ls) => reorderUnitDomain(ls, id, toUnitIndex)),
     undo: () => setHistory((h) => undoH(h)),
     redo: () => setHistory((h) => redoH(h)),
   };
