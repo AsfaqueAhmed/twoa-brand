@@ -20,18 +20,28 @@ import {
 
 export type Asset = { id: string; name: string; src: string; aspect: number };
 
-export function useStudioState(initialLayers: Layer[]) {
-  const [history, setHistory] = useState<History<Layer[]>>(() => createHistory(initialLayers));
+type ByView = Record<string, Layer[]>;
+const EMPTY: Layer[] = [];
+// Applies `fn` to one view's layers; returns the SAME record when nothing changed so history no-ops still work.
+const mapView = (rec: ByView, viewId: string, fn: (ls: Layer[]) => Layer[]): ByView => {
+  const current = rec[viewId] ?? EMPTY;
+  const next = fn(current);
+  return next === current ? rec : { ...rec, [viewId]: next };
+};
+
+export function useStudioState(initialLayersByView: ByView, viewId: string) {
+  const [history, setHistory] = useState<History<ByView>>(() => createHistory(initialLayersByView));
   const [rawSelectedId, setSelectedId] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const counter = useRef(0);
   const nextId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${counter.current++}`;
 
-  const layers = history.present;
+  const layersByView = history.present;
+  const layers = layersByView[viewId] ?? EMPTY;
   const selected = layers.find((l) => l.id === rawSelectedId) ?? null;
   const selectedId = selected ? selected.id : null; // validated: a stale id (e.g. after undo) is never exposed
 
-  const change = useCallback((fn: (ls: Layer[]) => Layer[]) => setHistory((h) => commit(h, fn(h.present))), []);
+  const change = useCallback((fn: (ls: Layer[]) => Layer[]) => setHistory((h) => commit(h, mapView(h.present, viewId, fn))), [viewId]);
 
   const rememberAsset = useCallback((a: Omit<Asset, 'id'>): Asset => {
     const asset = { ...a, id: `asset-${Date.now().toString(36)}-${counter.current++}` };
@@ -41,20 +51,21 @@ export function useStudioState(initialLayers: Layer[]) {
 
   const addImage = useCallback((a: Asset) => {
     const layer = createImageLayer({ id: nextId('layer'), name: a.name, src: a.src, aspect: a.aspect });
-    setHistory((h) => commit(h, addLayer(h.present, layer)));
+    setHistory((h) => commit(h, mapView(h.present, viewId, (ls) => addLayer(ls, layer))));
     setSelectedId(layer.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [viewId]);
 
   const addText = useCallback((text: string, fontFamily: string, color: string) => {
     const layer = createTextLayer({ id: nextId('layer'), text, fontFamily, color });
-    setHistory((h) => commit(h, addLayer(h.present, layer)));
+    setHistory((h) => commit(h, mapView(h.present, viewId, (ls) => addLayer(ls, layer))));
     setSelectedId(layer.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [viewId]);
 
   return {
     layers,
+    layersByView,
     selectedId,
     selected,
     assets,
@@ -65,7 +76,7 @@ export function useStudioState(initialLayers: Layer[]) {
     addImage,
     addText,
     patch: (id: string, p: LayerPatch) => change((ls) => updateLayer(ls, id, p)),
-    patchLive: (id: string, p: LayerPatch) => setHistory((h) => live(h, updateLayer(h.present, id, p))),
+    patchLive: (id: string, p: LayerPatch) => setHistory((h) => live(h, mapView(h.present, viewId, (ls) => updateLayer(ls, id, p)))),
     settleGesture: () => setHistory((h) => settle(h)),
     remove: (id: string) => {
       if (!layers.some((l) => l.id === id)) return;
@@ -76,8 +87,8 @@ export function useStudioState(initialLayers: Layer[]) {
     flip: (id: string, axis: 'x' | 'y') => change((ls) => flipLayer(ls, id, axis)),
     align: (id: string, size: { w: number; h: number }, edge: AlignEdge) =>
       setHistory((h) => {
-        const layer = h.present.find((l) => l.id === id);
-        return layer ? commit(h, updateLayer(h.present, id, alignLayer(layer, size, edge))) : h;
+        const layer = (h.present[viewId] ?? EMPTY).find((l) => l.id === id);
+        return layer ? commit(h, mapView(h.present, viewId, (ls) => updateLayer(ls, id, alignLayer(layer, size, edge)))) : h;
       }),
     move: (id: string, dir: 'up' | 'down') => change((ls) => moveLayer(ls, id, dir)),
     reorder: (id: string, toIndex: number) => change((ls) => reorderLayer(ls, id, toIndex)),

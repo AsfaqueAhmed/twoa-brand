@@ -25,7 +25,7 @@ type Props = {
   card: ParentCardData;
   initialSize: string;
   initialColor?: string;
-  initialLayers: Layer[];
+  initialLayersByView: Record<string, Layer[]>;
   refreshParents: () => Promise<ParentProduct[]>;
 };
 
@@ -40,8 +40,7 @@ const isTyping = (t: EventTarget | null) =>
     t.tagName === 'SELECT' ||
     t.isContentEditable);
 
-export default function StudioEditor({ parent, card, initialSize, initialColor, initialLayers, refreshParents }: Props) {
-  const studio = useStudioState(initialLayers);
+export default function StudioEditor({ parent, card, initialSize, initialColor, initialLayersByView, refreshParents }: Props) {
   const [tool, setTool] = useState<ToolTab>('design');
   const [size, setSize] = useState(initialSize);
   const [colorName, setColorName] = useState<string | undefined>(
@@ -58,8 +57,10 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
 
   const color = card.colors.find((c) => c.name === colorName);
   const views = useMemo(() => buildViews(parent, color), [parent, color]);
-  const [activeView, setActiveView] = useState('front');
-  const view = views.find((v) => v.id === activeView) ?? views[0];
+  const [activeViewId, setActiveViewId] = useState('view-0');
+  const view = views.find((v) => v.id === activeViewId) ?? views[0];
+  const studio = useStudioState(initialLayersByView, view?.id ?? 'view-0');
+  useEffect(() => setSelectedSize(null), [view?.id]);
   const sizes = parent.sizeOrder.filter((s) => (parent.stockBySize[s] ?? 0) > 0);
   const selectedText = studio.selected?.type === 'text' ? studio.selected : null;
 
@@ -153,7 +154,8 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         setStatus({ kind: 'error', text: 'This tee is no longer available in that size. Please choose another size.' });
         return;
       }
-      const design: StudioDesign = { parentProductId: parent.id, size, colorName, layers: studio.layers };
+      const design: StudioDesign = { parentProductId: parent.id, size, colorName, layersByView: Object.fromEntries(Object.entries(studio.layersByView).filter(([, ls]) => ls.length > 0)),
+      };
       try {
         sessionStorage.setItem(DESIGN_STORAGE_KEY, serializeDesign(design));
         sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: parent.id, size }));
@@ -207,8 +209,8 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             onUndo={studio.undo}
             onRedo={studio.redo}
             views={views}
-            activeView={view?.id ?? 'front'}
-            onView={setActiveView}
+            activeView={view?.id ?? 'view-0'}
+            onView={setActiveViewId}
             zoom={zoom}
             onZoom={setZoom}
             fullscreen={fullscreen}
@@ -235,7 +237,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
                 type="button"
                 aria-label={`${v.label} view`}
                 aria-pressed={v.id === view?.id}
-                onClick={() => setActiveView(v.id)}
+                onClick={() => setActiveViewId(v.id)}
                 className={`h-16 w-16 overflow-hidden rounded-lg border-2 bg-white ${v.id === view?.id ? 'border-black' : 'border-[#EEEEEE]'}`}
               >
                 <img src={v.image} alt="" className="h-full w-full object-cover" />

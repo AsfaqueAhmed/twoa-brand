@@ -66,7 +66,7 @@ export default function StudioPage() {
       card={card}
       initialSize={initialSize}
       initialColor={restore?.colorName}
-      initialLayers={restore?.layers ?? []}
+      initialLayersByView={restore?.layersByView ?? {}}
       refreshParents={refreshParents}
     />
   );
