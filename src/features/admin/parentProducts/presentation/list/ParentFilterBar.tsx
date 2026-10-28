@@ -5,13 +5,14 @@ import type { ParentFilters, ParentSort } from '../../domain/parentList';
 type Props = {
   filters: ParentFilters;
   sort: ParentSort;
+  categories: string[];
   activeCount: number;
   onFilters: (f: ParentFilters) => void;
   onSort: (s: ParentSort) => void;
   onReset: () => void;
 };
 
-export default function ParentFilterBar({ filters, sort, activeCount, onFilters, onSort, onReset }: Props) {
+export default function ParentFilterBar({ filters, sort, categories, activeCount, onFilters, onSort, onReset }: Props) {
   return (
     <FilterBar activeCount={activeCount} onReset={onReset}>
       <FilterSearch
@@ -25,6 +26,12 @@ export default function ParentFilterBar({ filters, sort, activeCount, onFilters,
         <option value="in">In stock</option>
         <option value="low">Low stock</option>
         <option value="out">Out of stock</option>
+      </FilterSelect>
+      <FilterSelect aria-label="Category" value={filters.category} onChange={(e) => onFilters({ ...filters, category: e.target.value })}>
+        <option value="">Category</option>
+        {categories.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
       </FilterSelect>
       <FilterSelect aria-label="Sort by" value={sort} onChange={(e) => onSort(e.target.value as ParentSort)}>
         <option value="">Sort by</option>

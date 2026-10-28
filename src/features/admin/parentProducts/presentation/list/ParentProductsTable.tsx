@@ -4,6 +4,7 @@ import type { ParentProduct } from '@/shared/domain/types';
 import { stockLevel, type ProductStatus } from '@/features/admin/inventory/domain/productList';
 import ProductStatusPill from '@/features/admin/inventory/presentation/list/ProductStatusPill';
 import StockBar from '@/features/admin/inventory/presentation/list/StockBar';
+import { parentCategoryLabel } from '../../domain/parentCategory';
 import { parentTotalStock } from '../../domain/parentList';
 
 type Props = {
@@ -41,11 +42,12 @@ function SizeChips({ pp }: { pp: ParentProduct }) {
 export default function ParentProductsTable({ parents, linked, onEdit, onDelete, emptyText = 'No parent products found.' }: Props) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px] border-collapse text-left">
+      <table className="w-full min-w-[960px] border-collapse text-left">
         <thead>
           <tr className={TABLE_HEAD_ROW}>
             <th className="w-20 py-3.5 pl-5 pr-2">Image</th>
             <th className="px-3 py-3.5">Parent Product</th>
+            <th className="px-3 py-3.5">Category</th>
             <th className="px-3 py-3.5">Sizes</th>
             <th className="px-3 py-3.5">Total Stock</th>
             <th className="px-3 py-3.5">Linked Products</th>
@@ -55,7 +57,7 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete,
         <tbody className={TABLE_BODY}>
           {parents.length === 0 ? (
             <tr>
-              <td colSpan={6} className="py-12 text-center font-semibold text-[#717171]">
+              <td colSpan={7} className="py-12 text-center font-semibold text-[#717171]">
                 {emptyText}
               </td>
             </tr>
@@ -84,6 +86,12 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete,
                   <td className="px-3 py-3">
                     <div className="max-w-[240px] truncate font-semibold text-black">{pp.name}</div>
                     <div className="mt-0.5 max-w-[240px] truncate font-mono text-[11px] text-[#919191]">{pp.id}</div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className={`max-w-[160px] truncate text-sm ${pp.category ? 'font-medium text-black' : 'italic text-[#919191]'}`}>
+                      {parentCategoryLabel(pp.category)}
+                    </div>
+                    {pp.subcategory && <div className="mt-0.5 max-w-[160px] truncate text-[11px] text-[#717171]">{pp.subcategory}</div>}
                   </td>
                   <td className="px-3 py-3">
                     <SizeChips pp={pp} />

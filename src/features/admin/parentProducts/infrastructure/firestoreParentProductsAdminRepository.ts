@@ -1,16 +1,30 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { ParentProduct } from '@/shared/domain/types';
+import { categoryColumns } from '../domain/parentCategory';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
 
 export async function fetchParentProducts(): Promise<ParentProduct[]> {
   return fetchAllParentProducts();
 }
 
+// products.category/subcategory are a denormalized copy of the parent's values.
+export async function cascadeCategoryToProducts(parentIds: string[], category: string, subcategory: string | null): Promise<void> {
+  if (parentIds.length === 0) return;
+  const { error } = await supabase
+    .from('products')
+    .update({ category, subcategory })
+    .in('parent_product_id', parentIds);
+  if (error) throw new Error(error.message);
+}
+
 export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: string[]): Promise<void> {
+  const cols = categoryColumns(pp.category, pp.subcategory);
   const { error: parentError } = await supabase
     .from('parent_products')
-    .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder });
+    .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder, ...cols });
   if (parentError) throw parentError;
+
+  await cascadeCategoryToProducts([pp.id], cols.category, cols.subcategory);
 
   const stockRows = pp.sizeOrder.map((size) => ({ parent_id: pp.id, size, stock: Number(pp.stockBySize[size]) || 0 }));
   if (stockRows.length > 0) {

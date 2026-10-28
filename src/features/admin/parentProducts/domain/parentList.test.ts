@@ -5,21 +5,23 @@ import {
   activeParentFilterCount,
   filterParents,
   linkedProductCounts,
+  parentCategoryFilterOptions,
   parentStats,
   parentTotalStock,
   sortParents,
 } from './parentList';
 
-const pp = (id: string, name: string, stock: Record<string, number>): ParentProduct => ({
+const pp = (id: string, name: string, stock: Record<string, number>, category = ''): ParentProduct => ({
   id,
   name,
   image: '',
+  category,
   sizeOrder: Object.keys(stock),
   stockBySize: stock,
 });
 
-const A = pp('p-a', 'Linen Shirt', { S: 5, M: 10 }); // 15 in
-const B = pp('p-b', 'Denim Jacket', { S: 3, M: 4 }); // 7 low
+const A = pp('p-a', 'Linen Shirt', { S: 5, M: 10 }, 'Men'); // 15 in
+const B = pp('p-b', 'Denim Jacket', { S: 3, M: 4 }, 'Women'); // 7 low
 const C = pp('p-c', 'Cotton Tee', { S: 0, M: 0 }); // 0 out
 const D = pp('p-d', 'Wool Coat', {}); // 0 out
 
@@ -55,8 +57,20 @@ describe('filterParents', () => {
     expect(filterParents(all, { ...DEFAULT_PARENT_FILTERS, stock: 'out' })).toEqual([C, D]);
   });
   it('combines search and stock', () =>
-    expect(filterParents(all, { search: 'co', stock: 'out' })).toEqual([C, D]));
+    expect(filterParents(all, { ...DEFAULT_PARENT_FILTERS, search: 'co', stock: 'out' })).toEqual([C, D]));
   it('handles empty list', () => expect(filterParents([], DEFAULT_PARENT_FILTERS)).toEqual([]));
+  it('filters by category, treating blank as Uncategorized', () => {
+    expect(filterParents(all, { ...DEFAULT_PARENT_FILTERS, category: 'Men' })).toEqual([A]);
+    expect(filterParents(all, { ...DEFAULT_PARENT_FILTERS, category: 'Uncategorized' })).toEqual([C, D]);
+  });
+});
+
+describe('parentCategoryFilterOptions', () => {
+  it('lists distinct sorted categories with Uncategorized last', () => {
+    expect(parentCategoryFilterOptions([C, B, A, D])).toEqual(['Men', 'Women', 'Uncategorized']);
+    expect(parentCategoryFilterOptions([A])).toEqual(['Men']);
+    expect(parentCategoryFilterOptions([])).toEqual([]);
+  });
 });
 
 describe('sortParents', () => {
@@ -93,8 +107,8 @@ describe('parentStats', () => {
 
 describe('activeParentFilterCount', () => {
   it('is 0 by default', () => expect(activeParentFilterCount(DEFAULT_PARENT_FILTERS, '')).toBe(0));
-  it('counts search, stock and sort; ignores whitespace search', () => {
-    expect(activeParentFilterCount({ search: 'a', stock: 'low' }, 'name')).toBe(3);
-    expect(activeParentFilterCount({ search: '  ', stock: '' }, '')).toBe(0);
+  it('counts search, stock, category and sort; ignores whitespace search', () => {
+    expect(activeParentFilterCount({ search: 'a', stock: 'low', category: 'Men' }, 'name')).toBe(4);
+    expect(activeParentFilterCount({ search: '  ', stock: '', category: '' }, '')).toBe(0);
   });
 });

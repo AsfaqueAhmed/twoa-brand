@@ -9,6 +9,7 @@ import {
   saveParentProduct,
   deleteParentProduct,
 } from '../infrastructure/firestoreParentProductsAdminRepository';
+import { fetchCategories, type CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import { paginate } from '@/features/admin/inventory/domain/productList';
 import Pagination from '@/features/admin/presentation/ui/Pagination';
@@ -19,11 +20,14 @@ import {
   activeParentFilterCount,
   filterParents,
   linkedProductCounts,
+  parentCategoryFilterOptions,
   parentStats,
   sortParents,
   type ParentFilters,
   type ParentSort,
 } from '../domain/parentList';
+import { validateParentCategory } from '../domain/parentCategory';
+import CategoryFields from './CategoryFields';
 import ParentStatsRow from './list/ParentStatsRow';
 import ParentFilterBar from './list/ParentFilterBar';
 import ParentProductsTable from './list/ParentProductsTable';
@@ -39,12 +43,14 @@ interface FormState {
   id: string;
   name: string;
   image: string;
+  category: string;
+  subcategory: string;
   rows: SizeRow[];
 }
 
 const PAGE_SIZE = 20;
 
-const emptyForm: FormState = { id: '', name: '', image: '', rows: [] };
+const emptyForm: FormState = { id: '', name: '', image: '', category: '', subcategory: '', rows: [] };
 
 export default function ParentProductManager() {
   const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
@@ -57,6 +63,18 @@ export default function ParentProductManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const [categoryDocs, setCategoryDocs] = useState<CategoryDoc[]>([]);
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategoryDocs(await fetchCategories());
+    } catch (err) {
+      console.error('Error fetching categories: ', err);
+    }
+  }, []);
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   const [linked, setLinked] = useState<Map<string, number> | null>(null);
   const [listError, setListError] = useState('');
@@ -101,13 +119,14 @@ export default function ParentProductManager() {
     () => sortParents(filterParents(parentProducts, filters), sort, linked ?? new Map()),
     [parentProducts, filters, sort, linked],
   );
+  const categoryOptions = useMemo(() => parentCategoryFilterOptions(parentProducts), [parentProducts]);
   const pageData = paginate(visible, page, PAGE_SIZE);
   const activeCount = activeParentFilterCount(filters, sort);
   const hasData = parentProducts.length > 0;
   const failedEmpty = loadFailed && !hasData && !loading;
 
   const openCreate = () => {
-    setForm({ id: `parent-${Date.now()}`, name: '', image: '', rows: [{ size: '', stock: 0 }] });
+    setForm({ id: `parent-${Date.now()}`, name: '', image: '', category: '', subcategory: '', rows: [{ size: '', stock: 0 }] });
     setIsEditingExistingId(null);
     setPreviousSizeOrder([]);
     setError('');
@@ -119,6 +138,8 @@ export default function ParentProductManager() {
       id: pp.id,
       name: pp.name,
       image: pp.image || '',
+      category: pp.category || '',
+      subcategory: pp.subcategory || '',
       rows: pp.sizeOrder.map((size) => ({ size, stock: pp.stockBySize[size] ?? 0 })),
     });
     setIsEditingExistingId(pp.id);
@@ -168,6 +189,11 @@ export default function ParentProductManager() {
       setError('Please provide a name.');
       return;
     }
+    const categoryError = validateParentCategory(form.category, form.subcategory, categoryDocs);
+    if (categoryError) {
+      setError(categoryError);
+      return;
+    }
     if (form.rows.length === 0) {
       setError('Add at least one size row.');
       return;
@@ -191,7 +217,18 @@ export default function ParentProductManager() {
     try {
       const sizeOrder = labels;
       const stockBySize = Object.fromEntries(form.rows.map((r) => [r.size.trim(), r.stock]));
-      await saveParentProduct({ id: form.id, name: form.name.trim(), image: form.image.trim(), sizeOrder, stockBySize }, previousSizeOrder);
+      await saveParentProduct(
+        {
+          id: form.id,
+          name: form.name.trim(),
+          image: form.image.trim(),
+          category: form.category.trim(),
+          subcategory: form.subcategory.trim(),
+          sizeOrder,
+          stockBySize,
+        },
+        previousSizeOrder,
+      );
       await refresh();
       setIsEditing(false);
     } catch (err: any) {
@@ -246,6 +283,7 @@ export default function ParentProductManager() {
       <ParentFilterBar
         filters={filters}
         sort={sort}
+        categories={categoryOptions}
         activeCount={activeCount}
         onFilters={(f) => {
           setFilters(f);
@@ -312,6 +350,15 @@ export default function ParentProductManager() {
                     className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
                 </div>
+
+                <CategoryFields
+                  categories={categoryDocs}
+                  category={form.category}
+                  subcategory={form.subcategory}
+                  onChange={(category, subcategory) => setForm((prev) => ({ ...prev, category, subcategory }))}
+                  onPersisted={loadCategories}
+                  onError={setError}
+                />
 
                 {/* Image */}
                 <div>
