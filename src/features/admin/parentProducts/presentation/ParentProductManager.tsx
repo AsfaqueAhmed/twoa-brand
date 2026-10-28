@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, XCircle, Upload, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, XCircle, Upload, RefreshCw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ParentProduct } from '@/shared/domain/types';
 import {
@@ -9,8 +9,22 @@ import {
   saveParentProduct,
   deleteParentProduct,
 } from '../infrastructure/firestoreParentProductsAdminRepository';
-import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
-import AdminCard from '@/features/admin/presentation/AdminCard';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { paginate } from '@/features/admin/inventory/domain/productList';
+import ProductsPagination from '@/features/admin/inventory/presentation/list/ProductsPagination';
+import {
+  DEFAULT_PARENT_FILTERS,
+  activeParentFilterCount,
+  filterParents,
+  linkedProductCounts,
+  parentStats,
+  sortParents,
+  type ParentFilters,
+  type ParentSort,
+} from '../domain/parentList';
+import ParentStatsRow from './list/ParentStatsRow';
+import ParentFilterBar from './list/ParentFilterBar';
+import ParentProductsTable from './list/ParentProductsTable';
 import { uploadProductImage } from '@/features/admin/inventory/infrastructure/productImageUpload';
 import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 
@@ -26,6 +40,8 @@ interface FormState {
   rows: SizeRow[];
 }
 
+const PAGE_SIZE = 20;
+
 const emptyForm: FormState = { id: '', name: '', image: '', rows: [] };
 
 export default function ParentProductManager() {
@@ -40,18 +56,46 @@ export default function ParentProductManager() {
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const [linked, setLinked] = useState<Map<string, number> | null>(null);
+  const [listError, setListError] = useState('');
+  const [filters, setFilters] = useState<ParentFilters>(DEFAULT_PARENT_FILTERS);
+  const [sort, setSort] = useState<ParentSort>('');
+  const [page, setPage] = useState(1);
+  const hasLoadedRef = useRef(false);
+
   const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      setParentProducts(await fetchParentProducts());
-    } finally {
-      setLoading(false);
+    // Only the first load shows the spinner; later reloads are silent.
+    if (!hasLoadedRef.current) setLoading(true);
+    const [parentsRes, productsRes] = await Promise.allSettled([fetchParentProducts(), fetchAllProductsForAdmin()]);
+    if (parentsRes.status === 'fulfilled') {
+      setParentProducts(parentsRes.value);
+      hasLoadedRef.current = true;
+      if (productsRes.status === 'fulfilled') {
+        setLinked(linkedProductCounts(productsRes.value));
+        setListError('');
+      } else {
+        console.error('Error fetching products: ', productsRes.reason);
+        setLinked(null);
+        setListError('Could not load linked product counts. Parent products are shown without them.');
+      }
+    } else {
+      console.error('Error fetching parent products: ', parentsRes.reason);
+      setListError('Failed to load parent products.');
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const stats = useMemo(() => parentStats(parentProducts), [parentProducts]);
+  const visible = useMemo(
+    () => sortParents(filterParents(parentProducts, filters), sort, linked ?? new Map()),
+    [parentProducts, filters, sort, linked],
+  );
+  const pageData = paginate(visible, page, PAGE_SIZE);
+  const activeCount = activeParentFilterCount(filters, sort);
 
   const openCreate = () => {
     setForm({ id: `parent-${Date.now()}`, name: '', image: '', rows: [{ size: '', stock: 0 }] });
@@ -149,31 +193,69 @@ export default function ParentProductManager() {
   };
 
   const handleDelete = async (pp: ParentProduct) => {
+    if ((linked?.get(pp.id) ?? 0) > 0) return;
     if (!window.confirm(`Delete parent product "${pp.name}"? This cannot be undone.`)) return;
     try {
       await deleteParentProduct(pp.id, pp.sizeOrder);
       await refresh();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete parent product.');
+      setListError(err.message || 'Failed to delete parent product.');
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <AdminPageHeader
-        title="Parent Products"
-        subtitle="Manage pooled sizes and stock."
-        actions={
-          <button
-            onClick={openCreate}
-            className="flex items-center justify-center space-x-2 rounded-lg bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-            id="admin-add-parentproduct-btn"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add Parent Product</span>
-          </button>
-        }
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-black">Parent Products</h1>
+          <p className="mt-1 text-sm text-[#717171]">Manage the sizes and stock shared by your products.</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-2 rounded-lg bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#333333]"
+          id="admin-add-parentproduct-btn"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Parent Product</span>
+        </button>
+      </div>
+
+      <ParentStatsRow stats={stats} />
+
+      {loading && parentProducts.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
+          <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
+          <p className="mt-3 text-xs font-semibold text-[#717171]">Loading parent products...</p>
+        </div>
+      )}
+
+      <ParentFilterBar
+        filters={filters}
+        sort={sort}
+        activeCount={activeCount}
+        onFilters={(f) => {
+          setFilters(f);
+          setPage(1);
+        }}
+        onSort={(v) => {
+          setSort(v);
+          setPage(1);
+        }}
+        onReset={() => {
+          setFilters(DEFAULT_PARENT_FILTERS);
+          setSort('');
+          setPage(1);
+        }}
       />
+
+      {listError && (
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800">
+          <span>{listError}</span>
+          <button type="button" aria-label="Dismiss error" onClick={() => setListError('')}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {isEditing && (
@@ -354,70 +436,21 @@ export default function ParentProductManager() {
         )}
       </AnimatePresence>
 
-      <AdminCard className="overflow-x-auto p-0!">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Image</th>
-              <th className="py-4 px-6">Name</th>
-              <th className="py-4 px-6">Sizes</th>
-              <th className="py-4 px-6">Total Stock</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-[#717171] font-semibold">
-                  Loading parent products...
-                </td>
-              </tr>
-            ) : parentProducts.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-[#717171] font-semibold">
-                  No parent products yet. Add one to get started.
-                </td>
-              </tr>
-            ) : (
-              parentProducts.map((pp) => {
-                const totalStock = Object.values(pp.stockBySize).reduce((a, b) => a + b, 0);
-                return (
-                  <tr key={pp.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                    <td className="py-4 px-6">
-                      {pp.image ? (
-                        <img src={pp.image} alt={pp.name} className="h-10 w-10 object-cover border border-[#EEEEEE]" referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="h-10 w-10 border border-dashed border-[#EEEEEE] bg-[#FAF9F6]" />
-                      )}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-black uppercase tracking-wide">{pp.name}</td>
-                    <td className="py-4 px-6 text-[10px] text-[#717171] font-mono">
-                      {pp.sizeOrder.map((s) => `${s}:${pp.stockBySize[s] ?? 0}`).join('  ')}
-                    </td>
-                    <td className="py-4 px-6 font-mono font-bold">{totalStock} units</td>
-                    <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                      <button
-                        onClick={() => openEdit(pp)}
-                        className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                        title="Edit Parent Product"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pp)}
-                        className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                        title="Delete Parent Product"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </AdminCard>
+      {!(loading && parentProducts.length === 0) && (
+        <div className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
+          <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
+            <ProductsPagination
+              from={pageData.from}
+              to={pageData.to}
+              total={pageData.total}
+              page={pageData.page}
+              totalPages={pageData.totalPages}
+              onPage={setPage}
+            />
+          </div>
+          <ParentProductsTable parents={pageData.items} linked={linked} onEdit={openEdit} onDelete={handleDelete} />
+        </div>
+      )}
 
       <ImageCropperModal
         isOpen={isCropperOpen}
