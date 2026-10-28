@@ -33,8 +33,8 @@ const parents = [
 ];
 
 describe('eligibility', () => {
-  it('lists categories that have stock somewhere, sorted, ignoring blank', () => {
-    expect(eligibleCategories(parents)).toEqual(['Caps', 'T-Shirts']);
+  it('lists only categories with a completable (non-blank, in-stock) subcategory, sorted', () => {
+    expect(eligibleCategories(parents)).toEqual(['T-Shirts']);
   });
   it('lists non-empty subcategories of a category with stock', () => {
     expect(eligibleSubcategories(parents, 'T-Shirts')).toEqual(['Graphic', 'Plain']);
@@ -70,6 +70,11 @@ describe('reducers', () => {
     expect(isComplete(full)).toBe(true);
     expect(isComplete({ ...full, parentId: '' })).toBe(false);
   });
+  it('isComplete is false when any single field is blank', () => {
+    expect(isComplete({ ...full, category: '' })).toBe(false);
+    expect(isComplete({ ...full, subcategory: '' })).toBe(false);
+    expect(isComplete({ ...full, size: '' })).toBe(false);
+  });
 });
 
 describe('validateSelection', () => {
@@ -85,6 +90,15 @@ describe('validateSelection', () => {
   it('resets to parent when only the parent vanished but the size is still available', () => {
     const gone = parents.filter((p) => p.id !== 'a').concat(parent('z', 'T-Shirts', 'Graphic', { M: 1 }));
     expect(validateSelection(gone, full)).toMatchObject({ ok: false, resetTo: 'parent' });
+  });
+  it('resets to subcategory when the chosen subcategory no longer has stock', () => {
+    const drained = parents.map((p) => (p.id === 'c' ? parent('c', 'T-Shirts', 'Plain', { M: 0 }) : p));
+    const sel = { category: 'T-Shirts', subcategory: 'Plain', size: 'M', parentId: 'c' };
+    expect(validateSelection(drained, sel)).toMatchObject({ ok: false, resetTo: 'subcategory' });
+  });
+  it('resets to category for a category with only blank subcategories (Caps)', () => {
+    const sel = { category: 'Caps', subcategory: '', size: 'M', parentId: 'e' };
+    expect(validateSelection(parents, sel)).toMatchObject({ ok: false, resetTo: 'category' });
   });
   it('resets to category when the category no longer exists', () => {
     expect(validateSelection([], full)).toMatchObject({ ok: false, resetTo: 'category' });

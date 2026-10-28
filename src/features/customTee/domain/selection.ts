@@ -15,7 +15,10 @@ const hasAnyStock = (p: ParentProduct) => p.sizeOrder.some((s) => hasStock(p, s)
 const sortedUnique = (values: string[]) => Array.from(new Set(values)).sort();
 
 export function eligibleCategories(parents: ParentProduct[]): string[] {
-  return sortedUnique(parents.filter((p) => p.category.trim() && hasAnyStock(p)).map((p) => p.category));
+  // A category is only listed if the user can complete it (needs a non-blank, in-stock subcategory).
+  return sortedUnique(
+    parents.filter((p) => p.category.trim() && hasAnyStock(p)).map((p) => p.category),
+  ).filter((c) => eligibleSubcategories(parents, c).length > 0);
 }
 
 export function eligibleSubcategories(parents: ParentProduct[], category: string): string[] {
