@@ -1,8 +1,22 @@
-import { Filter, Search } from 'lucide-react';
+import { ChevronDown, Filter, Search } from 'lucide-react';
 import type { ProductFilters, ProductSort } from '../../domain/productList';
 
 const SELECT =
-  'rounded-lg border border-[#EEEEEE] bg-white px-3 py-2.5 text-xs font-semibold text-black focus:border-black focus:outline-none';
+  'h-10 w-full cursor-pointer appearance-none rounded-lg border border-[#EEEEEE] bg-white pl-3.5 pr-9 text-xs font-semibold text-black focus:border-black focus:outline-none';
+const CONTROL = 'inline-flex h-10 items-center gap-2 rounded-lg border border-[#EEEEEE] bg-white px-3.5 text-xs font-semibold text-black';
+
+// Native <select> with the browser arrow removed so the chevron gets the same
+// inner padding on the right as the label has on the left.
+function FilterSelect({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative min-w-[9.5rem]">
+      <select {...props} className={SELECT}>
+        {children}
+      </select>
+      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#717171]" />
+    </div>
+  );
+}
 
 type Props = {
   filters: ProductFilters;
@@ -25,35 +39,35 @@ export default function ProductFilterBar({ filters, sort, categories, activeCoun
           placeholder="Search products by name, category..."
           value={filters.search}
           onChange={(e) => onFilters({ ...filters, search: e.target.value })}
-          className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none"
+          className="h-10 w-full rounded-lg border border-[#EEEEEE] bg-white pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none"
         />
       </div>
-      <select aria-label="Category" className={SELECT} value={filters.category} onChange={(e) => onFilters({ ...filters, category: e.target.value })}>
+      <FilterSelect aria-label="Category" value={filters.category} onChange={(e) => onFilters({ ...filters, category: e.target.value })}>
         <option value="">All Categories</option>
         {categories.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
-      </select>
-      <select aria-label="Status" className={SELECT} value={filters.status} onChange={(e) => onFilters({ ...filters, status: e.target.value as ProductFilters['status'] })}>
+      </FilterSelect>
+      <FilterSelect aria-label="Status" value={filters.status} onChange={(e) => onFilters({ ...filters, status: e.target.value as ProductFilters['status'] })}>
         <option value="">All Statuses</option>
         <option value="active">Active</option>
         <option value="inactive">Inactive</option>
-      </select>
-      <select aria-label="Stock status" className={SELECT} value={filters.stock} onChange={(e) => onFilters({ ...filters, stock: e.target.value as ProductFilters['stock'] })}>
+      </FilterSelect>
+      <FilterSelect aria-label="Stock status" value={filters.stock} onChange={(e) => onFilters({ ...filters, stock: e.target.value as ProductFilters['stock'] })}>
         <option value="">Stock Status</option>
         <option value="in">In stock</option>
         <option value="low">Low stock</option>
         <option value="out">Out of stock</option>
-      </select>
-      <select aria-label="Sort by" className={SELECT} value={sort} onChange={(e) => onSort(e.target.value as ProductSort)}>
+      </FilterSelect>
+      <FilterSelect aria-label="Sort by" value={sort} onChange={(e) => onSort(e.target.value as ProductSort)}>
         <option value="">Sort by</option>
         <option value="name">Name A-Z</option>
         <option value="price_asc">Price low-high</option>
         <option value="price_desc">Price high-low</option>
         <option value="stock_asc">Stock low-high</option>
         <option value="stock_desc">Stock high-low</option>
-      </select>
-      <span className="flex items-center gap-2 rounded-lg border border-[#EEEEEE] bg-white px-3.5 py-2.5 text-xs font-semibold text-black">
+      </FilterSelect>
+      <span className={CONTROL}>
         <Filter className="h-3.5 w-3.5" />
         Filter{activeCount > 0 && <span className="rounded-full bg-black px-1.5 text-[10px] text-white">{activeCount}</span>}
       </span>
@@ -61,7 +75,7 @@ export default function ProductFilterBar({ filters, sort, categories, activeCoun
         type="button"
         onClick={onReset}
         disabled={activeCount === 0}
-        className="rounded-lg border border-[#EEEEEE] bg-white px-3.5 py-2.5 text-xs font-semibold text-black hover:border-black disabled:opacity-40"
+        className={`${CONTROL} hover:border-black disabled:opacity-40`}
       >
         Reset
       </button>
