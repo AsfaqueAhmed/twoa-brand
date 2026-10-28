@@ -33,5 +33,5 @@ export function buildParentCard(parent: ParentProduct, products: Product[], size
     }
   }
 
-  return { parent, code: parent.id.slice(0, 6).toUpperCase(), photos, colors, stock: parent.stockBySize[size] ?? 0 };
+  return { parent, code: parent.id.slice(-6).toUpperCase(), photos, colors, stock: parent.stockBySize[size] ?? 0 };
 }

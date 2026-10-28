@@ -24,10 +24,17 @@ describe('buildParentCard', () => {
       product({ id: '3', parentProductId: 'other', image: 'nope.jpg', variants: [{ id: 'v4', name: 'Red' }] }),
     ];
     const card = buildParentCard(parent, products, 'M');
-    expect(card.code).toBe('ABC123');
+    expect(card.code).toBe('123DEF');
     expect(card.stock).toBe(45);
     expect(card.photos).toEqual(['p.jpg', 'g1.jpg', 'b.jpg']);
     expect(card.colors.map((c) => c.name)).toEqual(['Forest Green', 'Black']);
+  });
+  it('gives distinct codes to parents whose ids share a prefix', () => {
+    const a = buildParentCard({ ...parent, id: 'parent-1784992282522' }, [], 'M');
+    const b = buildParentCard({ ...parent, id: 'parent-1784992290001' }, [], 'M');
+    expect(a.code).toBe('282522');
+    expect(b.code).toBe('290001');
+    expect(a.code).not.toBe(b.code);
   });
   it('handles a parent with no linked products', () => {
     const card = buildParentCard({ ...parent, image: '' }, [], 'M');
