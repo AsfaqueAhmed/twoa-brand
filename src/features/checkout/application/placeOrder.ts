@@ -3,6 +3,7 @@ import type { CartItem } from '@/shared/domain/types';
 import { createOrder } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { buildStockLines } from '../infrastructure/reserveParentStock';
 import { computeDeliveryFeeByZone, computeTotal, generateOrderId } from '../domain/pricing';
+import { buildOrderItemPayload } from '../domain/orderItemPayload';
 
 export interface DeliveryDetails {
   name: string;
@@ -24,26 +25,7 @@ export async function placeOrder(params: {
   const { user, cartItems, deliveryDetails } = params;
   const orderId = generateOrderId();
 
-  const orderItemsPayload = cartItems.map((item) => {
-    const orderItem: Record<string, any> = {
-      productId: item.product.id,
-      name: item.product.name,
-      price: item.product.price,
-      quantity: item.quantity,
-      image_url: item.product.image,
-    };
-    if (item.selectedSize) orderItem.selectedSize = item.selectedSize;
-    if (item.selectedVariant) {
-      orderItem.selectedVariant = {
-        id: item.selectedVariant.id,
-        name: item.selectedVariant.name,
-        colorCode: item.selectedVariant.colorCode ?? null,
-        image_url: item.selectedVariant.image ?? null,
-      };
-    }
-    if (item.product.parentProductId) orderItem.parentProductId = item.product.parentProductId;
-    return orderItem;
-  });
+  const orderItemsPayload = cartItems.map(buildOrderItemPayload);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const deliveryFee = computeDeliveryFeeByZone({

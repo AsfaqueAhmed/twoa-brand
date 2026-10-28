@@ -8,6 +8,9 @@ export interface ProductVariant {
 export interface ParentProduct {
   id: string;
   name: string;
+  image?: string; // optional representative image
+  category: string; // owned by the parent; copied onto every linked product (products.category). '' = uncategorized
+  subcategory?: string;
   sizeOrder: string[]; // canonical size list & display order, e.g. ['S', 'M', 'L', 'XL']
   stockBySize: Record<string, number>; // keys are exactly the entries in sizeOrder
 }
@@ -45,6 +48,8 @@ export interface Product {
   sizeChartId?: string; // references a reusable SizeChart template
   gallery?: string[]; // extra product photos shown as thumbnails (main image stays in `image`)
   highlights?: ProductHighlight[]; // admin-entered feature row
+  isActive?: boolean; // false hides the product from the storefront (undefined = active)
+  isFeatured?: boolean;
   parentProduct?: ParentProduct; // read-time join attached by the application layer; never persisted on the product doc
 }
 

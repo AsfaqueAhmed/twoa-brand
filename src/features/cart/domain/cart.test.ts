@@ -9,6 +9,7 @@ import type { CartItem, ParentProduct, Product, ProductVariant } from '@/shared/
 const parentProduct: ParentProduct = {
   id: 'pp1',
   name: 'Widget Stock Pool',
+  category: '',
   sizeOrder: ['M'],
   stockBySize: { M: 3 },
 };

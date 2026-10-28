@@ -7,6 +7,7 @@ import type { Product, ProductVariant } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { isProductOutOfStock } from '@/shared/domain/stock';
 import { getDefaultSize, getInStockSizes } from '../domain/sizes';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface ProductCardProps {
   key?: string;
@@ -61,7 +62,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
     >
       {/* Product Image */}
       <div className="relative aspect-[4/5] overflow-hidden bg-[#F5F5F5]">
-        <img
+        <ThumbImage
           src={displayedImage}
           alt={product.name}
           className="h-full w-full object-cover object-center transition-all duration-500 group-hover:scale-103"
@@ -112,7 +113,7 @@ export default function ProductCard({ product, onSelect, onAddToCart }: ProductC
                   }}
                   onMouseEnter={() => setActiveVariantIndex(idx)}
                 >
-                  <img
+                  <ThumbImage
                     src={v.image || product.image}
                     alt=""
                     className="h-full w-full object-cover"

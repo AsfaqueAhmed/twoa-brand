@@ -112,7 +112,7 @@ export default function OrderTrackingView() {
           )}
         </div>
 
-        <div className="space-y-4 sm:space-y-6 lg:sticky lg:top-28">
+        <div className="space-y-4 sm:space-y-6 lg:sticky lg:top-24">
           {activeOrder && <OrderDetailsCard order={activeOrder} />}
           <HelpCard />
           <OtherOrdersCard orders={otherOrders} activeId={activeOrder?.id} onSelect={setSelectedOrder} />

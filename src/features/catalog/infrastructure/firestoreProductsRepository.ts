@@ -32,10 +32,24 @@ function toProduct(row: Record<string, any>): Product {
     sizeChartId: row.size_chart_id || undefined,
     gallery: Array.isArray(row.gallery) ? row.gallery.filter((u: unknown): u is string => typeof u === 'string' && !!u) : [],
     highlights: normalizeHighlights(row.highlights),
+    isActive: row.is_active !== false,
+    isFeatured: row.is_featured === true,
   };
 }
 
+// Storefront: active products only.
 export async function fetchAllProducts(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(toProduct);
+}
+
+// Admin screens: every product, including hidden (inactive) ones.
+export async function fetchAllProductsForAdmin(): Promise<Product[]> {
   const { data, error } = await supabase.from('products').select('*').order('id', { ascending: true });
   if (error) throw error;
   return (data || []).map(toProduct);
@@ -77,6 +91,7 @@ export async function fetchProductsPage(
     .from('products')
     .select('*')
     .in('parent_product_id', inStockParentIds)
+    .eq('is_active', true)
     .order('id', { ascending: true })
     .limit(pageSize);
   if (category && category !== 'All') q = q.eq('category', category);
@@ -94,7 +109,7 @@ export async function fetchProductsPage(
 }
 
 export async function fetchProductById(id: string): Promise<Product | null> {
-  const { data, error } = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase.from('products').select('*').eq('id', id).eq('is_active', true).maybeSingle();
   if (error) throw error;
   return data ? toProduct(data) : null;
 }

@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Copy, CheckCircle2, RefreshCw } from 'lucide-react';
+import AdminPageHeader from '@/features/admin/presentation/AdminPageHeader';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import StatusPill from '@/features/admin/presentation/ui/StatusPill';
+import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const FEED_URL = 'https://twoa-brand.web.app/product-feed.csv';
 
@@ -50,10 +55,12 @@ export default function ProductFeedManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
+    setDismissed(false);
     try {
       const res = await fetch(`${FEED_URL}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`Feed file not found yet (HTTP ${res.status}) — deploy the site at least once.`);
@@ -78,102 +85,81 @@ export default function ProductFeedManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="bg-[#FAF9F6] border border-[#EEEEEE] p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-black">Product Feed</h2>
-            <p className="text-[10px] text-[#717171] mt-1">
-              Give this URL to Meta Commerce Manager as a scheduled feed fetch. It's regenerated automatically every
-              time you build &amp; deploy the site (via <code className="font-mono">npm run build</code>) — base64
-              uploaded images are rehosted to a real URL automatically, no manual step needed.
-            </p>
-          </div>
+      <AdminPageHeader
+        title="Product Feed"
+        subtitle="Review and refresh your product feed."
+        actions={
           <button
+            type="button"
             onClick={refresh}
             disabled={loading}
-            className="flex items-center justify-center space-x-2 rounded-none border border-[#EEEEEE] bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-black hover:border-black transition-colors disabled:opacity-50 shrink-0"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A1A1A] disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-        </div>
+        }
+      />
 
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 text-[10px]">
+      {error && !dismissed && <ErrorBanner message={error} onDismiss={() => setDismissed(true)} />}
+
+      <div className="rounded-xl border border-[#EEEEEE] bg-[#FAF9F6] p-5">
+        <p className="text-xs text-[#717171]">
+          Give this URL to Meta Commerce Manager as a scheduled feed fetch. It&apos;s regenerated automatically every
+          time you build &amp; deploy the site (via <code className="font-mono">npm run build</code>) — base64
+          uploaded images are rehosted to a real URL automatically, no manual step needed.
+        </p>
+
+        <div className="mt-4 flex flex-col gap-3 text-xs sm:flex-row sm:items-center">
           <button
+            type="button"
             onClick={handleCopyUrl}
-            className="inline-flex items-center gap-1.5 border border-[#EEEEEE] bg-white hover:border-black px-2.5 py-1.5 text-black font-mono truncate max-w-full"
+            className="inline-flex max-w-full items-center gap-1.5 truncate rounded-lg border border-[#EEEEEE] bg-white px-3 py-2 font-mono text-black hover:border-black"
             title={FEED_URL}
           >
-            {copied ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <Copy className="h-3 w-3 shrink-0" />}
+            {copied ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <Copy className="h-3.5 w-3.5 shrink-0" />}
             <span className="truncate">{copied ? 'Copied!' : FEED_URL}</span>
           </button>
           {lastModified && (
-            <span className="font-bold uppercase tracking-wider text-[#717171]">
-              Last deployed {new Date(lastModified).toLocaleString()}
-            </span>
+            <span className="font-medium text-[#717171]">Last deployed {new Date(lastModified).toLocaleString()}</span>
           )}
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-800 border border-red-200 text-xs p-4 mt-4 font-medium">{error}</div>
-        )}
-
-        {!loading && rows && <p className="text-[10px] text-[#717171] mt-3"><strong className="text-black">{rows.length}</strong> products in the current feed.</p>}
+        {!loading && rows && <p className="mt-3 text-xs text-[#717171]"><strong className="text-black">{rows.length}</strong> products in the current feed.</p>}
       </div>
 
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Product</th>
-              <th className="py-4 px-6">Availability</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {loading ? (
-              <tr>
-                <td colSpan={2} className="py-12 text-center text-[#717171] font-semibold">
-                  Loading feed...
-                </td>
-              </tr>
-            ) : !rows || rows.length === 0 ? (
-              <tr>
-                <td colSpan={2} className="py-12 text-center text-[#717171] font-semibold">
-                  No products in the feed yet.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                  <td className="py-4 px-6 flex items-center space-x-3">
-                    <img
+      <TableCard>
+        <TableScroll
+          minWidth="min-w-[480px]"
+          head={<><Th className="pl-5">Product</Th><Th className="pr-5">Availability</Th></>}
+        >
+          {loading ? (
+            <tr><td colSpan={2} className="py-12 text-center text-sm text-[#717171]">Loading feed...</td></tr>
+          ) : !rows || rows.length === 0 ? (
+            <tr><td colSpan={2} className="py-12 text-center text-sm text-[#717171]">No products in the feed yet.</td></tr>
+          ) : (
+            rows.map((row) => (
+              <tr key={row.id} className={TABLE_ROW}>
+                <td className="py-3 pl-5 pr-3">
+                  <div className="flex items-center gap-3">
+                    <ThumbImage
                       src={row.image_link}
                       alt={row.title}
-                      className="h-9 w-9 object-cover bg-[#F5F5F5] border border-[#EEEEEE]"
+                      className="h-10 w-10 rounded-lg border border-[#EEEEEE] bg-[#F5F5F5] object-cover"
                       referrerPolicy="no-referrer"
                       loading="lazy"
                     />
-                    <span className="font-bold text-black uppercase tracking-wide truncate max-w-[220px]">
-                      {row.title}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span
-                      className={`font-mono font-bold px-2 py-0.5 border text-[10px] ${
-                        row.availability === 'in stock'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-red-50 text-red-800 border-red-200'
-                      }`}
-                    >
-                      {row.availability}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <span className="max-w-[260px] truncate font-medium text-black">{row.title}</span>
+                  </div>
+                </td>
+                <td className="px-3 pr-5">
+                  <StatusPill tone={row.availability === 'in stock' ? 'green' : 'red'}>{row.availability}</StatusPill>
+                </td>
+              </tr>
+            ))
+          )}
+        </TableScroll>
+      </TableCard>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, XCircle, Upload, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ParentProduct } from '@/shared/domain/types';
 import {
@@ -9,6 +9,30 @@ import {
   saveParentProduct,
   deleteParentProduct,
 } from '../infrastructure/firestoreParentProductsAdminRepository';
+import { fetchCategories, type CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { paginate } from '@/features/admin/inventory/domain/productList';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import { TableCard } from '@/features/admin/presentation/ui/TableCard';
+import {
+  DEFAULT_PARENT_FILTERS,
+  activeParentFilterCount,
+  filterParents,
+  linkedProductCounts,
+  parentCategoryFilterOptions,
+  parentStats,
+  sortParents,
+  type ParentFilters,
+  type ParentSort,
+} from '../domain/parentList';
+import { validateParentCategory } from '../domain/parentCategory';
+import CategoryFields from './CategoryFields';
+import ParentStatsRow from './list/ParentStatsRow';
+import ParentFilterBar from './list/ParentFilterBar';
+import ParentProductsTable from './list/ParentProductsTable';
+import { uploadProductImage } from '@/features/admin/inventory/infrastructure/productImageUpload';
+import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 
 interface SizeRow {
   size: string;
@@ -18,10 +42,15 @@ interface SizeRow {
 interface FormState {
   id: string;
   name: string;
+  image: string;
+  category: string;
+  subcategory: string;
   rows: SizeRow[];
 }
 
-const emptyForm: FormState = { id: '', name: '', rows: [] };
+const PAGE_SIZE = 20;
+
+const emptyForm: FormState = { id: '', name: '', image: '', category: '', subcategory: '', rows: [] };
 
 export default function ParentProductManager() {
   const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
@@ -32,22 +61,73 @@ export default function ParentProductManager() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPersistingCategory, setIsPersistingCategory] = useState(false);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const [categoryDocs, setCategoryDocs] = useState<CategoryDoc[]>([]);
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategoryDocs(await fetchCategories());
+    } catch (err) {
+      console.error('Error fetching categories: ', err);
+    }
+  }, []);
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const [linked, setLinked] = useState<Map<string, number> | null>(null);
+  const [listError, setListError] = useState('');
+  const [filters, setFilters] = useState<ParentFilters>(DEFAULT_PARENT_FILTERS);
+  const [sort, setSort] = useState<ParentSort>('');
+  const [page, setPage] = useState(1);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => setDismissed(false), [listError]);
+  const hasLoadedRef = useRef(false);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      setParentProducts(await fetchParentProducts());
-    } finally {
-      setLoading(false);
+    // Only the first load shows the spinner; later reloads are silent.
+    if (!hasLoadedRef.current) setLoading(true);
+    const [parentsRes, productsRes] = await Promise.allSettled([fetchParentProducts(), fetchAllProductsForAdmin()]);
+    if (parentsRes.status === 'fulfilled') {
+      setParentProducts(parentsRes.value);
+      hasLoadedRef.current = true;
+      setLoadFailed(false);
+      if (productsRes.status === 'fulfilled') {
+        setLinked(linkedProductCounts(productsRes.value));
+        setListError('');
+      } else {
+        console.error('Error fetching products: ', productsRes.reason);
+        setLinked(null);
+        setListError('Could not load linked product counts. Parent products are shown without them.');
+      }
+    } else {
+      console.error('Error fetching parent products: ', parentsRes.reason);
+      setLoadFailed(true);
+      setListError('Failed to load parent products.');
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  const stats = useMemo(() => parentStats(parentProducts), [parentProducts]);
+  const visible = useMemo(
+    () => sortParents(filterParents(parentProducts, filters), sort, linked ?? new Map()),
+    [parentProducts, filters, sort, linked],
+  );
+  const categoryOptions = useMemo(() => parentCategoryFilterOptions(parentProducts), [parentProducts]);
+  const pageData = paginate(visible, page, PAGE_SIZE);
+  const activeCount = activeParentFilterCount(filters, sort);
+  const hasData = parentProducts.length > 0;
+  const failedEmpty = loadFailed && !hasData && !loading;
+
   const openCreate = () => {
-    setForm({ id: `parent-${Date.now()}`, name: '', rows: [{ size: '', stock: 0 }] });
+    setForm({ id: `parent-${Date.now()}`, name: '', image: '', category: '', subcategory: '', rows: [{ size: '', stock: 0 }] });
     setIsEditingExistingId(null);
     setPreviousSizeOrder([]);
     setError('');
@@ -58,6 +138,9 @@ export default function ParentProductManager() {
     setForm({
       id: pp.id,
       name: pp.name,
+      image: pp.image || '',
+      category: pp.category || '',
+      subcategory: pp.subcategory || '',
       rows: pp.sizeOrder.map((size) => ({ size, stock: pp.stockBySize[size] ?? 0 })),
     });
     setIsEditingExistingId(pp.id);
@@ -88,10 +171,28 @@ export default function ParentProductManager() {
     }));
   };
 
+  const handleCropComplete = async (compressedDataUrl: string) => {
+    setIsUploadingImage(true);
+    setError('');
+    try {
+      const url = await uploadProductImage(`parent-products/${form.id}/${Date.now()}`, compressedDataUrl);
+      setForm((prev) => ({ ...prev, image: url }));
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload image.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
       setError('Please provide a name.');
+      return;
+    }
+    const categoryError = validateParentCategory(form.category, form.subcategory, categoryDocs);
+    if (categoryError) {
+      setError(categoryError);
       return;
     }
     if (form.rows.length === 0) {
@@ -117,7 +218,18 @@ export default function ParentProductManager() {
     try {
       const sizeOrder = labels;
       const stockBySize = Object.fromEntries(form.rows.map((r) => [r.size.trim(), r.stock]));
-      await saveParentProduct({ id: form.id, name: form.name.trim(), sizeOrder, stockBySize }, previousSizeOrder);
+      await saveParentProduct(
+        {
+          id: form.id,
+          name: form.name.trim(),
+          image: form.image.trim(),
+          category: form.category.trim(),
+          subcategory: form.subcategory.trim(),
+          sizeOrder,
+          stockBySize,
+        },
+        previousSizeOrder,
+      );
       await refresh();
       setIsEditing(false);
     } catch (err: any) {
@@ -128,33 +240,71 @@ export default function ParentProductManager() {
   };
 
   const handleDelete = async (pp: ParentProduct) => {
-    if (!window.confirm(`Delete parent product "${pp.name}"? This cannot be undone.`)) return;
+    if ((linked?.get(pp.id) ?? 0) > 0) return;
+    const prompt =
+      linked === null
+        ? `Linked product counts could not be loaded. Delete "${pp.name}" anyway? It will be refused if products still use it.`
+        : `Delete parent product "${pp.name}"? This cannot be undone.`;
+    if (!window.confirm(prompt)) return;
     try {
       await deleteParentProduct(pp.id, pp.sizeOrder);
       await refresh();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete parent product.');
+      setListError(err.message || 'Failed to delete parent product.');
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between bg-[#FAF9F6] border border-[#EEEEEE] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black">Parent Products</h2>
-          <p className="text-[10px] text-[#717171] mt-1">
-            Own the canonical size list and per-size stock. Link a catalog product to one from the Inventory tab.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-black">Parent Products</h1>
+          <p className="mt-1 text-sm text-[#717171]">Manage the sizes and stock shared by your products.</p>
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#333333]"
           id="admin-add-parentproduct-btn"
         >
           <Plus className="h-4 w-4" />
           <span>Add Parent Product</span>
         </button>
       </div>
+
+      {!loading && !failedEmpty && <ParentStatsRow stats={stats} />}
+
+      {loading && parentProducts.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#EEEEEE] py-16">
+          <RefreshCw className="h-5 w-5 animate-spin text-[#717171]" />
+          <p className="mt-3 text-xs font-semibold text-[#717171]">Loading parent products...</p>
+        </div>
+      )}
+
+      {!failedEmpty && (
+      <ParentFilterBar
+        filters={filters}
+        sort={sort}
+        categories={categoryOptions}
+        activeCount={activeCount}
+        onFilters={(f) => {
+          setFilters(f);
+          setPage(1);
+        }}
+        onSort={(v) => {
+          setSort(v);
+          setPage(1);
+        }}
+        onReset={() => {
+          setFilters(DEFAULT_PARENT_FILTERS);
+          setSort('');
+          setPage(1);
+        }}
+      />
+      )}
+
+      {listError && !(!failedEmpty && dismissed) && (
+        <ErrorBanner message={listError} onRetry={refresh} onDismiss={failedEmpty ? undefined : () => setDismissed(true)} />
+      )}
 
       <AnimatePresence>
         {isEditing && (
@@ -170,7 +320,7 @@ export default function ParentProductManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
+              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-black">
@@ -198,8 +348,66 @@ export default function ParentProductManager() {
                     value={form.name}
                     onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g. Classic Linen Overshirt — Stock Pool"
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
+                </div>
+
+                <CategoryFields
+                  categories={categoryDocs}
+                  category={form.category}
+                  subcategory={form.subcategory}
+                  onChange={(category, subcategory) => setForm((prev) => ({ ...prev, category, subcategory }))}
+                  onPersisted={loadCategories}
+                  onError={setError}
+                  onBusyChange={setIsPersistingCategory}
+                />
+
+                {/* Image */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
+                    Image (Paste URL or Upload Directly)
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={form.image}
+                      onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
+                      placeholder="Paste image URL (or upload directly)"
+                      className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCropperOpen(true)}
+                      disabled={isUploadingImage}
+                      className="bg-black hover:bg-[#333333] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 transition-colors flex items-center justify-center space-x-1.5 shrink-0 disabled:bg-[#717171] disabled:cursor-not-allowed"
+                    >
+                      {isUploadingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      <span>{isUploadingImage ? 'Uploading…' : 'Upload & Crop'}</span>
+                    </button>
+                  </div>
+                  {form.image && (
+                    <div className="mt-3 flex items-center space-x-3 bg-[#FAF9F6] p-2.5 border border-[#EEEEEE]">
+                      <img
+                        src={form.image}
+                        alt="Parent product preview"
+                        className="h-14 w-14 object-cover border border-[#EEEEEE]"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
+                        }}
+                      />
+                      <span className="flex-1 min-w-0 truncate text-[10px] font-mono font-semibold text-black">{form.image}</span>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
+                        className="text-red-600 hover:text-red-800 text-[10px] font-bold uppercase tracking-wider px-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Size + stock rows */}
@@ -238,7 +446,7 @@ export default function ParentProductManager() {
                                   value={row.size}
                                   onChange={(e) => handleRowSizeChange(rowIdx, e.target.value)}
                                   placeholder="S"
-                                  className="w-24 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
+                                  className="w-24 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono font-bold text-black focus:border-black focus:outline-none"
                                 />
                               </td>
                               <td className="py-1.5 px-2">
@@ -247,7 +455,7 @@ export default function ParentProductManager() {
                                   value={row.stock}
                                   onChange={(e) => handleRowStockChange(rowIdx, e.target.value)}
                                   placeholder="0"
-                                  className="w-24 rounded-none border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
+                                  className="w-24 rounded-lg border border-[#EEEEEE] bg-white py-1.5 px-2 text-[11px] font-mono text-black focus:border-black focus:outline-none"
                                 />
                               </td>
                               <td className="py-1.5 px-2 text-right">
@@ -277,7 +485,7 @@ export default function ParentProductManager() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving}
+                    disabled={isSaving || isPersistingCategory}
                     className="bg-black hover:bg-[#333333] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors disabled:bg-[#717171]"
                   >
                     {isSaving ? 'Saving...' : 'Save Parent Product'}
@@ -289,62 +497,33 @@ export default function ParentProductManager() {
         )}
       </AnimatePresence>
 
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Name</th>
-              <th className="py-4 px-6">Sizes</th>
-              <th className="py-4 px-6">Total Stock</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
-                  Loading parent products...
-                </td>
-              </tr>
-            ) : parentProducts.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-12 text-center text-[#717171] font-semibold">
-                  No parent products yet. Add one to get started.
-                </td>
-              </tr>
-            ) : (
-              parentProducts.map((pp) => {
-                const totalStock = Object.values(pp.stockBySize).reduce((a, b) => a + b, 0);
-                return (
-                  <tr key={pp.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                    <td className="py-4 px-6 font-bold text-black uppercase tracking-wide">{pp.name}</td>
-                    <td className="py-4 px-6 text-[10px] text-[#717171] font-mono">
-                      {pp.sizeOrder.map((s) => `${s}:${pp.stockBySize[s] ?? 0}`).join('  ')}
-                    </td>
-                    <td className="py-4 px-6 font-mono font-bold">{totalStock} units</td>
-                    <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                      <button
-                        onClick={() => openEdit(pp)}
-                        className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                        title="Edit Parent Product"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pp)}
-                        className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                        title="Delete Parent Product"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {!(loading && parentProducts.length === 0) && !failedEmpty && (
+        <TableCard>
+          <div className="flex items-center justify-end border-b border-[#EEEEEE] px-5 py-3">
+            <Pagination
+              from={pageData.from}
+              to={pageData.to}
+              total={pageData.total}
+              page={pageData.page}
+              totalPages={pageData.totalPages}
+              onPage={setPage}
+            />
+          </div>
+          <ParentProductsTable
+            parents={pageData.items}
+            emptyText={hasData ? 'No parent products found.' : 'No parent products yet.'}
+            linked={linked} onEdit={openEdit}
+            onDelete={handleDelete}
+          />
+        </TableCard>
+      )}
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        onCropComplete={handleCropComplete}
+        title="Crop & Optimize Parent Product Image"
+      />
     </div>
   );
 }

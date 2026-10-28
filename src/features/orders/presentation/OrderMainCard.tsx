@@ -4,6 +4,7 @@ import type { Order } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { orderNumber } from '../domain/orderBilling';
 import OrderStatusStepper from './OrderStatusStepper';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface Props {
   order: Order;
@@ -95,7 +96,7 @@ export default function OrderMainCard({ order, canCancel, onCancel }: Props) {
               key={`${item.productId}-${item.selectedSize || ''}-${item.selectedVariant?.id || ''}-${idx}`}
               className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
             >
-              <img
+              <ThumbImage
                 src={item.selectedVariant?.image || item.image}
                 alt={item.name}
                 className="h-16 w-14 object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"

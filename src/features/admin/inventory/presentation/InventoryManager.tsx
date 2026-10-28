@@ -1,35 +1,76 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Search, XCircle, Upload, Copy, Split, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, RefreshCw, XCircle, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Product, ProductVariant, ParentProduct, ProductHighlight } from '@/shared/domain/types';
 import { MAX_GALLERY_IMAGES } from '@/features/product/domain/gallery';
 import { HIGHLIGHT_ICON_KEYS, MAX_HIGHLIGHTS } from '@/features/product/domain/highlights';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
   fetchCategories,
-  persistNewCategory,
-  persistNewSubcategory,
   type CategoryDoc,
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
 import { uploadProductImage } from '../infrastructure/productImageUpload';
+import { resolveProductCategory } from '@/features/admin/parentProducts/domain/parentCategory';
 import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
 import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
-import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { pruneSelection } from '@/features/admin/orders/domain/orderView';
+import {
+  adjustParentStock,
+  changeParentsCategory,
+  deleteProducts,
+  setProductFeatured,
+  setProductsActive,
+} from '../infrastructure/productBulkRepository';
+import {
+  DEFAULT_FILTERS,
+  activeFilterCount,
+  attachParentProducts,
+  distinctParentIds,
+  filterProducts,
+  paginate,
+  productStats,
+  sortProducts,
+  type ProductFilters,
+  type ProductSort,
+} from '../domain/productList';
+import ProductsHeader from './list/ProductsHeader';
+import ProductStatsRow from './list/ProductStatsRow';
+import ProductFilterBar from './list/ProductFilterBar';
+import ProductsTable, { type ProductsListProps } from './list/ProductsTable';
+import ProductsGrid from './list/ProductsGrid';
+import ProductBulkToolbar, { type ProductViewMode } from './list/ProductBulkToolbar';
+import BulkCategoryModal from './list/BulkCategoryModal';
+import BulkStockModal from './list/BulkStockModal';
+import Pagination from '@/features/admin/presentation/ui/Pagination';
+import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
+import { TableCard } from '@/features/admin/presentation/ui/TableCard';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
+  const [listError, setListError] = useState('');
+
+  // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
+  const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
 
   const refreshProducts = useCallback(async () => {
-    setProductsLoading(true);
+    // Only the first load shows the spinner; later reloads are silent.
+    if (!hasLoadedRef.current) setProductsLoading(true);
     try {
-      setProducts(await fetchAllProducts());
+      const [prods, parents] = await Promise.all([fetchAllProductsForAdmin(), fetchParentProducts()]);
+      setParentProducts(parents);
+      setProducts(attachParentProducts(prods, parents));
+      hasLoadedRef.current = true;
+    } catch (err) {
+      console.error('Error fetching products: ', err);
+      setListError('Failed to load products.');
     } finally {
       setProductsLoading(false);
     }
@@ -49,21 +90,6 @@ export default function InventoryManager() {
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
   const [productGallery, setProductGallery] = useState<string[]>([]);
   const [productHighlights, setProductHighlights] = useState<ProductHighlight[]>([]);
-
-  // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
-  const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
-
-  const loadParentProducts = useCallback(async () => {
-    try {
-      setParentProducts(await fetchParentProducts());
-    } catch (err) {
-      console.error('Error fetching parent products: ', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadParentProducts();
-  }, [loadParentProducts]);
 
   // Size chart templates (reusable across products, managed on the Size Charts tab)
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
@@ -96,14 +122,6 @@ export default function InventoryManager() {
     loadCategories();
   }, [loadCategories]);
 
-  // New category addition state
-  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [newCategoryInput, setNewCategoryInput] = useState('');
-
-  // New subcategory addition state
-  const [isAddingNewSubcategory, setIsAddingNewSubcategory] = useState(false);
-  const [newSubcategoryInput, setNewSubcategoryInput] = useState('');
-
   // Single variant addition form state
   const [newVariantName, setNewVariantName] = useState('');
   const [newVariantColor, setNewVariantColor] = useState('#000000');
@@ -123,8 +141,6 @@ export default function InventoryManager() {
       price: 0,
       originalPrice: undefined,
       image: '',
-      category: '',
-      subcategory: '',
       rating: 5,
       parentProductId: undefined,
     });
@@ -132,10 +148,6 @@ export default function InventoryManager() {
     setProductGallery([]);
     setProductHighlights([]);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
   };
 
@@ -145,10 +157,6 @@ export default function InventoryManager() {
     setProductGallery(p.gallery ?? []);
     setProductHighlights(p.highlights ?? []);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
   };
 
@@ -161,31 +169,7 @@ export default function InventoryManager() {
     setProductGallery(p.gallery ?? []);
     setProductHighlights(p.highlights ?? []);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
-  };
-
-  const handleConfirmNewCategory = async () => {
-    const trimmed = newCategoryInput.trim();
-    if (!trimmed) return;
-    setEditingProduct((prev) => (prev ? { ...prev, category: trimmed } : null));
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    await persistNewCategory(trimmed);
-    await loadCategories();
-  };
-
-  const handleConfirmNewSubcategory = async () => {
-    const trimmed = newSubcategoryInput.trim();
-    if (!trimmed || !editingProduct?.category) return;
-    setEditingProduct((prev) => (prev ? { ...prev, subcategory: trimmed } : null));
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
-    await persistNewSubcategory(editingProduct.category, trimmed);
-    await loadCategories();
   };
 
   const handleTriggerCrop = (target: 'primary' | 'variant' | 'gallery') => {
@@ -199,7 +183,7 @@ export default function InventoryManager() {
     setEditorError('');
     try {
       if (cropperTarget === 'primary') {
-        const url = await uploadProductImage(`products/${productId}/main`, compressedDataUrl);
+        const url = await uploadProductImage(`products/${productId}/main-${Date.now()}`, compressedDataUrl);
         setEditingProduct((prev) => (prev ? { ...prev, image: url } : null));
       } else if (cropperTarget === 'variant') {
         const url = await uploadProductImage(`products/${productId}/variants/${Date.now()}`, compressedDataUrl);
@@ -243,10 +227,10 @@ export default function InventoryManager() {
     e.preventDefault();
     if (!editingProduct) return;
 
-    const { id, name, description, price, image, category, subcategory, parentProductId } = editingProduct;
+    const { id, name, description, price, image, parentProductId } = editingProduct;
 
-    if (!id || !name || !description || price === undefined || !image || !category) {
-      setEditorError('Please fill in all required fields (ID, Name, Description, Price, Primary Image, Category).');
+    if (!id || !name || !description || price === undefined || !image) {
+      setEditorError('Please fill in all required fields (ID, Name, Description, Price, Primary Image).');
       return;
     }
 
@@ -260,6 +244,14 @@ export default function InventoryManager() {
       return;
     }
 
+    // Category/subcategory belong to the parent product; products store a denormalized copy.
+    const resolved = resolveProductCategory(parentProducts.find((pp) => pp.id === parentProductId));
+    if ('error' in resolved) {
+      setEditorError(resolved.error);
+      return;
+    }
+    const { category, subcategory } = resolved;
+
     setIsSavingProduct(true);
     setEditorError('');
 
@@ -272,7 +264,7 @@ export default function InventoryManager() {
         originalPrice: editingProduct.originalPrice ? Number(editingProduct.originalPrice) : null,
         image,
         category,
-        subcategory: subcategory || '',
+        subcategory,
         rating: editingProduct.rating || 5,
         parentProductId,
         variants: productVariants,
@@ -298,7 +290,7 @@ export default function InventoryManager() {
       await refreshProducts();
     } catch (err) {
       console.error('Error deleting product: ', err);
-      alert('Failed to delete product.');
+      setListError('Failed to delete product.');
     }
   };
 
@@ -332,6 +324,9 @@ export default function InventoryManager() {
     setSplittingProductId(p.id);
     try {
       const [firstVariant, ...restVariants] = p.variants;
+      const splitParent = parentProducts.find((pp) => pp.id === p.parentProductId);
+      const splitCategory = splitParent?.category?.trim() ? splitParent.category : p.category;
+      const splitSubcategory = splitParent?.category?.trim() ? splitParent.subcategory || '' : p.subcategory || '';
       const usedIds = new Set(products.map((prod) => prod.id));
 
       await saveProduct({
@@ -341,8 +336,8 @@ export default function InventoryManager() {
         price: p.price,
         originalPrice: p.originalPrice ?? null,
         image: firstVariant.image || p.image,
-        category: p.category,
-        subcategory: p.subcategory || '',
+        category: splitCategory,
+        subcategory: splitSubcategory,
         rating: p.rating,
         parentProductId: p.parentProductId || null,
         variants: [],
@@ -366,8 +361,8 @@ export default function InventoryManager() {
           price: p.price,
           originalPrice: p.originalPrice ?? null,
           image: variant.image || p.image,
-          category: p.category,
-          subcategory: p.subcategory || '',
+          category: splitCategory,
+          subcategory: splitSubcategory,
           rating: p.rating,
           parentProductId: p.parentProductId || null,
           variants: [],
@@ -378,52 +373,131 @@ export default function InventoryManager() {
       await refreshProducts();
     } catch (err: any) {
       console.error('Error splitting product into design variants: ', err);
-      alert(err.message || 'Failed to split product into separate designs.');
+      setListError(err.message || 'Failed to split product into separate designs.');
     } finally {
       setSplittingProductId(null);
     }
   };
 
-  // Categories: sourced from the persisted `categories` collection, merged with any
-  // legacy category names still only present on existing product docs.
-  const existingCategories = Array.from(
-    new Set([...categoryDocs.map((c) => c.name), ...products.map((p) => p.category).filter(Boolean)])
-  ).sort();
+  const filterCategories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
 
-  // Subcategories for the currently selected category, same merge strategy.
-  const existingSubcategories = Array.from(
-    new Set([
-      ...(categoryDocs.find((c) => c.name === editingProduct?.category)?.subcategories || []),
-      ...products
-        .filter((p) => !editingProduct?.category || p.category === editingProduct.category)
-        .map((p) => p.subcategory)
-        .filter((s): s is string => !!s),
-    ])
-  ).sort();
+  // List state: filters, sort, pagination and selection
+  const PAGE_SIZE = 20;
+  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS);
+  const [sort, setSort] = useState<ProductSort>('');
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Search/Filters logic
-  const [productSearch, setProductSearch] = useState('');
-  const filteredInventory = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.id.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  const filtered = useMemo(() => sortProducts(filterProducts(products, filters), sort), [products, filters, sort]);
+  const pageData = paginate(filtered, page, PAGE_SIZE);
+  const stats = useMemo(() => productStats(products), [products]);
 
-  // Client-side pagination — inventory is already loaded in full, this just windows the table.
-  const INVENTORY_PAGE_SIZE = 20;
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(filteredInventory.length / INVENTORY_PAGE_SIZE));
+  // Selection only ever covers products visible under the current filters (all pages).
   useEffect(() => {
-    setCurrentPage(1);
-  }, [productSearch]);
-  const paginatedInventory = filteredInventory.slice(
-    (currentPage - 1) * INVENTORY_PAGE_SIZE,
-    currentPage * INVENTORY_PAGE_SIZE
-  );
+    setSelectedIds((prev) => pruneSelection(prev, filtered.map((p) => p.id)));
+  }, [filtered]);
+
+  const pageIds = pageData.items.map((p) => p.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const someOnPageSelected = pageIds.some((id) => selectedIds.includes(id));
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleAllOnPage = () =>
+    setSelectedIds((prev) =>
+      allOnPageSelected ? prev.filter((id) => !pageIds.includes(id)) : Array.from(new Set([...prev, ...pageIds]))
+    );
+
+  const handleFilters = (f: ProductFilters) => {
+    setFilters(f);
+    setPage(1);
+  };
+  const handleSort = (s: ProductSort) => {
+    setSort(s);
+    setPage(1);
+  };
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSort('');
+    setPage(1);
+  };
+
+  // Bulk actions
+  const [viewMode, setViewMode] = useState<ProductViewMode>('list');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkModal, setBulkModal] = useState<'category' | 'stock' | null>(null);
+  const [bulkModalError, setBulkModalError] = useState('');
+  const bulkParents = useMemo(() => distinctParentIds(products, selectedIds), [products, selectedIds]);
+
+  const openBulkModal = (m: 'category' | 'stock') => {
+    setBulkModalError('');
+    setBulkModal(m);
+  };
+
+  // Runs a repository call, silently reloads, and reports errors inline
+  // (inside the open modal when there is one, otherwise in the list banner).
+  const runBulk = async (action: () => Promise<void>, inModal = false) => {
+    setBulkBusy(true);
+    setBulkModalError('');
+    try {
+      await action();
+      await refreshProducts();
+      if (inModal) setBulkModal(null);
+    } catch (err: any) {
+      const msg = err.message || 'Bulk action failed.';
+      if (inModal) setBulkModalError(msg);
+      else setListError(msg);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const n = selectedIds.length;
+    if (n === 0 || !window.confirm(`Delete ${n} products? This cannot be undone.`)) return;
+    runBulk(() => deleteProducts(selectedIds));
+  };
+
+  // Optimistic featured toggle; reverts and reports inline on failure.
+  const [featuredPendingIds, setFeaturedPendingIds] = useState<string[]>([]);
+  const handleToggleFeatured = async (p: Product, featured: boolean) => {
+    if (featuredPendingIds.includes(p.id)) return;
+    setFeaturedPendingIds((prev) => [...prev, p.id]);
+    const apply = (value: boolean) =>
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, isFeatured: value } : x)));
+    apply(featured);
+    try {
+      await setProductFeatured(p.id, featured);
+    } catch (err: any) {
+      apply(!featured);
+      setListError(err.message || `Failed to update featured flag for "${p.name}".`);
+    } finally {
+      setFeaturedPendingIds((prev) => prev.filter((x) => x !== p.id));
+    }
+  };
+
+  const listProps: ProductsListProps = {
+    products: pageData.items,
+    selectedIds,
+    onToggle: toggleSelected,
+    onToggleAllOnPage: toggleAllOnPage,
+    allOnPageSelected,
+    someOnPageSelected,
+    onEdit: handleOpenEditProduct,
+    onDuplicate: handleDuplicateProduct,
+    onSplit: handleSplitVariants,
+    onDelete: (p) => handleDeleteProduct(p.id),
+    onToggleFeatured: handleToggleFeatured,
+    featuredPendingIds,
+    splittingProductId,
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      <ProductsHeader onAdd={handleOpenCreateProduct} />
+
+      <ProductStatsRow stats={stats} />
+
       {productsLoading && products.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 border border-dashed border-[#EEEEEE]">
           <RefreshCw className="h-6 w-6 text-black animate-spin mb-4" />
@@ -431,29 +505,15 @@ export default function InventoryManager() {
         </div>
       )}
 
-      {/* Header Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#FAF9F6] border border-[#EEEEEE] p-5">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#717171]" />
-          <input
-            type="text"
-            placeholder="Search inventory products..."
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-            className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-black placeholder-[#A1A1A1] focus:border-black focus:outline-none transition-colors"
-            id="inventory-search-input"
-          />
-        </div>
-
-        <button
-          onClick={handleOpenCreateProduct}
-          className="flex items-center justify-center space-x-2 rounded-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#333333] transition-colors"
-          id="admin-add-product-btn"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add New Product</span>
-        </button>
-      </div>
+      <ProductFilterBar
+        filters={filters}
+        sort={sort}
+        categories={filterCategories}
+        activeCount={activeFilterCount(filters, sort)}
+        onFilters={handleFilters}
+        onSort={handleSort}
+        onReset={handleResetFilters}
+      />
 
       {/* Product Form Drawer/Modal overlay */}
       <AnimatePresence>
@@ -471,7 +531,7 @@ export default function InventoryManager() {
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-none border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8 flex flex-col"
+              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-[#FDFDFD] shadow-2xl p-6 sm:p-8 flex flex-col"
               id="product-edit-form-panel"
             >
               <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4 mb-6">
@@ -509,7 +569,7 @@ export default function InventoryManager() {
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, id: e.target.value }))}
                       disabled={!!products.find((p) => p.id === editingProduct.id)}
                       placeholder="e.g. prod-jersey-limited"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191]"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none disabled:bg-[#F5F5F5] disabled:text-[#919191]"
                     />
                   </div>
 
@@ -524,7 +584,7 @@ export default function InventoryManager() {
                       value={editingProduct.name || ''}
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g. Classic Linen Overshirt"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -542,7 +602,7 @@ export default function InventoryManager() {
                       value={editingProduct.price || ''}
                       onChange={(e) => setEditingProduct((prev) => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
                       placeholder="e.g. 45.00"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
 
@@ -559,150 +619,22 @@ export default function InventoryManager() {
                         setEditingProduct((prev) => ({ ...prev, originalPrice: parseFloat(e.target.value) || undefined }))
                       }
                       placeholder="e.g. 60.00"
-                      className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                      className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Category */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                      Category*
-                    </label>
-                    {!isAddingNewCategory ? (
-                      <select
-                        required
-                        value={editingProduct.category || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_new__') {
-                            setIsAddingNewCategory(true);
-                          } else {
-                            setEditingProduct((prev) => ({ ...prev, category: e.target.value }));
-                          }
-                        }}
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                      >
-                        <option value="" disabled>
-                          Select a category…
-                        </option>
-                        {Array.from(
-                          new Set([...existingCategories, ...(editingProduct.category ? [editingProduct.category] : [])])
-                        )
-                          .sort()
-                          .map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        <option value="__add_new__">+ Add New Category</option>
-                      </select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={newCategoryInput}
-                          onChange={(e) => setNewCategoryInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleConfirmNewCategory();
-                            }
-                          }}
-                          placeholder="New category name"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleConfirmNewCategory}
-                          className="bg-black hover:bg-[#333333] text-white text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingNewCategory(false);
-                            setNewCategoryInput('');
-                          }}
-                          className="border border-[#EEEEEE] hover:border-black text-black text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Subcategory */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                      Subcategory (Optional)
-                    </label>
-                    {!isAddingNewSubcategory ? (
-                      <select
-                        value={editingProduct.subcategory || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_new__') {
-                            setIsAddingNewSubcategory(true);
-                          } else {
-                            setEditingProduct((prev) => ({ ...prev, subcategory: e.target.value }));
-                          }
-                        }}
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                      >
-                        <option value="">None</option>
-                        {Array.from(
-                          new Set([
-                            ...existingSubcategories,
-                            ...(editingProduct.subcategory ? [editingProduct.subcategory] : []),
-                          ])
-                        )
-                          .sort()
-                          .map((sub) => (
-                            <option key={sub} value={sub}>
-                              {sub}
-                            </option>
-                          ))}
-                        <option value="__add_new__">+ Add New Subcategory</option>
-                      </select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={newSubcategoryInput}
-                          onChange={(e) => setNewSubcategoryInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleConfirmNewSubcategory();
-                            }
-                          }}
-                          placeholder="New subcategory name"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleConfirmNewSubcategory}
-                          className="bg-black hover:bg-[#333333] text-white text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingNewSubcategory(false);
-                            setNewSubcategoryInput('');
-                          }}
-                          className="border border-[#EEEEEE] hover:border-black text-black text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Category (read-only: owned by the parent product) */}
+                {(() => {
+                  const selectedParent = parentProducts.find((pp) => pp.id === editingProduct.parentProductId);
+                  return (
+                    <p className="text-[11px] text-[#717171]" id="product-parent-category">
+                      {selectedParent
+                        ? `Category: ${selectedParent.category || 'Uncategorized'} / Subcategory: ${selectedParent.subcategory || 'None'} (from parent product)`
+                        : 'Category and subcategory come from the parent product. Select a parent product to apply them.'}
+                    </p>
+                  );
+                })()}
 
                 {/* Primary Image */}
                 <div>
@@ -717,7 +649,7 @@ export default function InventoryManager() {
                         value={editingProduct.image || ''}
                         onChange={(e) => setEditingProduct((prev) => ({ ...prev, image: e.target.value }))}
                         placeholder="Paste image URL (or upload directly)"
-                        className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                       />
                     </div>
                     <button
@@ -743,6 +675,8 @@ export default function InventoryManager() {
                         alt="Primary Product Preview"
                         className="h-14 w-14 object-cover border border-[#EEEEEE]"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
                         }}
@@ -775,7 +709,7 @@ export default function InventoryManager() {
                     {productGallery.map((url, i) => (
                       <div key={`${url}-${i}`} className="w-20">
                         <div className="relative h-20 w-20 border border-[#EEEEEE] bg-[#FAF9F6]">
-                          <img src={url} alt={`Gallery image ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={url} alt={`Gallery image ${i + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                           <button
                             type="button"
                             aria-label={`Remove gallery image ${i + 1}`}
@@ -856,7 +790,7 @@ export default function InventoryManager() {
                               prev.map((x, idx) => (idx === i ? { ...x, icon: e.target.value as ProductHighlight['icon'] } : x)),
                             )
                           }
-                          className="rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none sm:w-40"
+                          className="rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none sm:w-40"
                         >
                           {HIGHLIGHT_ICON_KEYS.map((key) => (
                             <option key={key} value={key}>
@@ -872,7 +806,7 @@ export default function InventoryManager() {
                             setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x)))
                           }
                           placeholder="180 GSM"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <input
                           type="text"
@@ -882,7 +816,7 @@ export default function InventoryManager() {
                             setProductHighlights((prev) => prev.map((x, idx) => (idx === i ? { ...x, subtitle: e.target.value } : x)))
                           }
                           placeholder="Lycra Cotton"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -919,7 +853,7 @@ export default function InventoryManager() {
                     value={editingProduct.description || ''}
                     onChange={(e) => setEditingProduct((prev) => ({ ...prev, description: e.target.value }))}
                     placeholder="Write dynamic sales copy or specs..."
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   />
                 </div>
 
@@ -950,7 +884,7 @@ export default function InventoryManager() {
                     onChange={(e) =>
                       setEditingProduct((prev) => ({ ...prev, parentProductId: e.target.value || undefined }))
                     }
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   >
                     <option value="" disabled>
                       Select a parent product…
@@ -996,7 +930,7 @@ export default function InventoryManager() {
                     onChange={(e) =>
                       setEditingProduct((prev) => ({ ...prev, sizeChartId: e.target.value || undefined }))
                     }
-                    className="w-full rounded-none border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
                   >
                     <option value="">None</option>
                     {sizeCharts.map((chart) => (
@@ -1055,7 +989,7 @@ export default function InventoryManager() {
                         value={newVariantName}
                         onChange={(e) => setNewVariantName(e.target.value)}
                         placeholder="Variant name (e.g. Sage Green)"
-                        className="rounded-none border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
+                        className="rounded-lg border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
                       />
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-[#717171] font-bold uppercase">Color:</span>
@@ -1076,7 +1010,7 @@ export default function InventoryManager() {
                           value={newVariantImage}
                           onChange={(e) => setNewVariantImage(e.target.value)}
                           placeholder="Variant Image (Paste URL or upload below)"
-                          className="flex-1 rounded-none border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
+                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2 px-3 text-xs text-black focus:border-black focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1108,6 +1042,8 @@ export default function InventoryManager() {
                             alt="Variant Preview"
                             className="h-10 w-10 object-cover border border-[#EEEEEE]"
                             referrerPolicy="no-referrer"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=Invalid+Image';
                             }}
@@ -1157,186 +1093,62 @@ export default function InventoryManager() {
         )}
       </AnimatePresence>
 
-      {/* Catalog grid inside admin panel */}
-      <div className="overflow-x-auto border border-[#EEEEEE] bg-white rounded-none shadow-xs">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF9F6] border-b border-[#EEEEEE] text-[10px] font-bold uppercase tracking-wider text-[#717171]">
-              <th className="py-4 px-6">Product</th>
-              <th className="py-4 px-6">Category</th>
-              <th className="py-4 px-6">Price</th>
-              <th className="py-4 px-6">Stock</th>
-              <th className="py-4 px-6">Variants</th>
-              <th className="py-4 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEEEEE] text-xs text-[#1A1A1A]">
-            {filteredInventory.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-[#717171] font-semibold">
-                  No products found matching your search. Please check search or add new!
-                </td>
-              </tr>
-            ) : (
-              paginatedInventory.map((p) => (
-                <tr key={p.id} className="hover:bg-[#FAF9F6]/50 transition-colors">
-                  {/* Product title/image */}
-                  <td className="py-4 px-6 flex items-center space-x-3">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="h-11 w-11 object-cover bg-[#F5F5F5] border border-[#EEEEEE]"
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h4 className="font-bold text-black uppercase tracking-wide truncate max-w-[180px]">{p.name}</h4>
-                      <span className="font-mono text-[9px] text-[#919191]">{p.id}</span>
-                    </div>
-                  </td>
+      {listError && <ErrorBanner message={listError} onDismiss={() => setListError('')} />}
 
-                  {/* Category */}
-                  <td className="py-4 px-6">
-                    <span className="inline-block px-2 py-0.5 bg-[#F5F5F5] border border-[#EEEEEE] text-[9px] font-bold uppercase tracking-wider text-black">
-                      {p.category}
-                    </span>
-                    {p.subcategory && <span className="block text-[10px] text-[#717171] mt-0.5">{p.subcategory}</span>}
-                  </td>
+      <TableCard>
+        <ProductBulkToolbar
+          selectedCount={selectedIds.length}
+          allOnPageSelected={allOnPageSelected}
+          someOnPageSelected={someOnPageSelected}
+          onToggleAllOnPage={toggleAllOnPage}
+          onEdit={() => {
+            const p = products.find((x) => x.id === selectedIds[0]);
+            if (p) handleOpenEditProduct(p);
+          }}
+          onChangeCategory={() => openBulkModal('category')}
+          onUpdateStock={() => openBulkModal('stock')}
+          onChangeStatus={(active) => runBulk(() => setProductsActive(selectedIds, active))}
+          onDelete={handleBulkDelete}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+          busy={bulkBusy}
+        >
+          <Pagination
+            id="inventory-pagination"
+            from={pageData.from}
+            to={pageData.to}
+            total={pageData.total}
+            page={pageData.page}
+            totalPages={pageData.totalPages}
+            onPage={setPage}
+          />
+        </ProductBulkToolbar>
+        {viewMode === 'grid' ? <ProductsGrid {...listProps} /> : <ProductsTable {...listProps} />}
+      </TableCard>
 
-                  {/* Price */}
-                  <td className="py-4 px-6 font-mono font-bold text-black">
-                    {formatCurrency(p.price)}
-                    {p.originalPrice && (
-                      <span className="block text-[9px] text-[#919191] line-through font-normal">{formatCurrency(p.originalPrice)}</span>
-                    )}
-                  </td>
-
-                  {/* Stock (per size, sourced from the linked Parent Product) */}
-                  <td className="py-4 px-6">
-                    {(() => {
-                      const pp = parentProducts.find((x) => x.id === p.parentProductId);
-                      if (!pp) {
-                        return (
-                          <span className="font-mono font-bold px-2 py-0.5 border bg-red-50 text-red-800 border-red-200">
-                            No Parent Product
-                          </span>
-                        );
-                      }
-                      return (
-                        <div className="flex flex-wrap gap-1">
-                          {pp.sizeOrder.map((sz) => {
-                            const stock = pp.stockBySize[sz] ?? 0;
-                            return (
-                              <span
-                                key={sz}
-                                className={`font-mono font-bold px-1.5 py-0.5 border text-[10px] ${
-                                  stock === 0
-                                    ? 'bg-red-50 text-red-800 border-red-200'
-                                    : stock < 10
-                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                }`}
-                              >
-                                {sz}:{stock}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </td>
-
-                  {/* Variants & Sizes list summaries */}
-                  <td className="py-4 px-6">
-                    <div className="space-y-1">
-                      {(() => {
-                        const pp = parentProducts.find((x) => x.id === p.parentProductId);
-                        return (
-                          pp &&
-                          pp.sizeOrder.length > 0 && (
-                            <span className="block text-[10px] text-[#717171]">
-                              <strong className="text-black uppercase text-[9px]">Sizes:</strong> {pp.sizeOrder.join(', ')}
-                            </span>
-                          )
-                        );
-                      })()}
-                      {p.variants && p.variants.length > 0 && (
-                        <span className="block text-[10px] text-[#717171]">
-                          <strong className="text-black uppercase text-[9px]">Design Colors:</strong> {p.variants.length} options
-                        </span>
-                      )}
-                      {!parentProducts.find((x) => x.id === p.parentProductId) &&
-                        (!p.variants || p.variants.length === 0) && (
-                          <span className="text-[10px] italic text-[#919191]">Standard</span>
-                        )}
-                    </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-4 px-6 text-right space-x-1.5 whitespace-nowrap">
-                    <button
-                      onClick={() => handleOpenEditProduct(p)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Edit Product"
-                      id={`admin-edit-prod-btn-${p.id}`}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicateProduct(p)}
-                      className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors"
-                      title="Duplicate Product"
-                      id={`admin-duplicate-prod-btn-${p.id}`}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
-                    {p.variants && p.variants.length > 0 && (
-                      <button
-                        onClick={() => handleSplitVariants(p)}
-                        disabled={splittingProductId === p.id}
-                        className="inline-flex items-center space-x-1 border border-[#EEEEEE] bg-white hover:border-black p-2 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Split Design Variants Into Separate Products"
-                        id={`admin-split-prod-btn-${p.id}`}
-                      >
-                        {splittingProductId === p.id ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Split className="h-3.5 w-3.5" />
-                        )}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteProduct(p.id)}
-                      className="inline-flex items-center space-x-1 border border-red-200 bg-white hover:bg-red-50 p-2 text-red-600 transition-colors"
-                      title="Delete Product"
-                      id={`admin-delete-prod-btn-${p.id}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center flex-wrap gap-1.5" id="inventory-pagination">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`min-w-[2.25rem] px-3 py-2 text-xs font-bold border transition-colors ${
-                page === currentPage
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white border-[#EEEEEE] text-[#717171] hover:border-black hover:text-black'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
+      {bulkModal === 'category' && (
+        <BulkCategoryModal
+          parentCount={bulkParents.parentIds.length}
+          productCount={selectedIds.length}
+          skipped={bulkParents.skipped}
+          categories={categoryDocs}
+          busy={bulkBusy}
+          error={bulkModalError}
+          onClose={() => setBulkModal(null)}
+          onApply={(category, subcategory) =>
+            runBulk(() => changeParentsCategory(bulkParents.parentIds, category, subcategory), true)
+          }
+        />
+      )}
+      {bulkModal === 'stock' && (
+        <BulkStockModal
+          parentCount={bulkParents.parentIds.length}
+          skipped={bulkParents.skipped}
+          busy={bulkBusy}
+          error={bulkModalError}
+          onClose={() => setBulkModal(null)}
+          onApply={(mode, amount) => runBulk(() => adjustParentStock(bulkParents.parentIds, mode, amount), true)}
+        />
       )}
 
       <ImageCropperModal

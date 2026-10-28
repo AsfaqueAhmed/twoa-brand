@@ -13,7 +13,7 @@ export default function OrderSummary() {
   const savings = computeSavings(items);
 
   return (
-    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-28" id="order-summary">
+    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-24" id="order-summary">
       <h2 className="text-xl sm:text-2xl font-bold text-black">Order Summary</h2>
 
       <div className="space-y-2 text-sm">

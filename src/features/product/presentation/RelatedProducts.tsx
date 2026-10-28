@@ -3,6 +3,7 @@
 import type { Product } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { useRelatedProducts } from '../application/useRelatedProducts';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface RelatedProductsProps {
   product: Product;
@@ -28,7 +29,7 @@ export default function RelatedProducts({ product, onSelect }: RelatedProductsPr
               aria-label={item.name}
             >
               <div className="aspect-[4/5] overflow-hidden bg-[#F5F5F5]">
-                <img
+                <ThumbImage
                   src={item.image}
                   alt=""
                   loading="lazy"

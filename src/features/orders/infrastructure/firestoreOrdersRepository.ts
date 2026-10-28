@@ -128,3 +128,26 @@ export async function fetchOrderByNumberAndPhone(orderNumber: string, phone: str
   if (error) throw new Error(error.message);
   return data && data.length > 0 ? toOrder(data[0]) : null;
 }
+
+// Admin-only: edits customer details, items and pricing via the
+// admin_update_order RPC (adjusts stock and coupon usage server-side).
+// items === null keeps the existing items.
+export async function adminUpdateOrder(
+  orderId: string,
+  p: {
+    userName: string; phone: string; address: string;
+    items: Record<string, any>[] | null; totalAmount: number; promoCode?: string; discount?: number;
+  },
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_order', {
+    p_order_id: orderId,
+    p_user_name: p.userName,
+    p_phone: p.phone,
+    p_address: p.address,
+    p_items: p.items,
+    p_total_amount: p.totalAmount,
+    p_promo_code: p.promoCode?.trim() || null,
+    p_discount: p.discount ?? null,
+  });
+  if (error) throw new Error(error.message);
+}

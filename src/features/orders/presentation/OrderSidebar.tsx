@@ -3,6 +3,7 @@ import type { Order } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { computeOrderBilling, orderNumber } from '../domain/orderBilling';
 import { SUPPORT_MESSAGE_URL, SUPPORT_PHONE } from './supportContacts';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const Row = ({ label, value, valueClass = 'text-black' }: { label: string; value: string; valueClass?: string }) => (
   <div className="flex justify-between gap-4 text-sm">
@@ -103,7 +104,7 @@ export function OtherOrdersCard({ orders, activeId, onSelect }: OtherOrdersProps
             }`}
             id={`order-row-${o.id}`}
           >
-            <img
+            <ThumbImage
               src={o.items[0]?.selectedVariant?.image || o.items[0]?.image}
               alt=""
               className="h-12 w-11 object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"

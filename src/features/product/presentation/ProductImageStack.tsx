@@ -46,7 +46,7 @@ export default function ProductImageStack({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src={image} alt={alt} className="block h-auto w-full" referrerPolicy="no-referrer" />
+          <img src={image} alt={alt} className="block h-auto w-full" referrerPolicy="no-referrer" loading="eager" fetchPriority="high" decoding="async" />
         </motion.div>
       </AnimatePresence>
       <span className="absolute top-4 left-4 z-10 bg-black px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white">

@@ -24,7 +24,7 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#EEEEEE] bg-[#FAF9F6]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-14 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <div
             onClick={() => setTab('shop')}
@@ -32,7 +32,7 @@ export default function Navbar() {
             id="brand-logo-trigger"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-7 w-auto sm:h-10" />
+            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-7 w-auto sm:h-10" loading="eager" fetchPriority="high" decoding="async" />
           </div>
 
           {/* Navigation Tabs (desktop/tablet only — mobile uses the bottom nav bar) */}
@@ -116,6 +116,7 @@ export default function Navbar() {
                   alt={user.displayName || 'Profile'}
                   className="h-8 w-8 rounded-full border border-[#EEEEEE]"
                   referrerPolicy="no-referrer"
+                  decoding="async"
                 />
                 <button
                   id="sign-out-btn"

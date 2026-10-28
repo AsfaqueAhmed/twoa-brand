@@ -13,3 +13,6 @@ coverage/
 
 # Generated at build time by scripts/generate-product-feed.mjs (see package.json "prebuild")
 /public/product-feed.csv
+
+# local data exports (contain customer data)
+backups/

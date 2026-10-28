@@ -3,6 +3,7 @@ import { ArrowRight, Lock, ShieldCheck, Tag, X } from 'lucide-react';
 import type { CartItem } from '@/shared/domain/types';
 import type { Coupon } from '@/features/coupons/domain/coupon';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 interface Props {
   items: CartItem[];
@@ -30,7 +31,7 @@ export default function CheckoutSummary({
   onRemovePromo,
 }: Props) {
   return (
-    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-28" id="checkout-summary">
+    <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-24" id="checkout-summary">
       <div className="flex items-baseline justify-between gap-3 border-b border-[#EEEEEE] pb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-black">
           Order Summary <span className="text-sm font-normal text-[#717171]">({count} {count === 1 ? 'item' : 'items'})</span>
@@ -47,7 +48,7 @@ export default function CheckoutSummary({
           const hasDiscount = !!originalPrice && originalPrice > price;
           return (
             <div key={key} className="flex gap-4 py-4 first:pt-0">
-              <img
+              <ThumbImage
                 src={item.selectedVariant?.image || item.product.image}
                 alt={item.product.name}
                 className="h-20 w-[72px] object-cover bg-[#F5F5F5] border border-[#EEEEEE] shrink-0"

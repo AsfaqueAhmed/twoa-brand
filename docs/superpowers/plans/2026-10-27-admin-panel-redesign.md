@@ -112,7 +112,7 @@ describe('computeStats', () => {
       order({ id: 'c', userId: 'u1', createdAt: '2026-10-01T10:00:00' }),
     ];
     const s = computeStats(orders, lastNDays(7, now));
-    expect(s).toEqual({ totalOrders: 2, totalSales: 200, productsSold: 2, newCustomers: 1 });
+    expect(s).toEqual({ totalOrders: 1, totalSales: 200, productsSold: 2, newCustomers: 1 });
   });
 });
 

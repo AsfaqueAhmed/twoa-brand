@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import type { Product, ProductVariant, SizeChart } from '@/shared/domain/types';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/features/cart/presentation/CartProvider';
+import { ThumbImage } from '@/shared/ui/ThumbImage';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { fetchSizeChartById } from '@/features/catalog/infrastructure/firestoreSizeChartsRepository';
 import { getDefaultSize } from '@/features/catalog/domain/sizes';
@@ -191,7 +192,7 @@ export default function ProductDetailView({
                 isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA]'
               }`}
             >
-              <img src={url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              <ThumbImage src={url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
             </button>
           );
         })}
@@ -316,7 +317,7 @@ export default function ProductDetailView({
                         style={!v.image && v.colorCode ? { backgroundColor: v.colorCode } : undefined}
                       >
                         {v.image && (
-                          <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <ThumbImage src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                         )}
                       </button>
                     );
