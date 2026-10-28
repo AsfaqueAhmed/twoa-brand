@@ -20,6 +20,8 @@ import {
   alignLayer,
   scaleToPercent,
   percentToScale,
+  TEXT_PRESETS,
+  MAX_TEXT_LENGTH,
 } from './layers';
 
 const img = (id: string) => createImageLayer({ id, name: `${id}.png`, src: 'data:image/png;base64,AAAA', aspect: 1.5 });
@@ -114,5 +116,46 @@ describe('scale percent', () => {
     expect(scaleToPercent(DEFAULT_SCALE)).toBe(100);
     expect(percentToScale(100)).toBeCloseTo(DEFAULT_SCALE);
     expect(percentToScale(scaleToPercent(0.2))).toBeCloseTo(0.2, 1);
+  });
+});
+
+describe('appearance and text style fields', () => {
+  it('defaults new fields', () => {
+    const i = createImageLayer({ id: 'a', name: 'a', src: 'data:image/png;base64,AA', aspect: 1 });
+    expect(i.opacity).toBe(1);
+    expect(i.groupId).toBeUndefined();
+    const t = createTextLayer({ id: 't', text: 'Hi' });
+    expect(t).toMatchObject({ opacity: 1, bold: false, italic: false, align: 'center', letterSpacing: 0 });
+  });
+  it('createTextLayer accepts style overrides', () => {
+    const t = createTextLayer({ id: 'h', text: 'Heading', scale: 0.6, bold: true, italic: true, align: 'left', letterSpacing: 0.1 });
+    expect(t).toMatchObject({ scale: 0.6, bold: true, italic: true, align: 'left', letterSpacing: 0.1 });
+  });
+  it('exposes heading/subheading/body presets', () => {
+    expect(TEXT_PRESETS.map((p) => p.kind)).toEqual(['heading', 'subheading', 'body']);
+    expect(TEXT_PRESETS[0].scale).toBeGreaterThan(TEXT_PRESETS[2].scale);
+  });
+  it('allows long multi-line text up to 200 chars', () => {
+    expect(MAX_TEXT_LENGTH).toBe(200);
+  });
+  it('clamps opacity and letter spacing', () => {
+    const i = createImageLayer({ id: 'a', name: 'a', src: 'data:image/png;base64,AA', aspect: 1 });
+    expect(clampLayer({ ...i, opacity: 0 }).opacity).toBe(0.05);
+    expect(clampLayer({ ...i, opacity: 5 }).opacity).toBe(1);
+    const t = createTextLayer({ id: 't', text: 'Hi' });
+    expect(clampLayer({ ...t, letterSpacing: 9 }).letterSpacing).toBe(0.5);
+    expect(clampLayer({ ...t, letterSpacing: -9 }).letterSpacing).toBe(-0.05);
+  });
+  it('patches opacity, text style and groupId (null removes it)', () => {
+    const t = createTextLayer({ id: 't', text: 'Hi' });
+    const out = updateLayer([t], 't', { opacity: 0.5, bold: true, align: 'right', letterSpacing: 0.2, groupId: 'g1' })[0];
+    expect(out).toMatchObject({ opacity: 0.5, bold: true, align: 'right', letterSpacing: 0.2, groupId: 'g1' });
+    const cleared = updateLayer([out], 't', { groupId: null })[0];
+    expect('groupId' in cleared).toBe(false);
+  });
+  it('an unchanged patch returns the same array', () => {
+    const t = createTextLayer({ id: 't', text: 'Hi' });
+    const layers = [t];
+    expect(updateLayer(layers, 't', { opacity: 1, bold: false })).toBe(layers);
   });
 });

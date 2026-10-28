@@ -49,6 +49,8 @@ function parseLayer(v: unknown): Layer | null {
     flipX: o.flipX === true,
     flipY: o.flipY === true,
     visible: o.visible !== false,
+    opacity: isNum(o.opacity) ? o.opacity : 1,
+    ...(typeof o.groupId === 'string' && LAYER_ID.test(o.groupId) ? { groupId: o.groupId } : {}),
   };
   if (o.type === 'image') {
     if (typeof o.src !== 'string' || !o.src.startsWith('data:image/') || !isNum(o.aspect) || o.aspect <= 0) return null;
@@ -58,7 +60,17 @@ function parseLayer(v: unknown): Layer | null {
     if (typeof o.text !== 'string' || !o.text || o.text.length > MAX_TEXT_LENGTH) return null;
     const family = FONT_OPTIONS.find((f) => f.family === o.fontFamily)?.family ?? FONT_OPTIONS[0].family;
     const color = typeof o.color === 'string' && HEX_COLOR.test(o.color) ? o.color : DEFAULT_TEXT_COLOR;
-    return clampLayer({ ...base, type: 'text' as const, text: o.text, fontFamily: family, color });
+    return clampLayer({
+      ...base,
+      type: 'text' as const,
+      text: o.text,
+      fontFamily: family,
+      color,
+      bold: o.bold === true,
+      italic: o.italic === true,
+      align: o.align === 'left' || o.align === 'right' ? o.align : ('center' as const),
+      letterSpacing: isNum(o.letterSpacing) ? o.letterSpacing : 0,
+    });
   }
   return null;
 }
@@ -73,7 +85,13 @@ function parseLayerList(list: unknown): Layer[] {
     seen.add(l.id);
     out.push(l);
   }
-  return out;
+  const counts = new Map<string, number>();
+  for (const l of out) if (l.groupId) counts.set(l.groupId, (counts.get(l.groupId) ?? 0) + 1);
+  return out.map((l) => {
+    if (!l.groupId || (counts.get(l.groupId) ?? 0) >= 2) return l;
+    const { groupId: _drop, ...rest } = l;
+    return rest as Layer;
+  });
 }
 
 export function parseDesign(raw: string | null): StudioDesign | null {

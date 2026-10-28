@@ -103,3 +103,26 @@ describe('pruneLayersByView', () => {
     expect(pruneLayersByView({ 'view-0': l }, [])).toEqual({});
   });
 });
+
+describe('new layer fields in saved designs', () => {
+  const img = (id: string, extra: Record<string, unknown> = {}) => ({ ...createImageLayer({ id, name: `${id}.png`, src: 'data:image/png;base64,AAAA', aspect: 1 }), ...extra });
+  const parse = (layers: unknown[]) => parseDesign(JSON.stringify({ parentProductId: 'p', size: 'M', layersByView: { 'view-0': layers } }))!.layersByView['view-0'] ?? [];
+
+  it('defaults missing fields on older layers', () => {
+    const legacy = { type: 'text', id: 't', name: 'x', text: 'Hi', fontFamily: 'Arial, Helvetica, sans-serif', color: '#111111', x: 0.5, y: 0.5, scale: 0.4, rotation: 0 };
+    expect(parse([legacy])[0]).toMatchObject({ opacity: 1, bold: false, italic: false, align: 'center', letterSpacing: 0 });
+  });
+  it('keeps valid new fields and sanitizes bad ones', () => {
+    const t = { ...createTextLayer({ id: 't', text: 'Hi' }), bold: true, italic: true, align: 'right', letterSpacing: 9, opacity: 0 };
+    expect(parse([t])[0]).toMatchObject({ bold: true, italic: true, align: 'right', letterSpacing: 0.5, opacity: 0.05 });
+    expect(parse([{ ...t, align: 'justify' }])[0]).toMatchObject({ align: 'center' });
+  });
+  it('accepts multi-line text up to 200 chars and rejects longer', () => {
+    expect(parse([createTextLayer({ id: 't', text: 'a\nb' })])).toHaveLength(1);
+    expect(parse([{ ...createTextLayer({ id: 't', text: 'x' }), text: 'x'.repeat(201) }])).toHaveLength(0);
+  });
+  it('keeps a groupId only when 2+ layers share it and it is a valid id', () => {
+    const out = parse([img('a', { groupId: 'g1' }), img('b', { groupId: 'g1' }), img('c', { groupId: 'lonely' }), img('d', { groupId: 'bad id!' })]);
+    expect(out.map((l) => l.groupId)).toEqual(['g1', 'g1', undefined, undefined]);
+  });
+});

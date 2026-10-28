@@ -12,18 +12,35 @@ export type LayerBase = {
   flipX: boolean;
   flipY: boolean;
   visible: boolean;
+  opacity: number;
+  groupId?: string;
 };
 
 export type ImageLayer = LayerBase & { type: 'image'; src: string; aspect: number };
-export type TextLayer = LayerBase & { type: 'text'; text: string; fontFamily: string; color: string };
+export type TextAlign = 'left' | 'center' | 'right';
+export type TextLayer = LayerBase & {
+  type: 'text';
+  text: string;
+  fontFamily: string;
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  align: TextAlign;
+  letterSpacing: number;
+};
 export type Layer = ImageLayer | TextLayer;
 
-export type LayerPatch = Partial<Omit<LayerBase, 'id'>> & {
+export type LayerPatch = Partial<Omit<LayerBase, 'id' | 'groupId'>> & {
+  groupId?: string | null; // null removes the group id
   src?: string;
   aspect?: number;
   text?: string;
   fontFamily?: string;
   color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  align?: TextAlign;
+  letterSpacing?: number;
 };
 
 export type AlignEdge = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
@@ -32,8 +49,17 @@ export const MIN_SCALE = 0.05;
 export const MAX_SCALE = 1.5;
 export const DEFAULT_SCALE = 0.4;
 export const TEXT_FONT_FRACTION = 0.2;
-export const MAX_TEXT_LENGTH = 60;
+export const MAX_TEXT_LENGTH = 200;
+export const MIN_OPACITY = 0.05;
+export const MIN_LETTER_SPACING = -0.05;
+export const MAX_LETTER_SPACING = 0.5;
 export const DEFAULT_TEXT_COLOR = '#111111';
+
+export const TEXT_PRESETS = [
+  { kind: 'heading', label: 'Add a heading', text: 'Heading', scale: 0.6, bold: true },
+  { kind: 'subheading', label: 'Add a subheading', text: 'Subheading', scale: 0.35, bold: true },
+  { kind: 'body', label: 'Add body text', text: 'Body text', scale: 0.2, bold: false },
+] as const;
 
 export const FONT_OPTIONS = [
   { label: 'Sans', family: 'Arial, Helvetica, sans-serif' },
@@ -51,30 +77,48 @@ export function normalizeRotation(deg: number): number {
 }
 
 export function clampLayer<T extends Layer>(layer: T): T {
-  return {
+  const out = {
     ...layer,
+    opacity: clamp(layer.opacity, MIN_OPACITY, 1),
     x: clamp(layer.x, 0, 1),
     y: clamp(layer.y, 0, 1),
     scale: clamp(layer.scale, MIN_SCALE, MAX_SCALE),
     rotation: normalizeRotation(layer.rotation),
   };
+  if (out.type === 'text') out.letterSpacing = clamp(out.letterSpacing, MIN_LETTER_SPACING, MAX_LETTER_SPACING);
+  return out;
 }
 
-const baseDefaults = { x: 0.5, y: 0.45, scale: DEFAULT_SCALE, rotation: 0, flipX: false, flipY: false, visible: true };
+const baseDefaults = { x: 0.5, y: 0.45, scale: DEFAULT_SCALE, rotation: 0, flipX: false, flipY: false, visible: true, opacity: 1 };
 
 export function createImageLayer(init: { id: string; name: string; src: string; aspect: number }): ImageLayer {
   return { ...baseDefaults, type: 'image', ...init };
 }
 
-export function createTextLayer(init: { id: string; text: string; fontFamily?: string; color?: string }): TextLayer {
+export function createTextLayer(init: {
+  id: string;
+  text: string;
+  fontFamily?: string;
+  color?: string;
+  scale?: number;
+  bold?: boolean;
+  italic?: boolean;
+  align?: TextAlign;
+  letterSpacing?: number;
+}): TextLayer {
   return {
     ...baseDefaults,
+    scale: init.scale ?? DEFAULT_SCALE,
     type: 'text',
     id: init.id,
     name: init.text.slice(0, 24) || 'Text',
     text: init.text,
     fontFamily: init.fontFamily ?? FONT_OPTIONS[0].family,
     color: init.color ?? DEFAULT_TEXT_COLOR,
+    bold: init.bold ?? false,
+    italic: init.italic ?? false,
+    align: init.align ?? 'center',
+    letterSpacing: init.letterSpacing ?? 0,
   };
 }
 
@@ -89,20 +133,27 @@ const shallowEqual = (a: object, b: object): boolean => {
 };
 
 export function updateLayer(layers: Layer[], id: string, patch: LayerPatch): Layer[] {
-  const { src, aspect, text, fontFamily, color, ...base } = patch;
+  const { src, aspect, text, fontFamily, color, bold, italic, align, letterSpacing, groupId, ...base } = patch;
   let changed = false;
   const out = layers.map((l) => {
     if (l.id !== id) return l;
-    const next =
+    const merged: Layer =
       l.type === 'image'
-        ? clampLayer({ ...l, ...base, ...(src !== undefined ? { src } : {}), ...(aspect !== undefined ? { aspect } : {}) })
-        : clampLayer({
+        ? { ...l, ...base, ...(src !== undefined ? { src } : {}), ...(aspect !== undefined ? { aspect } : {}) }
+        : {
             ...l,
             ...base,
             ...(text !== undefined ? { text } : {}),
             ...(fontFamily !== undefined ? { fontFamily } : {}),
             ...(color !== undefined ? { color } : {}),
-          });
+            ...(bold !== undefined ? { bold } : {}),
+            ...(italic !== undefined ? { italic } : {}),
+            ...(align !== undefined ? { align } : {}),
+            ...(letterSpacing !== undefined ? { letterSpacing } : {}),
+          };
+    if (groupId === null) delete merged.groupId;
+    else if (groupId !== undefined) merged.groupId = groupId;
+    const next = clampLayer(merged);
     if (shallowEqual(l, next)) return l;
     changed = true;
     return next;
