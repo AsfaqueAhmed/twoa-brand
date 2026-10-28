@@ -22,6 +22,15 @@ export function validateArtworkFile(file: { type: string; size: number }): strin
   return null;
 }
 
+export function pruneLayersByView(byView: Record<string, Layer[]>, viewIds: string[]): Record<string, Layer[]> {
+  const out: Record<string, Layer[]> = {};
+  for (const id of viewIds) {
+    const ls = byView[id];
+    if (Object.prototype.hasOwnProperty.call(byView, id) && ls.length > 0) out[id] = ls;
+  }
+  return out;
+}
+
 export const serializeDesign = (d: StudioDesign): string => JSON.stringify(d);
 
 // Validates untrusted (sessionStorage) data: only data:image sources, known fonts, hex colors.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createImageLayer, createTextLayer, FONT_OPTIONS, DEFAULT_TEXT_COLOR } from './layers';
-import { validateArtworkFile, serializeDesign, parseDesign, MAX_ARTWORK_BYTES, type StudioDesign } from './design';
+import { validateArtworkFile, serializeDesign, parseDesign, pruneLayersByView, MAX_ARTWORK_BYTES, type StudioDesign } from './design';
 
 describe('validateArtworkFile', () => {
   it('accepts png/jpeg/webp up to 10 MB', () => {
@@ -91,5 +91,15 @@ describe('per-view layers', () => {
   it('de-duplicates layer ids within a view', () => {
     const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layersByView: { 'view-0': [img('a'), img('a')] } });
     expect(parseDesign(raw)!.layersByView['view-0']).toHaveLength(1);
+  });
+});
+
+describe('pruneLayersByView', () => {
+  const l = [createImageLayer({ id: 'a', name: 'a', src: 'data:image/png;base64,AA', aspect: 1 })];
+  it('keeps only known views and drops empty lists', () => {
+    expect(pruneLayersByView({ 'view-0': l, 'view-1': l, 'view-2': [] }, ['view-0', 'view-2'])).toEqual({ 'view-0': l });
+  });
+  it('returns {} when there are no views', () => {
+    expect(pruneLayersByView({ 'view-0': l }, [])).toEqual({});
   });
 });

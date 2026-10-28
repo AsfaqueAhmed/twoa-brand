@@ -34,7 +34,7 @@ import ParentProductsTable from './list/ParentProductsTable';
 import { uploadProductImage } from '@/features/admin/inventory/infrastructure/productImageUpload';
 import ImageCropperModal from '@/features/admin/inventory/presentation/ImageCropperModal';
 import ParentImagesField from './ParentImagesField';
-import { getParentImages, nextImageTitle, primaryImageUrl, sanitizeParentImages } from '@/features/catalog/domain/parentImages';
+import { getParentImages, MAX_PARENT_IMAGES, nextImageTitle, primaryImageUrl, sanitizeParentImages } from '@/features/catalog/domain/parentImages';
 
 interface SizeRow {
   size: string;
@@ -174,11 +174,16 @@ export default function ParentProductManager() {
   };
 
   const handleCropComplete = async (compressedDataUrl: string) => {
+    const formId = form.id;
     setIsUploadingImage(true);
     setError('');
     try {
-      const url = await uploadProductImage(`parent-products/${form.id}/${Date.now()}`, compressedDataUrl);
-      setForm((prev) => ({ ...prev, images: [...prev.images, { title: nextImageTitle(prev.images), url }] }));
+      const url = await uploadProductImage(`parent-products/${formId}/${Date.now()}`, compressedDataUrl);
+      setForm((prev) =>
+        prev.id === formId && prev.images.length < MAX_PARENT_IMAGES && !prev.images.some((i) => i.url === url)
+          ? { ...prev, images: [...prev.images, { title: nextImageTitle(prev.images), url }] }
+          : prev,
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to upload image.');
     } finally {
@@ -333,7 +338,8 @@ export default function ParentProductManager() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="text-[#717171] hover:text-black border border-[#EEEEEE] p-1.5"
+                  disabled={isUploadingImage}
+                  className="text-[#717171] hover:text-black border border-[#EEEEEE] p-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <XCircle className="h-4.5 w-4.5" />
                 </button>
@@ -442,13 +448,14 @@ export default function ParentProductManager() {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="border border-[#EEEEEE] hover:border-black text-black text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-colors"
+                    disabled={isUploadingImage}
+                    className="border border-[#EEEEEE] hover:border-black text-black text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving || isPersistingCategory}
+                    disabled={isSaving || isPersistingCategory || isUploadingImage}
                     className="bg-black hover:bg-[#333333] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors disabled:bg-[#717171]"
                   >
                     {isSaving ? 'Saving...' : 'Save Parent Product'}

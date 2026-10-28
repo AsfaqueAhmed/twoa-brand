@@ -24,6 +24,7 @@ const PRIMARY_BTN = 'bg-black hover:bg-[#333333] text-white text-[11px] font-bol
 
 export default function ParentImagesField({ images, onChange, onUpload, uploading }: Props) {
   const [url, setUrl] = useState('');
+  const [dupError, setDupError] = useState('');
   const full = images.length >= MAX_PARENT_IMAGES;
 
   const setTitle = (i: number, title: string) => onChange(images.map((img, idx) => (idx === i ? { ...img, title } : img)));
@@ -38,8 +39,13 @@ export default function ParentImagesField({ images, onChange, onUpload, uploadin
   const addUrl = () => {
     const trimmed = url.trim();
     if (!trimmed || full) return;
+    if (images.some((img) => img.url === trimmed)) {
+      setDupError('That image is already in the list.');
+      return;
+    }
     onChange([...images, { title: nextImageTitle(images), url: trimmed }]);
     setUrl('');
+    setDupError('');
   };
 
   return (
@@ -57,7 +63,7 @@ export default function ParentImagesField({ images, onChange, onUpload, uploadin
       {images.length > 0 && (
         <ul className="mb-3 space-y-2">
           {images.map((img, i) => (
-            <li key={`${img.url}-${i}`} className="flex items-center gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-2.5">
+            <li key={img.url} className="flex items-center gap-3 border border-[#EEEEEE] bg-[#FAF9F6] p-2.5">
               <img
                 src={img.url}
                 alt={img.title || `Image ${i + 1}`}
@@ -105,7 +111,10 @@ export default function ParentImagesField({ images, onChange, onUpload, uploadin
           type="text"
           value={url}
           disabled={full}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setDupError('');
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -124,6 +133,11 @@ export default function ParentImagesField({ images, onChange, onUpload, uploadin
           <span>{uploading ? 'Uploading…' : 'Upload & Crop'}</span>
         </button>
       </div>
+      {dupError && (
+        <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">
+          {dupError}
+        </p>
+      )}
     </div>
   );
 }

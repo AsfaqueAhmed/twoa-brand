@@ -5,7 +5,7 @@ import { Save, ShoppingBag } from 'lucide-react';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
 import { type AlignEdge, type Layer } from '../../domain/layers';
-import { DESIGN_STORAGE_KEY, type StudioDesign, serializeDesign, validateArtworkFile } from '../../domain/design';
+import { DESIGN_STORAGE_KEY, type StudioDesign, pruneLayersByView, serializeDesign, validateArtworkFile } from '../../domain/design';
 import { HANDOFF_KEY, resolveStudioTarget } from '../../domain/studioTarget';
 import { buildViews } from '../../domain/views';
 import { fileToDataUrl } from '../../application/imageUpload';
@@ -59,7 +59,8 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const views = useMemo(() => buildViews(parent, color), [parent, color]);
   const [activeViewId, setActiveViewId] = useState('view-0');
   const view = views.find((v) => v.id === activeViewId) ?? views[0];
-  const studio = useStudioState(initialLayersByView, view?.id ?? 'view-0');
+  const initialPruned = useMemo(() => pruneLayersByView(initialLayersByView, views.map((v) => v.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const studio = useStudioState(initialPruned, view?.id ?? 'view-0');
   useEffect(() => setSelectedSize(null), [view?.id]);
   const sizes = parent.sizeOrder.filter((s) => (parent.stockBySize[s] ?? 0) > 0);
   const selectedText = studio.selected?.type === 'text' ? studio.selected : null;
@@ -154,7 +155,11 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         setStatus({ kind: 'error', text: 'This tee is no longer available in that size. Please choose another size.' });
         return;
       }
-      const design: StudioDesign = { parentProductId: parent.id, size, colorName, layersByView: Object.fromEntries(Object.entries(studio.layersByView).filter(([, ls]) => ls.length > 0)),
+      const design: StudioDesign = {
+        parentProductId: parent.id,
+        size,
+        colorName,
+        layersByView: pruneLayersByView(studio.layersByView, views.map((v) => v.id)),
       };
       try {
         sessionStorage.setItem(DESIGN_STORAGE_KEY, serializeDesign(design));

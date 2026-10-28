@@ -100,6 +100,7 @@ Vitest for the five domain modules. Browser check: load from the popup, upload, 
 - `ParentProduct` gains optional `images?: ParentImage[]` (`ParentImage = { title: string; url: string }`). `getParentImages(parent)` returns `images`, or falls back to the single `image` as `Front`, so nothing breaks before the migration is applied (reads use `select *`).
 - Rules (`sanitizeParentImages`): trim; drop blank and duplicate URLs; max 8; title max 40 chars; blank titles become `Image N` (by position).
 - The migration file is written but NOT applied until the user says so (take a DB backup first).
+- **Deploy order:** apply the migration and deploy this code together. Any `image` edit made by older code between the migration and the deploy leaves `images` stale (the reader prefers `images`); run the sync `update` from the top of the migration file right before/at deploy (it only touches rows with 0 or 1 images).
 
 ## Admin (Parent Products form)
 
