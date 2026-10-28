@@ -1,6 +1,7 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { ParentProduct } from '@/shared/domain/types';
 import { categoryColumns } from '../domain/parentCategory';
+import { getParentImages, primaryImageUrl, sanitizeParentImages } from '@/features/catalog/domain/parentImages';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
 
 export async function fetchParentProducts(): Promise<ParentProduct[]> {
@@ -19,9 +20,10 @@ export async function cascadeCategoryToProducts(parentIds: string[], category: s
 
 export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: string[]): Promise<void> {
   const cols = categoryColumns(pp.category, pp.subcategory);
+  const images = sanitizeParentImages(pp.images ?? getParentImages(pp));
   const { error: parentError } = await supabase
     .from('parent_products')
-    .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder, ...cols });
+    .upsert({ id: pp.id, name: pp.name, image: primaryImageUrl(images), images, size_order: pp.sizeOrder, ...cols });
   if (parentError) throw parentError;
 
   const stockRows = pp.sizeOrder.map((size) => ({ parent_id: pp.id, size, stock: Number(pp.stockBySize[size]) || 0 }));

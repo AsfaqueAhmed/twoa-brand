@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import type { ParentProduct } from '@/shared/domain/types';
+import { getParentImages, parseParentImages } from '@/features/catalog/domain/parentImages';
 
 function assembleParentProduct(row: Record<string, any>, stockRows: Record<string, any>[]): ParentProduct {
   const sizeOrder: string[] = Array.isArray(row.size_order) ? row.size_order : [];
@@ -8,10 +9,13 @@ function assembleParentProduct(row: Record<string, any>, stockRows: Record<strin
   for (const size of sizeOrder) {
     stockBySize[size] = stockBySizeMap.get(size) ?? 0;
   }
+  const stored = parseParentImages(row.images); // row.images is undefined before the migration is applied
+  const images = stored.length > 0 ? stored : getParentImages({ image: row.image || '' });
   return {
     id: row.id,
     name: row.name || '',
-    image: row.image || '',
+    image: images[0]?.url ?? '',
+    images,
     category: row.category || '',
     subcategory: row.subcategory || '',
     sizeOrder,
