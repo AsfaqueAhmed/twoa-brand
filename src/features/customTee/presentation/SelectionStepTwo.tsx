@@ -52,7 +52,7 @@ export default function SelectionStepTwo({ parents, products, selection, onChang
 
       <fieldset disabled={busy} className="m-0 min-w-0 border-0 p-0">
         {cards.length === 0 ? (
-          <p className="bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">No tees match this selection.</p>
+          <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">No tees match this selection.</p>
         ) : (
           <div className="overflow-y-auto p-1" style={{ maxHeight: maxHeight ? maxHeight + 8 : undefined }}>
             <div ref={gridRef} className="grid grid-cols-4 gap-3">
@@ -75,7 +75,7 @@ export default function SelectionStepTwo({ parents, products, selection, onChang
           type="button"
           disabled={busy}
           onClick={onBack}
-          className="border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black disabled:opacity-50"
+          className="rounded-lg border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black disabled:opacity-50"
         >
           Back
         </button>
@@ -84,7 +84,7 @@ export default function SelectionStepTwo({ parents, products, selection, onChang
             type="button"
             disabled={busy}
             onClick={onContinue}
-            className="flex-1 bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
+            className="flex-1 rounded-lg bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
           >
             {busy ? 'Checking stock…' : 'Continue to Design Studio'}
           </button>

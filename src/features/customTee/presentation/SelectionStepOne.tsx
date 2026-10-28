@@ -22,7 +22,7 @@ type Props = {
 };
 
 const LABEL = 'mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
-const NOTE = 'bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
+const NOTE = 'rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
 
 export default function SelectionStepOne({ parents, selection, onChange, onNext }: Props) {
   const categories = useMemo(() => eligibleCategories(parents), [parents]);
@@ -76,7 +76,7 @@ export default function SelectionStepOne({ parents, selection, onChange, onNext 
                     type="button"
                     aria-pressed={selection.size === s}
                     onClick={() => onChange(selectSize(selection, s))}
-                    className={`min-w-14 border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                    className={`min-w-14 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
                       selection.size === s ? 'border-black bg-black text-white' : 'border-[#EEEEEE] bg-white text-black hover:border-black'
                     }`}
                   >
@@ -94,7 +94,7 @@ export default function SelectionStepOne({ parents, selection, onChange, onNext 
           <button
             type="button"
             onClick={onNext}
-            className="w-full bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
+            className="w-full rounded-lg bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
           >
             Next
           </button>

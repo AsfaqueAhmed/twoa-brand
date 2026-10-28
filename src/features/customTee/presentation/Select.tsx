@@ -69,7 +69,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
         aria-controls={`${id}-list`}
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={onKeyDown}
-        className={`flex w-full items-center justify-between border bg-white px-4 py-3 text-left text-sm focus:outline-none ${
+        className={`flex w-full items-center justify-between rounded-lg border bg-white px-4 py-3 text-left text-sm focus:outline-none ${
           open ? 'border-black' : 'border-[#EEEEEE] hover:border-black focus:border-black'
         } ${value ? 'text-black' : 'text-[#717171]'}`}
       >
@@ -80,7 +80,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
         <ul
           id={`${id}-list`}
           role="listbox"
-          className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto border border-[#EEEEEE] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+          className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
         >
           {options.map((o, i) => (
             <li

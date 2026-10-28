@@ -81,21 +81,21 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
           <li>Size: {handedOff.size}</li>
         </ul>
         {/* Phase C: the Design Studio opens here with this parent and size. */}
-        <p className="bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
+        <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
           The Design Studio is coming soon. Your selection is saved for this session.
         </p>
         <div className="sticky bottom-0 mt-auto flex gap-3 bg-white pb-6 pt-8">
           <button
             type="button"
             onClick={() => setHandedOff(null)}
-            className="border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black"
+            className="rounded-lg border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black"
           >
             Change tee
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
+            className="flex-1 rounded-lg bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
           >
             Close
           </button>
@@ -106,7 +106,7 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
     body = (
       <>
         <Stepper step={step} />
-        {notice && <p role="alert" className="mb-5 bg-amber-50 px-4 py-3 text-xs text-amber-800">{notice}</p>}
+        {notice && <p role="alert" className="mb-5 rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-800">{notice}</p>}
         {step === 1 ? (
           <SelectionStepOne parents={parents} selection={selection} onChange={onChange} onNext={() => setStep(2)} />
         ) : (

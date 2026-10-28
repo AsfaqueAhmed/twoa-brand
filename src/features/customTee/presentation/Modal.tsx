@@ -33,7 +33,7 @@ export default function Modal({ onClose, title, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative flex max-h-[92vh] w-full flex-col overflow-hidden bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)] sm:w-[640px]"
+        className="relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-lg bg-white sm:rounded-lg shadow-[0_24px_64px_rgba(0,0,0,0.18)] sm:w-[640px]"
       >
         <button
           ref={closeRef}

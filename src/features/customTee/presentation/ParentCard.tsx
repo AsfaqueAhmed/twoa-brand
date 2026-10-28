@@ -11,11 +11,11 @@ export default function ParentCard({ card, size, selected, onSelect }: Props) {
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`min-w-0 border bg-white p-2 text-left transition-colors ${
+      className={`min-w-0 rounded-lg border bg-white p-2 text-left transition-colors ${
         selected ? 'border-black ring-1 ring-black' : 'border-[#EEEEEE] hover:border-black'
       }`}
     >
-      <div className="aspect-square w-full overflow-hidden bg-[#F5F5F5]">
+      <div className="aspect-square w-full overflow-hidden rounded-md bg-[#F5F5F5]">
         {photos[0] ? (
           <img src={photos[0]} alt={parent.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
