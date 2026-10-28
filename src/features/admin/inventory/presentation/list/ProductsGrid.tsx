@@ -26,8 +26,9 @@ export default function ProductsGrid(props: ProductsListProps) {
             type="button"
             aria-label={p.isFeatured ? `Unfeature ${p.name}` : `Feature ${p.name}`}
             aria-pressed={!!p.isFeatured}
+            disabled={props.featuredPendingIds.includes(p.id)}
             onClick={() => props.onToggleFeatured(p, !p.isFeatured)}
-            className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-1.5 shadow"
+            className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-1.5 shadow disabled:opacity-50"
           >
             <Star className={`h-4 w-4 ${p.isFeatured ? 'fill-amber-400 text-amber-500' : 'text-[#717171]'}`} />
           </button>

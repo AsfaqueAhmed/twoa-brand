@@ -12,8 +12,14 @@ import {
   productStats,
   activeFilterCount,
   nextStock,
+  stockBarPercent,
+  distinctParentIds,
+  attachParentProducts,
+  validateStockAmount,
   type ProductFilters,
 } from './productList';
+import { pruneSelection } from '@/features/admin/orders/domain/orderView';
+import type { ParentProduct } from '@/shared/domain/types';
 
 function mk(id: string, over: Partial<Product> = {}, stock?: Record<string, number> | null): Product {
   const stockBySize = stock === undefined ? { S: 5, M: 5 } : stock;
@@ -98,6 +104,12 @@ describe('filterProducts', () => {
     expect(filterProducts(items, f({ stock: 'low' })).map((p) => p.id)).toEqual(['p2']);
     expect(filterProducts(items, f({ stock: 'out' })).map((p) => p.id)).toEqual(['p3']);
   });
+  it('treats null stock (no parent) as out of stock', () => {
+    const noParent = [mk('n1', {}, null), mk('n2', {}, { S: 50 })];
+    expect(filterProducts(noParent, f({ stock: 'out' })).map((p) => p.id)).toEqual(['n1']);
+    expect(filterProducts(noParent, f({ stock: 'in' })).map((p) => p.id)).toEqual(['n2']);
+    expect(filterProducts(noParent, f({ stock: 'low' }))).toEqual([]);
+  });
   it('combines filters', () => {
     expect(filterProducts(items, f({ status: 'active', stock: 'out' })).map((p) => p.id)).toEqual(['p3']);
     expect(filterProducts(items, f({ status: 'inactive', stock: 'out' }))).toEqual([]);
@@ -120,6 +132,11 @@ describe('sortProducts', () => {
   it('sorts by price', () => {
     expect(sortProducts(items, 'price_asc').map((p) => p.id)).toEqual(['b', 'c', 'a']);
     expect(sortProducts(items, 'price_desc').map((p) => p.id)).toEqual(['a', 'c', 'b']);
+  });
+  it("keeps stable order for ties and for '' on a fresh copy", () => {
+    const t1 = mk('t1', { price: 5 }), t2 = mk('t2', { price: 5 }), t3 = mk('t3', { price: 5 });
+    expect(sortProducts([t2, t1, t3], 'price_asc').map((p) => p.id)).toEqual(['t2', 't1', 't3']);
+    expect(sortProducts([t3, t1, t2], '').map((p) => p.id)).toEqual(['t3', 't1', 't2']);
   });
   it('sorts by stock with null as 0', () => {
     expect(sortProducts(items, 'stock_asc').map((p) => p.id)).toEqual(['b', 'a', 'c']);
@@ -174,23 +191,70 @@ describe('nextStock', () => {
   });
   it('floors at 0 when removing', () => {
     expect(nextStock(5, 'remove', 9)).toBe(0);
+    expect(nextStock(0, 'remove', 1)).toBe(0);
+  });
+  it('handles zero amounts', () => {
+    expect(nextStock(5, 'set', 0)).toBe(0);
+    expect(nextStock(5, 'add', 0)).toBe(5);
+    expect(nextStock(5, 'remove', 0)).toBe(5);
   });
 });
 
-describe('stockBarPercent / distinctParentIds', () => {
-  it('computes bar width relative to the max', async () => {
-    const { stockBarPercent } = await import('./productList');
+describe('stockBarPercent', () => {
+  it('computes bar width relative to the max', () => {
     expect(stockBarPercent(null)).toBe(0);
     expect(stockBarPercent(0)).toBe(0);
     expect(stockBarPercent(30)).toBe(50);
     expect(stockBarPercent(500)).toBe(100);
   });
+});
 
-  it('collects distinct parent ids and counts parentless products', async () => {
-    const { distinctParentIds } = await import('./productList');
-    const mk = (id: string, parentProductId?: string) => ({ id, parentProductId }) as never;
-    const res = distinctParentIds([mk('a', 'p1'), mk('b', 'p1'), mk('c'), mk('d', 'p2')], ['a', 'b', 'c']);
+describe('distinctParentIds', () => {
+  const lite = (id: string, parentProductId?: string) => mk(id, { parentProductId }, null);
+  it('collects distinct parent ids and counts parentless products', () => {
+    const res = distinctParentIds([lite('a', 'p1'), lite('b', 'p1'), lite('c'), lite('d', 'p2')], ['a', 'b', 'c']);
     expect(res.parentIds).toEqual(['p1']);
     expect(res.skipped).toBe(1);
+  });
+});
+
+describe('attachParentProducts', () => {
+  const parent = (id: string): ParentProduct => ({ id, name: id, sizeOrder: ['S'], stockBySize: { S: 4 } });
+  it('attaches the matching parent and leaves others undefined', () => {
+    const items = [mk('a', { parentProductId: 'p1' }, null), mk('b', {}, null), mk('c', { parentProductId: 'missing' }, null)];
+    const out = attachParentProducts(items, [parent('p1')]);
+    expect(out[0].parentProduct?.id).toBe('p1');
+    expect(out[1].parentProduct).toBeUndefined();
+    expect(out[2].parentProduct).toBeUndefined();
+    expect(productTotalStock(out[0])).toBe(4);
+  });
+  it('does not mutate inputs and replaces stale parents', () => {
+    const items = [mk('a', { parentProductId: 'p1' }, { S: 99 })];
+    const out = attachParentProducts(items, [parent('p1')]);
+    expect(out[0]).not.toBe(items[0]);
+    expect(items[0].parentProduct?.stockBySize.S).toBe(99);
+    expect(out[0].parentProduct?.stockBySize.S).toBe(4);
+  });
+});
+
+describe('selection pruning against the filtered list', () => {
+  it('drops selected ids hidden by the current filters', () => {
+    const items = [mk('p1', { category: 'Hats' }), mk('p2', { category: 'Shirts' }), mk('p3', { category: 'Hats' })];
+    const visible = filterProducts(items, f({ category: 'Hats' })).map((p) => p.id);
+    expect(pruneSelection(['p1', 'p2', 'p3'], visible)).toEqual(['p1', 'p3']);
+  });
+  it('keeps the same array when nothing is hidden', () => {
+    const sel = ['p1'];
+    expect(pruneSelection(sel, ['p1', 'p2'])).toBe(sel);
+  });
+});
+
+describe('validateStockAmount', () => {
+  it('accepts whole numbers of 0 or more', () => {
+    expect(validateStockAmount(0)).toBeNull();
+    expect(validateStockAmount(12)).toBeNull();
+  });
+  it('rejects negatives, fractions and non-finite values', () => {
+    for (const bad of [-1, 1.5, NaN, Infinity]) expect(validateStockAmount(bad)).toMatch(/whole number/);
   });
 });

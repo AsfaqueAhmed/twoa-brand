@@ -3,16 +3,18 @@
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-type Props = { title: string; onClose: () => void; children: React.ReactNode };
+type Props = { title: string; onClose: () => void; busy?: boolean; children: React.ReactNode };
 
 // Portal dialog: Escape + backdrop close, focuses the first control on open.
-export default function BulkModalShell({ title, onClose, children }: Props) {
+export default function BulkModalShell({ title, onClose, busy = false, children }: Props) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
 
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>('select, input, button:not([data-close])')?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !busyRef.current && onClose();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -21,7 +23,7 @@ export default function BulkModalShell({ title, onClose, children }: Props) {
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#1A1A1A]/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#1A1A1A]/40" onClick={() => { if (!busy) onClose(); }} />
       <div
         ref={panelRef}
         role="dialog"

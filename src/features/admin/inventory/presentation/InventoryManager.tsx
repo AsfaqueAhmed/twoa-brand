@@ -20,7 +20,6 @@ import { fetchParentProducts } from '@/features/admin/parentProducts/infrastruct
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
 import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
-import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { pruneSelection } from '@/features/admin/orders/domain/orderView';
 import {
   adjustParentStock,
@@ -32,6 +31,7 @@ import {
 import {
   DEFAULT_FILTERS,
   activeFilterCount,
+  attachParentProducts,
   distinctParentIds,
   filterProducts,
   paginate,
@@ -54,13 +54,22 @@ export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const hasLoadedRef = useRef(false);
+  const [listError, setListError] = useState('');
+
+  // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
+  const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
 
   const refreshProducts = useCallback(async () => {
     // Only the first load shows the spinner; later reloads are silent.
     if (!hasLoadedRef.current) setProductsLoading(true);
     try {
-      setProducts(await fetchAllProductsForAdmin());
+      const [prods, parents] = await Promise.all([fetchAllProductsForAdmin(), fetchParentProducts()]);
+      setParentProducts(parents);
+      setProducts(attachParentProducts(prods, parents));
       hasLoadedRef.current = true;
+    } catch (err) {
+      console.error('Error fetching products: ', err);
+      setListError('Failed to load products.');
     } finally {
       setProductsLoading(false);
     }
@@ -80,21 +89,6 @@ export default function InventoryManager() {
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
   const [productGallery, setProductGallery] = useState<string[]>([]);
   const [productHighlights, setProductHighlights] = useState<ProductHighlight[]>([]);
-
-  // Parent products (own the canonical size list + per-size stock, managed on the Parent Products tab)
-  const [parentProducts, setParentProducts] = useState<ParentProduct[]>([]);
-
-  const loadParentProducts = useCallback(async () => {
-    try {
-      setParentProducts(await fetchParentProducts());
-    } catch (err) {
-      console.error('Error fetching parent products: ', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadParentProducts();
-  }, [loadParentProducts]);
 
   // Size chart templates (reusable across products, managed on the Size Charts tab)
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>([]);
@@ -440,18 +434,15 @@ export default function InventoryManager() {
   const [sort, setSort] = useState<ProductSort>('');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [listError, setListError] = useState('');
 
   const filtered = useMemo(() => sortProducts(filterProducts(products, filters), sort), [products, filters, sort]);
   const pageData = paginate(filtered, page, PAGE_SIZE);
   const stats = useMemo(() => productStats(products), [products]);
 
-  // Drop selected ids that no longer exist after a reload.
+  // Selection only ever covers products visible under the current filters (all pages).
   useEffect(() => {
-    setSelectedIds((prev) =>
-      pruneSelection(prev, products.map((p) => p.id))
-    );
-  }, [products]);
+    setSelectedIds((prev) => pruneSelection(prev, filtered.map((p) => p.id)));
+  }, [filtered]);
 
   const pageIds = pageData.items.map((p) => p.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
@@ -515,7 +506,10 @@ export default function InventoryManager() {
   };
 
   // Optimistic featured toggle; reverts and reports inline on failure.
+  const [featuredPendingIds, setFeaturedPendingIds] = useState<string[]>([]);
   const handleToggleFeatured = async (p: Product, featured: boolean) => {
+    if (featuredPendingIds.includes(p.id)) return;
+    setFeaturedPendingIds((prev) => [...prev, p.id]);
     const apply = (value: boolean) =>
       setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, isFeatured: value } : x)));
     apply(featured);
@@ -524,6 +518,8 @@ export default function InventoryManager() {
     } catch (err: any) {
       apply(!featured);
       setListError(err.message || `Failed to update featured flag for "${p.name}".`);
+    } finally {
+      setFeaturedPendingIds((prev) => prev.filter((x) => x !== p.id));
     }
   };
 
@@ -539,6 +535,7 @@ export default function InventoryManager() {
     onSplit: handleSplitVariants,
     onDelete: (p) => handleDeleteProduct(p.id),
     onToggleFeatured: handleToggleFeatured,
+    featuredPendingIds,
     splittingProductId,
   };
 

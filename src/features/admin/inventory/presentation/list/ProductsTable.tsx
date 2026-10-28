@@ -19,6 +19,7 @@ export type ProductsListProps = {
   onSplit: (p: Product) => void;
   onDelete: (p: Product) => void;
   onToggleFeatured: (p: Product, featured: boolean) => void;
+  featuredPendingIds: string[];
   splittingProductId: string | null;
 };
 
@@ -138,6 +139,7 @@ export default function ProductsTable(props: ProductsListProps) {
                     <FeaturedSwitch
                       checked={!!p.isFeatured}
                       label={`Featured: ${p.name}`}
+                      disabled={props.featuredPendingIds.includes(p.id)}
                       onChange={(next) => props.onToggleFeatured(p, next)}
                     />
                   </td>

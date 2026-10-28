@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Order, Product } from '@/shared/domain/types';
 import { fetchAllOrders } from '@/features/orders/infrastructure/firestoreOrdersRepository';
 import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { attachParentProducts } from '@/features/admin/inventory/domain/productList';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
 
 export function useAdminData(opts: { products?: boolean } = {}) {
@@ -26,9 +27,8 @@ export function useAdminData(opts: { products?: boolean } = {}) {
           withProducts ? fetchAllParentProducts() : Promise.resolve([]),
         ]);
         if (cancelled) return;
-        const parentById = new Map(pp.map((x) => [x.id, x]));
         setOrders(o);
-        setProducts(p.map((prod) => ({ ...prod, parentProduct: prod.parentProductId ? parentById.get(prod.parentProductId) : undefined })));
+        setProducts(attachParentProducts(p, pp));
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load data');
       } finally {

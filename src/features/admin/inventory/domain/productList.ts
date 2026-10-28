@@ -1,4 +1,4 @@
-import type { Product } from '@/shared/domain/types';
+import type { ParentProduct, Product } from '@/shared/domain/types';
 
 export type StockLevel = 'in' | 'low' | 'out';
 export const LOW_STOCK_THRESHOLD = 10;
@@ -124,4 +124,14 @@ export function distinctParentIds(products: Product[], selectedIds: string[]) {
     else skipped += 1;
   }
   return { parentIds: [...parents], skipped };
+}
+
+// Joins each product with its parent product (the source of sizes and stock).
+export function attachParentProducts(products: Product[], parents: ParentProduct[]): Product[] {
+  const byId = new Map(parents.map((pp) => [pp.id, pp]));
+  return products.map((p) => ({ ...p, parentProduct: p.parentProductId ? byId.get(p.parentProductId) : undefined }));
+}
+
+export function validateStockAmount(amount: number): string | null {
+  return Number.isInteger(amount) && amount >= 0 ? null : 'Enter a whole number of 0 or more.';
 }

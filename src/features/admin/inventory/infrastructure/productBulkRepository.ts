@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
-import { nextStock, type StockAdjustMode } from '../domain/productList';
+import { nextStock, validateStockAmount, type StockAdjustMode } from '../domain/productList';
 
 export async function setProductFeatured(id: string, featured: boolean): Promise<void> {
   const { error } = await supabase.from('products').update({ is_featured: featured }).eq('id', id);
@@ -29,7 +29,8 @@ export async function deleteProducts(ids: string[]): Promise<void> {
 
 // Read-modify-write per size row; concurrent edits to the same rows can race.
 export async function adjustParentStock(parentIds: string[], mode: StockAdjustMode, amount: number): Promise<void> {
-  if (!Number.isInteger(amount) || amount < 0) throw new Error('Enter a whole number of 0 or more.');
+  const invalid = validateStockAmount(amount);
+  if (invalid) throw new Error(invalid);
   if (parentIds.length === 0) return;
 
   const { data, error } = await supabase

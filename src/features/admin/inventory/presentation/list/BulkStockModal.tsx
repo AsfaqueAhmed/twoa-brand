@@ -25,7 +25,7 @@ export default function BulkStockModal({ parentCount, skipped, busy, error, onAp
   const valid = /^\d+$/.test(amount.trim());
 
   return (
-    <BulkModalShell title="Update stock" onClose={onClose}>
+    <BulkModalShell title="Update stock" onClose={onClose} busy={busy}>
       <p className="mb-2 text-xs text-[#717171]">
         Stock is shared by every product of a parent product. The change is applied to every size of each parent product, so all products linked to it are affected.
       </p>
@@ -54,7 +54,7 @@ export default function BulkStockModal({ parentCount, skipped, busy, error, onAp
       />
       {error && <p role="alert" className="mt-3 text-xs font-medium text-red-700">{error}</p>}
       <div className="mt-6 flex justify-end gap-2">
-        <button type="button" data-close onClick={onClose} className="rounded-lg border border-[#EEEEEE] px-4 py-2 text-sm text-black hover:border-black">Cancel</button>
+        <button type="button" data-close disabled={busy} onClick={onClose} className="rounded-lg border border-[#EEEEEE] px-4 py-2 text-sm text-black hover:border-black disabled:opacity-40">Cancel</button>
         <button
           type="button"
           disabled={!valid || parentCount === 0 || busy}
