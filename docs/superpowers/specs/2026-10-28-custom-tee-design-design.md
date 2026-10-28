@@ -111,3 +111,28 @@ The single Image field becomes an **Images** list: each row has a thumbnail, a t
 - `buildViews(parent, color)` returns one view per image: `id = "view-<index>"`, `label = title`, `image = url` (the first view uses the selected color variant's image when it has one).
 - Layers are **per view**. `useStudioState(initialLayersByView, viewId)` holds `Record<viewId, Layer[]>` in one undo history; all edit operations apply to the active view. Switching views clears nothing; the selection is naturally per view.
 - `StudioDesign` stores `layersByView`. `parseDesign` also accepts the legacy `layers` array and loads it into `view-0`. View keys must match `view-<digits>`; ids are validated and de-duplicated per view; empty views are not saved.
+
+---
+
+# Phase C2: Figma/Canva-style studio controls
+
+Black-and-white styling is unchanged (guides are black lines with a white outline). Floating toolbar, duplicate/copy-paste and a print-area guide are out of scope.
+
+## Panels
+
+- **Left Text tab only adds text:** "Add a heading", "Add a subheading", "Add body text" presets. It never shows editing fields for a selected layer.
+- **Right bar = selection-aware Properties** (between the product panel and the layers list, shown only with a selection): text layer -> content, font, size, bold, italic, align, letter spacing, color, opacity; image layer -> opacity; 2+ layers or a group -> group/ungroup, delete, opacity (all). For any selection: Align (and Distribute when 3+ units). A single layer also gets Flip and Scale.
+
+## Layer model additions
+
+- All layers: `opacity` (0.05..1, default 1), optional `groupId`. Text: `bold`, `italic`, `align` (left|center|right, default center), `letterSpacing` (em, -0.05..0.5, default 0); text may be multi-line, max 200 chars. Older designs load with defaults.
+- **Groups are flat:** layers sharing a `groupId` (>= 2 members, contiguous in the stack). Clicking a member selects the whole group; double-click selects just that member. Group/ungroup: Cmd/Ctrl+G, Cmd/Ctrl+Shift+G. A group moves, scales and rotates as one unit (scale/rotate about the group's bounding box center; members keep relative placement). Stack "units" (a group or a lone layer) are what the layers list reorders.
+- Selection state is `selectedIds`. Marquee, shift/cmd-click and Cmd/Ctrl+A build it; whole groups are always selected together except via double-click.
+
+## Canvas behavior
+
+- Snapping while dragging: the selection's bounding box edges/center snap to canvas edges/center and other layers' edges/centers within 6 screen px, with black guide lines; Alt disables. Rotation snaps to 15 degree multiples within 4 degrees (Shift forces). A small readout shows angle or scale percent while rotating/scaling.
+- Align: one unit aligns to the canvas; 2+ units align to the selection's bounds; Distribute needs 3+ units (equal gaps, first/last fixed).
+- Text: double-click a text layer to edit in place (textarea overlay). Click away commits; Escape cancels; Enter adds a line.
+- Viewport: wheel pans, Ctrl/Cmd+wheel (and trackpad pinch) zooms about the cursor, Space+drag or middle-drag pans; zoom 25%-400%; Fit button; clicking the percent resets to 100%.
+- Arrow keys nudge the selection 1 px (Shift 10 px); Delete removes; Escape clears the selection.
