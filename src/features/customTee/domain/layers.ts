@@ -12,6 +12,7 @@ export type LayerBase = {
   flipX: boolean;
   flipY: boolean;
   visible: boolean;
+  opacity?: number;
   groupId?: string;
 };
 
@@ -81,6 +82,7 @@ export function clampLayer<T extends Layer>(layer: T): T {
     y: clamp(layer.y, 0, 1),
     scale: clamp(layer.scale, MIN_SCALE, MAX_SCALE),
     rotation: normalizeRotation(layer.rotation),
+    ...(layer.opacity !== undefined ? { opacity: clamp(layer.opacity, 0.05, 1) } : {}),
   };
   if (out.type === 'text') {
     out.letterSpacing = clamp(out.letterSpacing, MIN_LETTER_SPACING, MAX_LETTER_SPACING);
