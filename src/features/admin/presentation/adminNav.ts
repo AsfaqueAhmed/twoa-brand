@@ -1,6 +1,6 @@
 import {
   Home, Package, Layers, ClipboardList, RotateCcw, Users, Ticket, Image as ImageIcon,
-  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, type LucideIcon,
+  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, Download, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavLeaf { label: string; href: string }
@@ -48,7 +48,13 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Customer Insights', icon: UserSearch, href: '/admin/reports/customers' },
     ],
   },
-  { title: 'Settings', items: [{ label: 'Shipping Zones', icon: Truck, href: '/admin/shipping' }] },
+  {
+    title: 'Settings',
+    items: [
+      { label: 'Shipping Zones', icon: Truck, href: '/admin/shipping' },
+      { label: 'Data Export', icon: Download, href: '/admin/data-export' },
+    ],
+  },
 ];
 
 const ALL_HREFS: string[] = NAV_SECTIONS.flatMap((s) =>

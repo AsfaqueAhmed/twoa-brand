@@ -15,6 +15,9 @@ describe('activeHref', () => {
   it('matches the categories page', () => {
     expect(activeHref('/admin/categories')).toBe('/admin/categories');
   });
+  it('matches the data export page', () => {
+    expect(activeHref('/admin/data-export')).toBe('/admin/data-export');
+  });
   it('returns null for unknown routes', () => {
     expect(activeHref('/admin/nope')).toBeNull();
   });
