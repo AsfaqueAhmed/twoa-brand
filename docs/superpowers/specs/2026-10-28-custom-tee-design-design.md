@@ -3,7 +3,7 @@
 ## Roadmap (one spec per phase)
 
 - **A. Picker (this spec):** `/custom-tee` four-step selection, ends at a hand-off screen.
-- **B. Parent view images:** admin uploads front/back/left/right images on a Parent Product (migration + admin UI + `ParentProduct` type). Prerequisite for studio views.
+- **B. Parent view images (spec below, "Phase B"):** admin uploads multiple titled images on a Parent Product (migration + admin UI + `ParentProduct` type); the studio views come from them.
 - **C. Design Studio (spec below, "Phase C"):** the reference layout (left tool rail, canvas, right panel): image + text layers, layers list (visibility, reorder), position/scale/align/flip, undo/redo, zoom/fullscreen. Front view only until phase B; the view tabs render from a `views` list that phase B extends.
 - **D. Commerce:** price source, Add to Cart, artwork upload storage, order persistence, Free Gallery.
 
@@ -89,3 +89,24 @@ Save re-fetches stock and checks the chosen size is still eligible; on success i
 ## Testing
 
 Vitest for the five domain modules. Browser check: load from the popup, upload, drag/scale/rotate, text, layers (hide/reorder/delete), align/flip, undo/redo, zoom, save + reload restore, invalid hand-off redirect, stock-gone on Save, narrow width.
+
+---
+
+# Phase B: Multiple titled parent images
+
+## Data
+
+- New additive column `parent_products.images jsonb not null default '[]'`: ordered `[{ "title": string, "url": string }]`. The existing `image` column stays and always mirrors the first image's URL (the admin save writes both), so the popup picker, cards, storefront and `selectableParents` are unchanged. The migration backfills `[{ "title": "Front", "url": image }]` where `image <> ''`.
+- `ParentProduct` gains optional `images?: ParentImage[]` (`ParentImage = { title: string; url: string }`). `getParentImages(parent)` returns `images`, or falls back to the single `image` as `Front`, so nothing breaks before the migration is applied (reads use `select *`).
+- Rules (`sanitizeParentImages`): trim; drop blank and duplicate URLs; max 8; title max 40 chars; blank titles become `Image N` (by position).
+- The migration file is written but NOT applied until the user says so (take a DB backup first).
+
+## Admin (Parent Products form)
+
+The single Image field becomes an **Images** list: each row has a thumbnail, a title input (free text, datalist suggestions Front/Back/Left/Right), move up/down and remove; row 1 is badged "Primary". Below the list: paste-URL add, and "Upload & Crop" (existing cropper, one image per upload). New images get the first unused suggested title. Max 8. Saving writes `images` and `image = images[0].url`.
+
+## Studio (views and per-view layers)
+
+- `buildViews(parent, color)` returns one view per image: `id = "view-<index>"`, `label = title`, `image = url` (the first view uses the selected color variant's image when it has one).
+- Layers are **per view**. `useStudioState(initialLayersByView, viewId)` holds `Record<viewId, Layer[]>` in one undo history; all edit operations apply to the active view. Switching views clears nothing; the selection is naturally per view.
+- `StudioDesign` stores `layersByView`. `parseDesign` also accepts the legacy `layers` array and loads it into `view-0`. View keys must match `view-<digits>`; ids are validated and de-duplicated per view; empty views are not saved.
