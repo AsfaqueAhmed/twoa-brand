@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import TrustStrip from '@/features/catalog/presentation/TrustStrip';
 import { useCustomTeeData } from '../../application/useCustomTeeData';
 import { buildParentCard } from '../../domain/cards';
 import { DESIGN_STORAGE_KEY, parseDesign } from '../../domain/design';
@@ -61,17 +60,14 @@ export default function StudioPage() {
   const initialSize = restore && (parent.stockBySize[restore.size] ?? 0) > 0 ? restore.size : ready.size;
 
   return (
-    <>
-      <StudioEditor
-        key={`${parent.id}:${ready.size}`}
-        parent={parent}
-        card={card}
-        initialSize={initialSize}
-        initialColor={restore?.colorName}
-        initialLayers={restore?.layers ?? []}
-        refreshParents={refreshParents}
-      />
-      <TrustStrip />
-    </>
+    <StudioEditor
+      key={`${parent.id}:${ready.size}`}
+      parent={parent}
+      card={card}
+      initialSize={initialSize}
+      initialColor={restore?.colorName}
+      initialLayers={restore?.layers ?? []}
+      refreshParents={refreshParents}
+    />
   );
 }

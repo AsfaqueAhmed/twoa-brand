@@ -74,7 +74,7 @@ A full page `/custom-tee/studio` (under the site navbar), matching the approved 
 - Zoom 50%-200% in 25% steps changes the canvas width; fullscreen uses the Fullscreen API on the studio root.
 - Design tab: upload (PNG/JPG/WebP, max 10 MB; drag-and-drop or click; multiple files). Images are downscaled to max 1600px and stored as data URLs. Images tab: uploaded asset library (click adds another layer). Text tab: add text, font (white custom dropdown), color; edits the selected text layer. Layers tab: the same layers list as the right panel.
 - Right panel: product card (parent name, SKU code, category/subcategory), Color swatches (from linked product variants; selecting one swaps the base image when the variant has an image), Size buttons (sizes with stock), Design Layers list (select, show/hide, delete, drag-to-reorder + up/down), Position & Scale (align x6, flip x2, scale slider + % box; disabled with no selection), Save Design, a disabled "Add to Cart (coming soon)".
-- Footer: the existing `TrustStrip`.
+- No footer strip on the studio page.
 
 ## Save
 
