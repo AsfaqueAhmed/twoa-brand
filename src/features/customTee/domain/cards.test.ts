@@ -1,0 +1,37 @@
+import { describe, it, expect } from 'vitest';
+import type { ParentProduct, Product } from '@/shared/domain/types';
+import { buildParentCard } from './cards';
+
+const parent: ParentProduct = {
+  id: 'abc123def',
+  name: 'Premium Oversized Tee',
+  image: 'p.jpg',
+  category: 'T-Shirts',
+  subcategory: 'Graphic',
+  sizeOrder: ['M'],
+  stockBySize: { M: 45 },
+};
+
+const product = (over: Partial<Product>): Product => ({
+  id: 'x', name: 'x', description: '', price: 1, image: '', category: 'T-Shirts', rating: 5, ...over,
+});
+
+describe('buildParentCard', () => {
+  it('derives code, stock, deduped photos and colors from linked products only', () => {
+    const products = [
+      product({ id: '1', parentProductId: 'abc123def', image: 'p.jpg', gallery: ['g1.jpg', ''], variants: [{ id: 'v1', name: 'Forest Green', colorCode: '#0a0' }] }),
+      product({ id: '2', parentProductId: 'abc123def', image: 'b.jpg', variants: [{ id: 'v2', name: 'forest green' }, { id: 'v3', name: 'Black' }] }),
+      product({ id: '3', parentProductId: 'other', image: 'nope.jpg', variants: [{ id: 'v4', name: 'Red' }] }),
+    ];
+    const card = buildParentCard(parent, products, 'M');
+    expect(card.code).toBe('ABC123');
+    expect(card.stock).toBe(45);
+    expect(card.photos).toEqual(['p.jpg', 'g1.jpg', 'b.jpg']);
+    expect(card.colors.map((c) => c.name)).toEqual(['Forest Green', 'Black']);
+  });
+  it('handles a parent with no linked products', () => {
+    const card = buildParentCard({ ...parent, image: '' }, [], 'M');
+    expect(card.photos).toEqual([]);
+    expect(card.colors).toEqual([]);
+  });
+});
