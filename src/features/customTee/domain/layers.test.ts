@@ -159,3 +159,11 @@ describe('appearance and text style fields', () => {
     expect(updateLayer(layers, 't', { opacity: 1, bold: false })).toBe(layers);
   });
 });
+
+describe('text length limit', () => {
+  it('updateLayer truncates text to MAX_TEXT_LENGTH', () => {
+    const t = createTextLayer({ id: 't', text: 'hi' });
+    const out = updateLayer([t], 't', { text: 'x'.repeat(300) });
+    expect((out[0] as { text: string }).text).toHaveLength(200);
+  });
+});

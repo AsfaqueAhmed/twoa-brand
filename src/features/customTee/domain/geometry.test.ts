@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createImageLayer, type Layer } from './layers';
+import { createImageLayer, MIN_SCALE, type Layer } from './layers';
 import {
   layerBox,
   unionBox,
@@ -10,6 +10,9 @@ import {
   rotateLayersAround,
   alignLayers,
   distributeLayers,
+  limitMoveDelta,
+  limitScaleFactor,
+  rotationFits,
 } from './geometry';
 
 const canvas = { w: 100, h: 100 };
@@ -111,5 +114,39 @@ describe('distributeLayers', () => {
   it('needs at least three units', () => {
     const layers = [L('a', 0.2), L('b', 0.6)];
     expect(distributeLayers(layers, ['a', 'b'], sizes, 'horizontal', canvas)).toBe(layers);
+  });
+});
+
+describe('group limits', () => {
+  const group = [L('a', 0.2, 0.5), L('b', 0.6, 0.5)];
+
+  it('limitMoveDelta shrinks the shared delta so every center stays inside', () => {
+    const r = limitMoveDelta(group, ['a', 'b'], 0.9, 0);
+    expect(r.dx).toBeCloseTo(0.4);
+    expect(r.dy).toBe(0);
+    expect(limitMoveDelta(group, ['a', 'b'], -0.5, 0.2)).toEqual({ dx: -0.2, dy: 0.2 });
+  });
+
+  it('moveLayersBy keeps members spaced at the edge', () => {
+    const out = moveLayersBy(group, ['a', 'b'], 0.9, 0);
+    expect(byId(out, 'b').x).toBeCloseTo(1);
+    expect(byId(out, 'b').x - byId(out, 'a').x).toBeCloseTo(0.4);
+  });
+
+  it('limitScaleFactor respects scale bounds and canvas edges', () => {
+    const ls = [L('a', 0.4, 0.5, { scale: 0.4 }), L('b', 0.6, 0.5, { scale: 0.4 })];
+    expect(limitScaleFactor(ls, ['a', 'b'], 10, { x: 0.5, y: 0.5 })).toBeCloseTo(3.75);
+    expect(limitScaleFactor(ls, ['a', 'b'], 0.0001, { x: 0.5, y: 0.5 })).toBeCloseTo(MIN_SCALE / 0.4);
+    expect(limitScaleFactor(ls, ['a', 'b'], 1.2, { x: 0.5, y: 0.5 })).toBe(1.2);
+    const wide = [L('a', 0.1, 0.5, { scale: 0.1 }), L('b', 0.9, 0.5, { scale: 0.1 })];
+    expect(limitScaleFactor(wide, ['a', 'b'], 3, { x: 0.5, y: 0.5 })).toBeCloseTo(1.25);
+  });
+
+  it('rotationFits is false when a rotated center would leave the canvas', () => {
+    const ls = [L('a', 0.1, 0.5), L('b', 0.9, 0.5)];
+    expect(rotationFits(ls, ['a', 'b'], 180, { x: 0.5, y: 0.5 }, canvas)).toBe(true);
+    expect(rotationFits(ls, ['a', 'b'], 45, { x: 0.5, y: 0.5 }, canvas)).toBe(true);
+    const corner = [L('a', 0.05, 0.05), L('b', 0.95, 0.95)];
+    expect(rotationFits(corner, ['a', 'b'], 45, { x: 0.5, y: 0.5 }, canvas)).toBe(false);
   });
 });

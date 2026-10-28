@@ -1,9 +1,9 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
-import { type Layer, type LayerPatch, TEXT_FONT_FRACTION, normalizeRotation, scaleToPercent } from '../../domain/layers';
+import { type Layer, type LayerPatch, MAX_TEXT_LENGTH, TEXT_FONT_FRACTION, normalizeRotation, scaleToPercent } from '../../domain/layers';
 import { expandToGroups, isSingleUnit } from '../../domain/grouping';
-import { type Box, type CanvasPx, type Size, boxCenter, boxesIntersect, layerBox, rotateLayersAround, scaleLayersAround, unionBox } from '../../domain/geometry';
+import { type Box, type CanvasPx, type Size, boxCenter, boxesIntersect, layerBox, limitMoveDelta, limitScaleFactor, rotateLayersAround, rotationFits, scaleLayersAround, unionBox } from '../../domain/geometry';
 import { type Guide, snapAngle, snapBox } from '../../domain/snapping';
 import { type Viewport, clampZoom, fitViewport, panBy, zoomAt } from '../../domain/viewport';
 
@@ -22,12 +22,13 @@ type Props = {
   onZoomChange: (zoom: number) => void;
 };
 
-type Drag =
+type Drag = { pointerId: number } & (
   | { kind: 'move'; ids: string[]; startNx: number; startNy: number; start: Record<string, { x: number; y: number }>; startBox: Box; others: Box[] }
   | { kind: 'scale'; ids: string[]; anchor: { x: number; y: number }; cx: number; cy: number; startDist: number; startLayers: Layer[]; single: boolean }
-  | { kind: 'rotate'; ids: string[]; anchor: { x: number; y: number }; cx: number; cy: number; startAngle: number; startLayers: Layer[]; single: boolean }
+  | { kind: 'rotate'; ids: string[]; anchor: { x: number; y: number }; cx: number; cy: number; startAngle: number; startLayers: Layer[]; single: boolean; lastDelta: number }
   | { kind: 'pan'; startX: number; startY: number; panX: number; panY: number }
-  | { kind: 'marquee'; startNx: number; startNy: number; additive: boolean; base: string[] };
+  | { kind: 'marquee'; startNx: number; startNy: number; additive: boolean; base: string[] }
+);
 
 const BASE_WIDTH_PX = 520;
 const SNAP_PX = 6;
@@ -112,9 +113,11 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      const zoomKey = e.ctrlKey || e.metaKey;
+      if (!zoomKey && !window.matchMedia('(min-width: 1024px)').matches) return; // narrow layouts: let the page scroll
       e.preventDefault();
       const current = vpRef.current;
-      if (e.ctrlKey || e.metaKey) {
+      if (zoomKey) {
         const rect = el.getBoundingClientRect();
         applyViewport(zoomAt(current, current.zoom * Math.exp(-e.deltaY * 0.01), { x: e.clientX - rect.left, y: e.clientY - rect.top }));
       } else {
@@ -128,8 +131,10 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
   // Space + drag pans.
   useEffect(() => {
     const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    const inCanvasScope = (t: EventTarget | null) =>
+      t === document.body || (t instanceof HTMLElement && t.closest('[data-canvas-container]') !== null);
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !typing(e.target)) {
+      if (e.code === 'Space' && !typing(e.target) && inCanvasScope(e.target)) {
         e.preventDefault();
         setSpaceDown(true);
       }
@@ -139,11 +144,24 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     };
     document.addEventListener('keydown', down);
     document.addEventListener('keyup', up);
+    const reset = () => setSpaceDown(false);
+    const onVisibility = () => {
+      if (document.hidden) reset();
+    };
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      window.removeEventListener('blur', reset);
+      document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('keydown', down);
       document.removeEventListener('keyup', up);
     };
   }, []);
+
+  // Stop editing text whose layer was removed or hidden.
+  useEffect(() => {
+    if (editingId !== null && !layers.some((l) => l.id === editingId && l.visible)) setEditingId(null);
+  }, [layers, editingId]);
 
   const stageRect = () => stageRef.current!.getBoundingClientRect();
   const norm = (e: { clientX: number; clientY: number }) => {
@@ -159,6 +177,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     if (!startBox) return;
     const { nx, ny } = norm(e);
     drag.current = {
+      pointerId: e.pointerId,
       kind: 'move',
       ids,
       startNx: nx,
@@ -171,6 +190,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 
   const onLayerPointerDown = (e: React.PointerEvent, layer: Layer) => {
     e.stopPropagation();
+    if (drag.current) return; // a second finger / button while a drag is active
     if (editingId === layer.id) return; // let the text field handle it
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -190,6 +210,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 
   const onHandlePointerDown = (e: React.PointerEvent, kind: 'scale' | 'rotate') => {
     e.stopPropagation();
+    if (drag.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const picked = layers.filter((l) => selectedIds.includes(l.id));
     const union = unionBox(boxesOf(picked));
@@ -200,30 +221,31 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     const cx = r.left + anchor.x * r.width;
     const cy = r.top + anchor.y * r.height;
     if (kind === 'scale') {
-      drag.current = { kind, ids: selectedIds, anchor, cx, cy, startDist: Math.max(1, Math.hypot(e.clientX - cx, e.clientY - cy)), startLayers: picked, single };
+      drag.current = { pointerId: e.pointerId, kind, ids: selectedIds, anchor, cx, cy, startDist: Math.max(1, Math.hypot(e.clientX - cx, e.clientY - cy)), startLayers: picked, single };
     } else {
-      drag.current = { kind, ids: selectedIds, anchor, cx, cy, startAngle: toDeg(Math.atan2(e.clientY - cy, e.clientX - cx)), startLayers: picked, single };
+      drag.current = { pointerId: e.pointerId, kind, ids: selectedIds, anchor, cx, cy, startAngle: toDeg(Math.atan2(e.clientY - cy, e.clientX - cx)), startLayers: picked, single, lastDelta: 0 };
     }
   };
 
   const onContainerPointerDown = (e: React.PointerEvent) => {
     if (e.target !== e.currentTarget && !(e.target as HTMLElement).hasAttribute('data-stage-bg')) return;
+    if (drag.current) return;
     if (e.button === 1 || (e.button === 0 && spaceDown)) {
       e.currentTarget.setPointerCapture(e.pointerId);
-      drag.current = { kind: 'pan', startX: e.clientX, startY: e.clientY, panX: vp.panX, panY: vp.panY };
+      drag.current = { pointerId: e.pointerId, kind: 'pan', startX: e.clientX, startY: e.clientY, panX: vp.panX, panY: vp.panY };
       return;
     }
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const { nx, ny } = norm(e);
     const additive = hasModifier(e);
-    drag.current = { kind: 'marquee', startNx: nx, startNy: ny, additive, base: additive ? selectedIds : [] };
+    drag.current = { pointerId: e.pointerId, kind: 'marquee', startNx: nx, startNy: ny, additive, base: additive ? selectedIds : [] };
     if (!additive) onSelect([]);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || e.pointerId !== d.pointerId) return;
     if (d.kind === 'pan') {
       applyViewport({ ...vpRef.current, panX: d.panX + (e.clientX - d.startX), panY: d.panY + (e.clientY - d.startY) });
       return;
@@ -249,12 +271,14 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
         dy += snap.dy;
         found = snap.guides;
       }
+      ({ dx, dy } = limitMoveDelta(layers.filter((l) => d.ids.includes(l.id)).map((l) => ({ ...l, ...d.start[l.id] })), d.ids, dx, dy));
       setGuides(found);
       onLiveChange(Object.fromEntries(d.ids.map((id) => [id, { x: d.start[id].x + dx, y: d.start[id].y + dy }])));
       return;
     }
     if (d.kind === 'scale') {
-      const factor = Math.max(0.05, Math.hypot(e.clientX - d.cx, e.clientY - d.cy) / d.startDist);
+      const rawFactor = Math.max(0.05, Math.hypot(e.clientX - d.cx, e.clientY - d.cy) / d.startDist);
+      const factor = limitScaleFactor(d.startLayers, d.ids, rawFactor, d.anchor);
       const next = scaleLayersAround(d.startLayers, d.ids, factor, d.anchor, stagePx);
       onLiveChange(Object.fromEntries(next.map((l) => [l.id, { x: l.x, y: l.y, scale: l.scale }])));
       const text = d.single ? `${scaleToPercent(next[0].scale)}%` : `${Math.round(factor * 100)}%`;
@@ -266,15 +290,18 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     const raw = toDeg(Math.atan2(e.clientY - d.cy, e.clientX - d.cx)) - d.startAngle;
     const base = d.single ? d.startLayers[0].rotation : 0;
     const snapped = snapAngle(normalizeRotation(base + raw), 15, 4, e.shiftKey);
-    const delta = snapped - base;
+    let delta = snapped - base;
+    if (rotationFits(d.startLayers, d.ids, delta, d.anchor, stagePx)) d.lastDelta = delta;
+    else delta = d.lastDelta;
     const next = rotateLayersAround(d.startLayers, d.ids, delta, d.anchor, stagePx);
     onLiveChange(Object.fromEntries(next.map((l) => [l.id, { x: l.x, y: l.y, rotation: l.rotation }])));
     const cr = containerRef.current!.getBoundingClientRect();
     setReadout({ x: e.clientX - cr.left + 14, y: e.clientY - cr.top + 14, text: `${Math.round(normalizeRotation(base + delta))}°` });
   };
 
-  const endDrag = () => {
+  const endDrag = (e?: React.PointerEvent) => {
     const d = drag.current;
+    if (d && e && e.pointerId !== d.pointerId) return;
     drag.current = null;
     setGuides([]);
     setMarquee(null);
@@ -292,6 +319,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     <span
       aria-hidden="true"
       onPointerDown={(e) => onHandlePointerDown(e, kind)}
+      onLostPointerCapture={endDrag}
       style={{ position: 'absolute', width: px(12), height: px(12), background: '#fff', border: `${px(1.5)}px solid #000`, borderRadius: kind === 'rotate' ? '50%' : px(2), cursor, touchAction: 'none', pointerEvents: 'auto', ...extra }}
     />
   );
@@ -304,8 +332,9 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
       className="relative h-[calc(100vh-15rem)] min-h-[420px] w-full overflow-hidden"
-      style={{ cursor: spaceDown ? 'grab' : 'default', touchAction: 'none' }}
+      style={{ cursor: spaceDown ? 'grab' : 'default', touchAction: 'pan-y' }}
     >
       <div
         ref={stageRef}
@@ -336,6 +365,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                 key={layer.id}
                 data-layer-id={layer.id}
                 onPointerDown={(e) => onLayerPointerDown(e, layer)}
+                onLostPointerCapture={endDrag}
                 onDoubleClick={() => {
                   onSelect([layer.id]);
                   if (layer.type === 'text') setEditingId(layer.id);
@@ -496,6 +526,7 @@ function TextEditor({ initial, onDone }: { initial: string; onDone: (value: stri
       ref={ref}
       value={value}
       aria-label="Edit text"
+      maxLength={MAX_TEXT_LENGTH}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => finish(true)}
       onKeyDown={(e) => {

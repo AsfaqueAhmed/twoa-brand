@@ -1,4 +1,5 @@
 import { type Layer, FONT_OPTIONS, DEFAULT_TEXT_COLOR, MAX_TEXT_LENGTH, clampLayer } from './layers';
+import { normalizeGroups } from './grouping';
 
 export type StudioDesign = {
   parentProductId: string;
@@ -85,13 +86,7 @@ function parseLayerList(list: unknown): Layer[] {
     seen.add(l.id);
     out.push(l);
   }
-  const counts = new Map<string, number>();
-  for (const l of out) if (l.groupId) counts.set(l.groupId, (counts.get(l.groupId) ?? 0) + 1);
-  return out.map((l) => {
-    if (!l.groupId || (counts.get(l.groupId) ?? 0) >= 2) return l;
-    const { groupId: _drop, ...rest } = l;
-    return rest as Layer;
-  });
+  return normalizeGroups(out);
 }
 
 export function parseDesign(raw: string | null): StudioDesign | null {

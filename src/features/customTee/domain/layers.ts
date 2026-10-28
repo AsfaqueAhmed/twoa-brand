@@ -85,7 +85,10 @@ export function clampLayer<T extends Layer>(layer: T): T {
     scale: clamp(layer.scale, MIN_SCALE, MAX_SCALE),
     rotation: normalizeRotation(layer.rotation),
   };
-  if (out.type === 'text') out.letterSpacing = clamp(out.letterSpacing, MIN_LETTER_SPACING, MAX_LETTER_SPACING);
+  if (out.type === 'text') {
+    out.letterSpacing = clamp(out.letterSpacing, MIN_LETTER_SPACING, MAX_LETTER_SPACING);
+    if (out.text.length > MAX_TEXT_LENGTH) out.text = out.text.slice(0, MAX_TEXT_LENGTH);
+  }
   return out;
 }
 

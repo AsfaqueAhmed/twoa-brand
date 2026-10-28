@@ -1,4 +1,4 @@
-import { type AlignEdge, type Layer, updateLayer } from './layers';
+import { type AlignEdge, type Layer, MAX_SCALE, MIN_SCALE, updateLayer } from './layers';
 import { selectionUnits } from './grouping';
 
 export type Size = { w: number; h: number };
@@ -34,7 +34,67 @@ export const boxCenter = (b: Box) => ({ x: (b.left + b.right) / 2, y: (b.top + b
 export const boxesIntersect = (a: Box, b: Box): boolean =>
   a.left <= b.right && b.left <= a.right && a.top <= b.bottom && b.top <= a.bottom;
 
-export function moveLayersBy(layers: Layer[], ids: string[], dx: number, dy: number): Layer[] {
+const EPS = 1e-9;
+
+// Shrinks the shared delta so every selected layer's center stays within 0..1 (a group stops as a whole).
+export function limitMoveDelta(layers: Layer[], ids: string[], dx: number, dy: number): { dx: number; dy: number } {
+  const selected = new Set(ids);
+  let minX = 0;
+  let maxX = 0;
+  let minY = 0;
+  let maxY = 0;
+  let first = true;
+  for (const l of layers) {
+    if (!selected.has(l.id)) continue;
+    minX = first ? Math.min(0, -l.x) : Math.max(minX, -l.x);
+    maxX = first ? Math.max(0, 1 - l.x) : Math.min(maxX, 1 - l.x);
+    minY = first ? Math.min(0, -l.y) : Math.max(minY, -l.y);
+    maxY = first ? Math.max(0, 1 - l.y) : Math.min(maxY, 1 - l.y);
+    first = false;
+  }
+  if (first) return { dx, dy };
+  // Layers are clamped to 0..1, so min <= 0 <= max; guard anyway.
+  const clampTo = (v: number, lo: number, hi: number) => Math.min(Math.max(v, Math.min(lo, 0)), Math.max(hi, 0));
+  return { dx: clampTo(dx, minX, maxX), dy: clampTo(dy, minY, maxY) };
+}
+
+// Shrinks/grows the factor so every member's scale stays within bounds and every scaled center stays within 0..1.
+export function limitScaleFactor(layers: Layer[], ids: string[], factor: number, anchor: { x: number; y: number }): number {
+  const selected = new Set(ids);
+  let lo = 0;
+  let hi = Infinity;
+  for (const l of layers) {
+    if (!selected.has(l.id)) continue;
+    lo = Math.max(lo, MIN_SCALE / l.scale);
+    hi = Math.min(hi, MAX_SCALE / l.scale);
+    for (const [c, a] of [[l.x, anchor.x], [l.y, anchor.y]] as const) {
+      if (c > a + EPS) hi = Math.min(hi, (1 - a) / (c - a));
+      else if (c < a - EPS) hi = Math.min(hi, a / (a - c));
+    }
+  }
+  if (hi === Infinity) return factor;
+  return Math.min(Math.max(factor, lo), Math.max(hi, 0));
+}
+
+// True when every selected layer's center, rotated by `deg` about `anchor`, stays within 0..1.
+export function rotationFits(layers: Layer[], ids: string[], deg: number, anchor: { x: number; y: number }, canvas: CanvasPx): boolean {
+  const rad = (deg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const selected = new Set(ids);
+  for (const l of layers) {
+    if (!selected.has(l.id)) continue;
+    const vx = (l.x - anchor.x) * canvas.w;
+    const vy = (l.y - anchor.y) * canvas.h;
+    const x = anchor.x + (vx * cos - vy * sin) / canvas.w;
+    const y = anchor.y + (vx * sin + vy * cos) / canvas.h;
+    if (x < -EPS || x > 1 + EPS || y < -EPS || y > 1 + EPS) return false;
+  }
+  return true;
+}
+
+export function moveLayersBy(layers: Layer[], ids: string[], dx0: number, dy0: number): Layer[] {
+  const { dx, dy } = limitMoveDelta(layers, ids, dx0, dy0);
   const selected = new Set(ids);
   let out = layers;
   for (const l of layers) {

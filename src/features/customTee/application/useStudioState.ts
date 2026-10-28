@@ -13,7 +13,7 @@ import {
   toggleVisible,
   updateLayer,
 } from '../domain/layers';
-import { expandToGroups, groupLayers, moveUnit as moveUnitDomain, removeLayers, reorderUnit as reorderUnitDomain, ungroupLayers } from '../domain/grouping';
+import { expandToGroups, groupLayers, isSingleUnit, moveUnit as moveUnitDomain, removeLayers, reorderUnit as reorderUnitDomain, ungroupLayers } from '../domain/grouping';
 import { type CanvasPx, type Size, alignLayers, distributeLayers, moveLayersBy } from '../domain/geometry';
 
 export type Asset = { id: string; name: string; src: string; aspect: number };
@@ -37,8 +37,8 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
 
   const layersByView = history.present;
   const layers = layersByView[viewId] ?? EMPTY;
-  // Validated against the active view's layers: a stale id (after undo, or on another view) is never exposed.
-  const selectedIds = rawSelection.filter((id) => layers.some((l) => l.id === id));
+  // Validated against the active view's layers: a stale or hidden id (after undo, or on another view) is never exposed.
+  const selectedIds = rawSelection.filter((id) => layers.some((l) => l.id === id && l.visible));
   const selected = selectedIds.length === 1 ? (layers.find((l) => l.id === selectedIds[0]) ?? null) : null;
 
   const change = useCallback(
@@ -102,14 +102,17 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
     nudge: (ids: string[], dx: number, dy: number) => change((ls) => moveLayersBy(ls, ids, dx, dy)),
     removeSelected: () => removeIds(selectedIds),
     removeIds,
-    setVisible: (ids: string[], visible: boolean) =>
+    setVisible: (ids: string[], visible: boolean) => {
       change((ls) => {
         let out = ls;
         for (const l of ls) if (ids.includes(l.id) && l.visible !== visible) out = toggleVisible(out, l.id);
         return out;
-      }),
+      });
+      if (!visible) setRawSelection((cur) => cur.filter((id) => !ids.includes(id)));
+    },
     flip: (id: string, axis: 'x' | 'y') => change((ls) => flipLayer(ls, id, axis)),
     group: () => {
+      if (selectedIds.length > 1 && isSingleUnit(layers, selectedIds)) return; // a whole group is already selected
       const id = nextId('group');
       change((ls) => groupLayers(ls, selectedIds, id));
       setRawSelection((cur) => expandToGroups(layers, cur));

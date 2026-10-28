@@ -39,6 +39,15 @@ type Status = { kind: 'ok' | 'error'; text: string } | null;
 
 const SECTION_TITLE = 'mb-3 text-[11px] font-bold uppercase tracking-widest text-black';
 const TEXT_INPUT_TYPES = ['text', 'search', 'number', 'email', 'url', 'tel', 'password'];
+const isFormControl = (t: EventTarget | null) =>
+  t instanceof HTMLElement &&
+  (t.tagName === 'INPUT' ||
+    t.tagName === 'TEXTAREA' ||
+    t.tagName === 'SELECT' ||
+    t.tagName === 'BUTTON' ||
+    t.isContentEditable ||
+    t.getAttribute('role') === 'combobox' ||
+    t.getAttribute('role') === 'option');
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement &&
   ((t instanceof HTMLInputElement && TEXT_INPUT_TYPES.includes(t.type)) ||
@@ -144,10 +153,22 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   // Delete removes the selected layer; Ctrl/Cmd+Z undo, +Shift redo. Ignored while typing in a field.
   const studioRef = useRef(studio);
   studioRef.current = studio;
+  // A selection never carries over to another view.
+  const viewId = view?.id;
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    studioRef.current.select([]);
+  }, [viewId]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
       const s = studioRef.current;
+      const needsFree = e.key === 'Delete' || e.key === 'Backspace' || e.key.startsWith('Arrow');
+      if (needsFree && isFormControl(e.target)) return; // sliders, buttons and selects keep their own keys
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
       if ((e.key === 'Delete' || e.key === 'Backspace') && s.selectedIds.length > 0) {
@@ -165,6 +186,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         if (e.shiftKey) s.ungroup();
         else s.group();
       } else if (e.key === 'Escape') {
+        if (document.querySelector('[role=listbox]')) return; // an open Select closes first
         s.select([]);
       } else if (s.selectedIds.length > 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
         e.preventDefault();
@@ -255,7 +277,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             onFullscreen={toggleFullscreen}
             fullscreenSupported={fullscreenSupported}
           />
-          <p className="text-[10px] text-[#717171]">Wheel to pan · Ctrl/Cmd + wheel to zoom · Space + drag to pan · Shift-click or drag a box to multi-select · Cmd/Ctrl + G to group</p>
+          <p className="text-[10px] text-[#717171]">Wheel to pan · Ctrl/Cmd + wheel to zoom · Space + drag to pan · Shift-click or drag a box to multi-select · Cmd/Ctrl + G to group · On touch screens use the zoom buttons</p>
           <Canvas
             ref={canvasRef}
             baseImage={view?.image}
@@ -319,7 +341,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
                 <SelectionInspector
                   count={studio.selectedIds.length}
                   isGroup={isGroup}
-                  canGroup={studio.selectedIds.length > 1}
+                  canGroup={studio.selectedIds.length > 1 && !isGroup}
                   onGroup={studio.group}
                   onUngroup={studio.ungroup}
                   onDelete={studio.removeSelected}

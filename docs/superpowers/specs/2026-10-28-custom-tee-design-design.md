@@ -136,3 +136,8 @@ Black-and-white styling is unchanged (guides are black lines with a white outlin
 - Text: double-click a text layer to edit in place (textarea overlay). Click away commits; Escape cancels; Enter adds a line.
 - Viewport: wheel pans, Ctrl/Cmd+wheel (and trackpad pinch) zooms about the cursor, Space+drag or middle-drag pans; zoom 25%-400%; Fit button; clicking the percent resets to 100%.
 - Arrow keys nudge the selection 1 px (Shift 10 px); Delete removes; Escape clears the selection.
+- Limits: moving, scaling or rotating a group stops at the canvas edge / the scale limits as a whole (members keep their relative spacing) instead of distorting it.
+- Hidden layers are never selected (hiding a layer removes it from the selection); the selection also clears when the active view changes.
+- Double-click isolates a single member of a group: it gets no handles, and Ungroup ungroups the whole group. Clicking a member row in the layers list selects just that member.
+- In-place text editing is limited to 200 characters.
+- On narrow (touch) layouts the canvas does not capture page scroll (a plain wheel scrolls the page); there is no pinch-zoom or touch pan, so use the zoom buttons.
