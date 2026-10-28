@@ -24,29 +24,31 @@ function truncateSelection(sel: Selection, resetTo: SelectionStep): Selection {
 export default function CustomTeeFlow() {
   const { parents, products, loading, error, refreshParents } = useCustomTeeData();
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
-  const [handedOff, setHandedOff] = useState(false);
+  const [handedOff, setHandedOff] = useState<Selection | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const card = useMemo(() => {
-    const parent = parents.find((p) => p.id === selection.parentId);
-    return parent ? buildParentCard(parent, products, selection.size) : null;
-  }, [parents, products, selection.parentId, selection.size]);
+    if (!handedOff) return null;
+    const parent = parents.find((p) => p.id === handedOff.parentId);
+    return parent ? buildParentCard(parent, products, handedOff.size) : null;
+  }, [parents, products, handedOff]);
 
   // Re-reads stock; on failure clears the invalid steps and shows a message. Never writes stock.
   const onContinue = async () => {
+    const current = selection;
     setBusy(true);
     try {
       const fresh = await refreshParents();
-      const result = validateSelection(fresh, selection);
+      const result = validateSelection(fresh, current);
       if (!result.ok) {
-        setSelection(truncateSelection(selection, result.resetTo));
+        setSelection(truncateSelection(current, result.resetTo));
         setNotice(result.reason);
         return;
       }
       setNotice(null);
-      sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: selection.parentId, size: selection.size }));
-      setHandedOff(true);
+      sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: current.parentId, size: current.size }));
+      setHandedOff(current);
     } catch {
       setNotice('Could not check stock. Please try again.');
     } finally {
@@ -64,13 +66,13 @@ export default function CustomTeeFlow() {
         <ul className="space-y-1 text-sm text-black">
           <li>Tee: {card.parent.name} (SKU {card.code})</li>
           <li>Category: {card.parent.category} / {card.parent.subcategory}</li>
-          <li>Size: {selection.size}</li>
+          <li>Size: {handedOff.size}</li>
         </ul>
         {/* Phase C: the Design Studio opens here with this parent and size. */}
         <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
           The Design Studio is coming soon. Your selection is saved for this session.
         </p>
-        <button type="button" onClick={() => setHandedOff(false)} className="text-xs font-bold uppercase tracking-widest text-black underline">
+        <button type="button" onClick={() => setHandedOff(null)} className="text-xs font-bold uppercase tracking-widest text-black underline">
           Change tee
         </button>
       </div>

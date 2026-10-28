@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ParentProduct, Product } from '@/shared/domain/types';
 import {
   type Selection,
@@ -33,9 +33,6 @@ const LABEL = 'block text-[10px] font-bold uppercase tracking-wider text-[#71717
 const NOTE = 'rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]';
 
 export default function SelectionWizard({ parents, products, selection, onChange, onContinue, notice, busy }: Props) {
-  const [galleryIndex, setGalleryIndex] = useState(0);
-  useEffect(() => setGalleryIndex(0), [selection.parentId]);
-
   const categories = useMemo(() => eligibleCategories(parents), [parents]);
   const subcategories = useMemo(() => eligibleSubcategories(parents, selection.category), [parents, selection.category]);
   const sizes = useMemo(
@@ -48,7 +45,7 @@ export default function SelectionWizard({ parents, products, selection, onChange
   );
   const cards = useMemo(() => matches.map((p) => buildParentCard(p, products, selection.size)), [matches, products, selection.size]);
   const chosen = cards.find((c) => c.parent.id === selection.parentId);
-  const photo = chosen?.photos[galleryIndex] ?? chosen?.photos[0];
+  const photo = chosen?.photos[0];
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_360px]">
@@ -56,13 +53,14 @@ export default function SelectionWizard({ parents, products, selection, onChange
         <h1 className="text-xl font-bold uppercase tracking-wider text-black">Design your tee</h1>
         {notice && <p role="alert" className="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-800">{notice}</p>}
 
+        <fieldset disabled={!!busy} className="min-w-0 border-0 p-0 m-0 space-y-6">
         <div>
           <label className={LABEL} htmlFor="tee-category">1. Category</label>
           <select
             id="tee-category"
             className={FIELD}
             value={selection.category}
-            onChange={(e) => { setGalleryIndex(0); onChange(selectCategory(selection, e.target.value)); }}
+            onChange={(e) => { onChange(selectCategory(selection, e.target.value)); }}
           >
             <option value="">Select a category</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -77,7 +75,7 @@ export default function SelectionWizard({ parents, products, selection, onChange
               id="tee-subcategory"
               className={FIELD}
               value={selection.subcategory}
-              onChange={(e) => { setGalleryIndex(0); onChange(selectSubcategory(selection, e.target.value)); }}
+              onChange={(e) => { onChange(selectSubcategory(selection, e.target.value)); }}
             >
               <option value="">Select a subcategory</option>
               {subcategories.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -100,7 +98,7 @@ export default function SelectionWizard({ parents, products, selection, onChange
                     key={s}
                     type="button"
                     aria-pressed={selection.size === s}
-                    onClick={() => { setGalleryIndex(0); onChange(selectSize(selection, s)); }}
+                    onClick={() => { onChange(selectSize(selection, s)); }}
                     className={`min-w-12 rounded-lg border px-4 py-2 text-sm font-semibold ${
                       selection.size === s ? 'border-black bg-black text-white' : 'border-[#EEEEEE] bg-white text-black hover:border-black'
                     }`}
@@ -126,13 +124,15 @@ export default function SelectionWizard({ parents, products, selection, onChange
                     card={card}
                     size={selection.size}
                     selected={card.parent.id === selection.parentId}
-                    onSelect={() => { setGalleryIndex(0); onChange(selectParent(selection, card.parent.id)); }}
+                    onSelect={() => { onChange(selectParent(selection, card.parent.id)); }}
                   />
                 ))}
               </div>
             )}
           </div>
         )}
+
+        </fieldset>
 
         {isComplete(selection) && (
           <button
@@ -156,22 +156,6 @@ export default function SelectionWizard({ parents, products, selection, onChange
             </div>
           )}
         </div>
-        {chosen && chosen.photos.length > 1 && (
-          <div className="mt-3 flex gap-2 overflow-x-auto">
-            {chosen.photos.map((url, i) => (
-              <button
-                key={`${url}-${i}`}
-                aria-current={i === galleryIndex}
-                type="button"
-                aria-label={`Photo ${i + 1}`}
-                onClick={() => setGalleryIndex(i)}
-                className={`h-14 w-14 shrink-0 overflow-hidden rounded-md border ${i === galleryIndex ? 'border-black' : 'border-[#EEEEEE]'}`}
-              >
-                <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
       </aside>
     </div>
   );

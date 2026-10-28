@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ParentProduct, Product } from '@/shared/domain/types';
 import { fetchAllParentProducts } from '@/features/catalog/infrastructure/firestoreParentProductsRepository';
-import { selectableParents } from '../domain/selection';
 import { fetchAllProducts } from '@/features/catalog/infrastructure/firestoreProductsRepository';
+import { selectableParents } from '../domain/selection';
 
 export function useCustomTeeData() {
   const [parents, setParents] = useState<ParentProduct[]>([]);
