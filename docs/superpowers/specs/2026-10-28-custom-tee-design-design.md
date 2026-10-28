@@ -142,3 +142,12 @@ Black-and-white styling is unchanged (guides are black lines with a white outlin
 - In-place text editing is limited to 200 characters.
 - On narrow (touch) layouts the canvas does not capture page scroll (a plain wheel scrolls the page); there is no pinch-zoom or touch pan, so use the zoom buttons.
 - Panning (and zooming) can never move the product out of view: at least 25% of the tee image stays inside the canvas on both axes.
+
+## Fit-to-screen editor (desktop, lg and up)
+
+- The studio page is exactly the visible height (`100vh`) under the navbar; neither the page nor any panel scrolls. Below `lg` the stacked layout is unchanged (it scrolls the page normally).
+- Minimum height: the editor never gets shorter than about 704px total; on shorter screens the page scrolls instead of cramming controls.
+- Canvas column: toolbar, hint line, the canvas (fills the remaining height), view thumbnails. No fixed canvas height on desktop.
+- Right panel: compact product header (thumbnail, name, SKU) + size and color rows; **Layers | Properties tabs** (Properties opens automatically when something is selected, and returns to Layers when the selection clears); Save Design / Add to Cart pinned at the bottom. Compact Properties: text content (2 rows); font + size on one row; bold, italic, align x3 and color on one row; letter spacing; one "Arrange" row with 6 align + 2 distribute icons; one row with flip x2 + scale slider + percent box.
+- Long lists never scroll: Layers (right tab and left Layers tool) show a limited number of rows plus a "+N more" row that expands in place; the left Images panel shows a limited grid plus "+N more".
+
