@@ -50,7 +50,6 @@ function parseLayer(v: unknown): Layer | null {
     flipX: o.flipX === true,
     flipY: o.flipY === true,
     visible: o.visible !== false,
-    opacity: isNum(o.opacity) ? o.opacity : 1,
     ...(typeof o.groupId === 'string' && LAYER_ID.test(o.groupId) ? { groupId: o.groupId } : {}),
   };
   if (o.type === 'image') {

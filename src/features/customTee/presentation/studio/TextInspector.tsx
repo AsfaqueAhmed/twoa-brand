@@ -16,7 +16,6 @@ import {
   scaleToPercent,
 } from '../../domain/layers';
 import Select from '../Select';
-import AppearanceSection from './AppearanceSection';
 
 type Props = {
   layer: TextLayer;
@@ -155,8 +154,6 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
           className="h-11 w-full cursor-pointer rounded-lg border border-[#EEEEEE] bg-white p-1"
         />
       </div>
-
-      <AppearanceSection opacity={layer.opacity} onLive={(opacity) => onLive({ opacity })} onSettle={onSettle} />
     </div>
   );
 }

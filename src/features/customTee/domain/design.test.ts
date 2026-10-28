@@ -110,12 +110,18 @@ describe('new layer fields in saved designs', () => {
 
   it('defaults missing fields on older layers', () => {
     const legacy = { type: 'text', id: 't', name: 'x', text: 'Hi', fontFamily: 'Arial, Helvetica, sans-serif', color: '#111111', x: 0.5, y: 0.5, scale: 0.4, rotation: 0 };
-    expect(parse([legacy])[0]).toMatchObject({ opacity: 1, bold: false, italic: false, align: 'center', letterSpacing: 0 });
+    expect(parse([legacy])[0]).toMatchObject({ bold: false, italic: false, align: 'center', letterSpacing: 0 });
   });
   it('keeps valid new fields and sanitizes bad ones', () => {
-    const t = { ...createTextLayer({ id: 't', text: 'Hi' }), bold: true, italic: true, align: 'right', letterSpacing: 9, opacity: 0 };
-    expect(parse([t])[0]).toMatchObject({ bold: true, italic: true, align: 'right', letterSpacing: 0.5, opacity: 0.05 });
+    const t = { ...createTextLayer({ id: 't', text: 'Hi' }), bold: true, italic: true, align: 'right', letterSpacing: 9 };
+    expect(parse([t])[0]).toMatchObject({ bold: true, italic: true, align: 'right', letterSpacing: 0.5 });
     expect(parse([{ ...t, align: 'justify' }])[0]).toMatchObject({ align: 'center' });
+  });
+  it('ignores a legacy opacity field on saved layers', () => {
+    // opacity was removed from the model; old saves that still carry it must load without it
+    const layer = parse([img('a', { opacity: 0.3 })])[0];
+    expect(layer).toBeDefined();
+    expect('opacity' in layer).toBe(false);
   });
   it('accepts multi-line text up to 200 chars and rejects longer', () => {
     expect(parse([createTextLayer({ id: 't', text: 'a\nb' })])).toHaveLength(1);

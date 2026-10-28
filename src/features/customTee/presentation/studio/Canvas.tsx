@@ -387,7 +387,6 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
                   data-layer-content
                   style={{
                     transform: `scale(${layer.flipX ? -1 : 1}, ${layer.flipY ? -1 : 1})`,
-                    opacity: layer.opacity,
                     ...(layer.type === 'text'
                       ? {
                           fontSize: `${layer.scale * TEXT_FONT_FRACTION * stagePx.w}px`,

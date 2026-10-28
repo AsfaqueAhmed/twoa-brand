@@ -1,7 +1,6 @@
 'use client';
 
 import { Group, Trash2, Ungroup } from 'lucide-react';
-import AppearanceSection from './AppearanceSection';
 
 type Props = {
   count: number;
@@ -10,14 +9,11 @@ type Props = {
   onGroup: () => void;
   onUngroup: () => void;
   onDelete: () => void;
-  opacity: number;
-  onOpacityLive: (v: number) => void;
-  onSettle: () => void;
 };
 
 const BTN = 'flex items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black disabled:cursor-not-allowed disabled:text-[#CDCDCD] disabled:hover:border-[#EEEEEE]';
 
-export default function SelectionInspector({ count, isGroup, canGroup, onGroup, onUngroup, onDelete, opacity, onOpacityLive, onSettle }: Props) {
+export default function SelectionInspector({ count, isGroup, canGroup, onGroup, onUngroup, onDelete }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-xs font-semibold text-black">{isGroup ? `Group · ${count} layers` : `${count} layers selected`}</p>
@@ -39,7 +35,6 @@ export default function SelectionInspector({ count, isGroup, canGroup, onGroup, 
         </button>
       </div>
       <p className="text-[10px] text-[#717171]">Shortcuts: Cmd/Ctrl+G group, Cmd/Ctrl+Shift+G ungroup.</p>
-      <AppearanceSection opacity={opacity} onLive={onOpacityLive} onSettle={onSettle} />
     </div>
   );
 }

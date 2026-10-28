@@ -121,11 +121,11 @@ Black-and-white styling is unchanged (guides are black lines with a white outlin
 ## Panels
 
 - **Left Text tab only adds text:** "Add a heading", "Add a subheading", "Add body text" presets. It never shows editing fields for a selected layer.
-- **Right bar = selection-aware Properties** (between the product panel and the layers list, shown only with a selection): text layer -> content, font, size, bold, italic, align, letter spacing, color, opacity; image layer -> opacity; 2+ layers or a group -> group/ungroup, delete, opacity (all). For any selection: Align (and Distribute when 3+ units). A single layer also gets Flip and Scale.
+- **Right bar = selection-aware Properties** (between the product panel and the layers list, shown only with a selection): text layer -> content, font, size, bold, italic, align, letter spacing, color; image layer -> layer name only; 2+ layers or a group -> group/ungroup, delete. For any selection: Align (and Distribute when 3+ units). A single layer also gets Flip and Scale.
 
 ## Layer model additions
 
-- All layers: `opacity` (0.05..1, default 1), optional `groupId`. Text: `bold`, `italic`, `align` (left|center|right, default center), `letterSpacing` (em, -0.05..0.5, default 0); text may be multi-line, max 200 chars. Older designs load with defaults.
+- All layers: optional `groupId`. Text: `bold`, `italic`, `align` (left|center|right, default center), `letterSpacing` (em, -0.05..0.5, default 0); text may be multi-line, max 200 chars. Older designs load with defaults.
 - **Groups are flat:** layers sharing a `groupId` (>= 2 members, contiguous in the stack). Clicking a member selects the whole group; double-click selects just that member. Group/ungroup: Cmd/Ctrl+G, Cmd/Ctrl+Shift+G. A group moves, scales and rotates as one unit (scale/rotate about the group's bounding box center; members keep relative placement). Stack "units" (a group or a lone layer) are what the layers list reorders.
 - Selection state is `selectedIds`. Marquee, shift/cmd-click and Cmd/Ctrl+A build it; whole groups are always selected together except via double-click.
 

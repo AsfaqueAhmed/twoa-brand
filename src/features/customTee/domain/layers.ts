@@ -12,7 +12,6 @@ export type LayerBase = {
   flipX: boolean;
   flipY: boolean;
   visible: boolean;
-  opacity: number;
   groupId?: string;
 };
 
@@ -50,7 +49,6 @@ export const MAX_SCALE = 1.5;
 export const DEFAULT_SCALE = 0.4;
 export const TEXT_FONT_FRACTION = 0.2;
 export const MAX_TEXT_LENGTH = 200;
-export const MIN_OPACITY = 0.05;
 export const MIN_LETTER_SPACING = -0.05;
 export const MAX_LETTER_SPACING = 0.5;
 export const DEFAULT_TEXT_COLOR = '#111111';
@@ -79,7 +77,6 @@ export function normalizeRotation(deg: number): number {
 export function clampLayer<T extends Layer>(layer: T): T {
   const out = {
     ...layer,
-    opacity: clamp(layer.opacity, MIN_OPACITY, 1),
     x: clamp(layer.x, 0, 1),
     y: clamp(layer.y, 0, 1),
     scale: clamp(layer.scale, MIN_SCALE, MAX_SCALE),
@@ -92,7 +89,7 @@ export function clampLayer<T extends Layer>(layer: T): T {
   return out;
 }
 
-const baseDefaults = { x: 0.5, y: 0.45, scale: DEFAULT_SCALE, rotation: 0, flipX: false, flipY: false, visible: true, opacity: 1 };
+const baseDefaults = { x: 0.5, y: 0.45, scale: DEFAULT_SCALE, rotation: 0, flipX: false, flipY: false, visible: true };
 
 export function createImageLayer(init: { id: string; name: string; src: string; aspect: number }): ImageLayer {
   return { ...baseDefaults, type: 'image', ...init };

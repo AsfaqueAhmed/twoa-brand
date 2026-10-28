@@ -19,7 +19,6 @@ import DesignPanel from './DesignPanel';
 import ImagesPanel from './ImagesPanel';
 import TextAddPanel from './TextAddPanel';
 import TextInspector from './TextInspector';
-import ImageInspector from './ImageInspector';
 import SelectionInspector from './SelectionInspector';
 import AlignPanel from './AlignPanel';
 import LayersList from './LayersList';
@@ -86,8 +85,6 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const units = selectionUnits(studio.layers, studio.selectedIds);
   const singleUnit = isSingleUnit(studio.layers, studio.selectedIds);
   const isGroup = singleUnit && studio.selectedIds.length > 1;
-  const selectedLayers = studio.layers.filter((l) => studio.selectedIds.includes(l.id));
-  const allOpacity = selectedLayers.length > 0 ? selectedLayers[0].opacity : 1;
 
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -335,7 +332,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
                 />
               )}
               {selectedImage && (
-                <ImageInspector layer={selectedImage} onLive={(p) => studio.patchLive(selectedImage.id, p)} onSettle={studio.settleGesture} />
+                <p className="truncate text-xs font-semibold text-black">{selectedImage.name}</p>
               )}
               {studio.selectedIds.length > 1 && (
                 <SelectionInspector
@@ -345,9 +342,6 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
                   onGroup={studio.group}
                   onUngroup={studio.ungroup}
                   onDelete={studio.removeSelected}
-                  opacity={allOpacity}
-                  onOpacityLive={(v) => studio.patchManyLive(Object.fromEntries(studio.selectedIds.map((id) => [id, { opacity: v }])))}
-                  onSettle={studio.settleGesture}
                 />
               )}
               <AlignPanel
