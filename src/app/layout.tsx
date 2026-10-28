@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider';
 import { CartProvider } from '@/features/cart/presentation/CartProvider';
 import { ProductNavigationProvider } from '@/features/product/presentation/ProductNavigationProvider';
+import { CustomTeeProvider } from '@/features/customTee/presentation/CustomTeeProvider';
 import MetaPixelScript from '@/shared/presentation/MetaPixelScript';
 
 export const metadata: Metadata = {
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <CartProvider>
             <ProductNavigationProvider>
-              {children}
+              <CustomTeeProvider>
+                {children}
+              </CustomTeeProvider>
             </ProductNavigationProvider>
           </CartProvider>
         </AuthProvider>

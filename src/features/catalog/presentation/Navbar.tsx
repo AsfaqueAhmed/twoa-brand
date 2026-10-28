@@ -5,21 +5,27 @@ import { ShoppingBag, History, LogIn, LogOut, Loader2, Sliders, Shirt } from 'lu
 import { motion } from 'motion/react';
 import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { useCart } from '@/features/cart/presentation/CartProvider';
+import { useCustomTee } from '@/features/customTee/presentation/CustomTeeProvider';
 
 export default function Navbar() {
   const { user, authLoading, isAdmin, signIn, signOut } = useAuth();
   const { count: cartCount } = useCart();
   const pathname = usePathname();
   const router = useRouter();
-  const currentTab: 'shop' | 'custom' | 'orders' | 'admin' = pathname.startsWith('/admin')
-    ? 'admin'
-    : pathname.startsWith('/orders')
-      ? 'orders'
-      : pathname.startsWith('/custom-tee')
-        ? 'custom'
-        : 'shop';
-  const setTab = (tab: 'shop' | 'custom' | 'orders' | 'admin') =>
-    router.push(tab === 'shop' ? '/' : tab === 'custom' ? '/custom-tee' : tab === 'orders' ? '/orders' : '/admin');
+  const { isOpen: customOpen, open: openCustomTee } = useCustomTee();
+  const currentTab: 'shop' | 'custom' | 'orders' | 'admin' = customOpen
+    ? 'custom'
+    : pathname.startsWith('/admin')
+      ? 'admin'
+      : pathname.startsWith('/orders')
+        ? 'orders'
+        : pathname.startsWith('/custom-tee')
+          ? 'custom'
+          : 'shop';
+  const setTab = (tab: 'shop' | 'custom' | 'orders' | 'admin') => {
+    if (tab === 'custom') return openCustomTee();
+    router.push(tab === 'shop' ? '/' : tab === 'orders' ? '/orders' : '/admin');
+  };
   const onOpenCart = () => router.push('/cart');
   // Product, cart and checkout pages carry their own sticky action bar on mobile.
   const hideBottomNav = ['/product', '/cart', '/checkout'].some((p) => pathname.startsWith(p));
