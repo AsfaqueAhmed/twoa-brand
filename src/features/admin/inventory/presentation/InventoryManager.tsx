@@ -183,7 +183,7 @@ export default function InventoryManager() {
     setEditorError('');
     try {
       if (cropperTarget === 'primary') {
-        const url = await uploadProductImage(`products/${productId}/main`, compressedDataUrl);
+        const url = await uploadProductImage(`products/${productId}/main-${Date.now()}`, compressedDataUrl);
         setEditingProduct((prev) => (prev ? { ...prev, image: url } : null));
       } else if (cropperTarget === 'variant') {
         const url = await uploadProductImage(`products/${productId}/variants/${Date.now()}`, compressedDataUrl);

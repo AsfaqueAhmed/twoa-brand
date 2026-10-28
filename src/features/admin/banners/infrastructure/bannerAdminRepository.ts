@@ -72,5 +72,5 @@ export async function removeBannerImage(url?: string): Promise<void> {
 // Each upload gets a unique path so replacing an image never overwrites the
 // file a live banner still points to.
 export async function uploadBannerImage(id: string, kind: 'desktop' | 'mobile', dataUrl: string): Promise<string> {
-  return uploadProductImage(`banners/${id}-${kind}-${Date.now()}`, dataUrl);
+  return uploadProductImage(`banners/${id}-${kind}-${Date.now()}`, dataUrl, { thumbnail: false });
 }
