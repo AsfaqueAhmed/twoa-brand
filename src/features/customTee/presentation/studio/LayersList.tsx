@@ -13,17 +13,22 @@ type Props = {
   onRemove: (ids: string[]) => void;
   onMoveUnit: (id: string, dir: 'up' | 'down') => void;
   onReorderUnit: (id: string, toUnitIndex: number) => void;
+  maxRows?: number;
 };
 
 const ICON_BTN = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#717171] hover:bg-[#F5F5F5] hover:text-black disabled:cursor-not-allowed disabled:opacity-30';
 
 // Shows the stack top-first; a group is one expandable row, and reordering moves whole units.
-export default function LayersList({ layers, selectedIds, onSelect, onSetVisible, onRemove, onMoveUnit, onReorderUnit }: Props) {
+export default function LayersList({ layers, selectedIds, onSelect, onSetVisible, onRemove, onMoveUnit, onReorderUnit, maxRows }: Props) {
+  const [showAll, setShowAll] = useState(false);
   const dragId = useRef<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const units = stackUnits(layers);
   const byId = new Map(layers.map((l) => [l.id, l]));
   const hasMods = (e: React.MouseEvent) => e.shiftKey || e.metaKey || e.ctrlKey;
+
+  const topFirst = units.map((unit, unitIndex) => ({ unit, unitIndex })).reverse();
+  const limited = maxRows !== undefined && topFirst.length > maxRows;
 
   if (layers.length === 0) {
     return <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">No layers yet. Upload an image or add text to start.</p>;
@@ -41,9 +46,9 @@ export default function LayersList({ layers, selectedIds, onSelect, onSetVisible
   const layerRow = (layer: Layer, nested: boolean) => {
     const isSelected = selectedIds.includes(layer.id);
     return (
-      <li key={layer.id} className={`flex items-center gap-1 rounded-lg border px-1.5 py-1.5 ${nested ? 'ml-6' : ''} ${isSelected ? 'border-black bg-[#FAF9F6]' : 'border-[#EEEEEE] bg-white'} ${layer.visible ? '' : 'opacity-60'}`}>
+      <li key={layer.id} className={`flex items-center gap-1 rounded-lg border px-1.5 py-1.5 lg:py-0.5 ${nested ? 'ml-6' : ''} ${isSelected ? 'border-black bg-[#FAF9F6]' : 'border-[#EEEEEE] bg-white'} ${layer.visible ? '' : 'opacity-60'}`}>
         <button type="button" onClick={(e) => select(e, [layer.id])} aria-pressed={isSelected} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#F5F5F5]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md lg:h-7 lg:w-7 bg-[#F5F5F5]">
             {layer.type === 'image' ? <img src={layer.src} alt="" className="h-full w-full object-contain" /> : <Type className="h-4 w-4 text-[#717171]" />}
           </span>
           <span className="truncate text-xs text-black">{layer.name}</span>
@@ -59,10 +64,16 @@ export default function LayersList({ layers, selectedIds, onSelect, onSetVisible
   };
 
   return (
-    <ul className="space-y-1.5" aria-label="Design layers">
-      {units
-        .map((unit, unitIndex) => ({ unit, unitIndex }))
-        .reverse()
+    <ul className="space-y-1.5 lg:space-y-1" aria-label="Design layers">
+      {limited && showAll && (
+        <li className="list-none">
+          <button type="button" onClick={() => setShowAll(false)} className="w-full rounded-lg border border-[#EEEEEE] py-1.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black">
+            Show less
+          </button>
+        </li>
+      )}
+      {topFirst
+        .slice(0, limited && !showAll ? maxRows : undefined)
         .map(({ unit, unitIndex }) => {
           const head = unit[0];
           const members = unit.map((id) => byId.get(id)!).reverse(); // top-first
@@ -125,10 +136,10 @@ export default function LayersList({ layers, selectedIds, onSelect, onSetVisible
                   </span>
                   <ul className="min-w-0 flex-1">{layerRow(members[0], false)}</ul>
                   <div className="flex flex-col justify-center">
-                    <button type="button" aria-label="Move layer up" disabled={unitIndex === units.length - 1} onClick={() => onMoveUnit(head, 'up')} className={ICON_BTN}>
+                    <button type="button" aria-label="Move layer up" disabled={unitIndex === units.length - 1} onClick={() => onMoveUnit(head, 'up')} className={`${ICON_BTN} lg:h-[18px]`}>
                       <ChevronUp className="h-4 w-4" />
                     </button>
-                    <button type="button" aria-label="Move layer down" disabled={unitIndex === 0} onClick={() => onMoveUnit(head, 'down')} className={ICON_BTN}>
+                    <button type="button" aria-label="Move layer down" disabled={unitIndex === 0} onClick={() => onMoveUnit(head, 'down')} className={`${ICON_BTN} lg:h-[18px]`}>
                       <ChevronDown className="h-4 w-4" />
                     </button>
                   </div>
@@ -137,6 +148,13 @@ export default function LayersList({ layers, selectedIds, onSelect, onSetVisible
             </li>
           );
         })}
+      {limited && !showAll && (
+        <li className="list-none">
+          <button type="button" onClick={() => setShowAll(true)} className="w-full rounded-lg border border-[#EEEEEE] py-1.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black">
+            {`+${topFirst.length - (maxRows ?? 0)} more`}
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

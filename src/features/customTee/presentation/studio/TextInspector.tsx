@@ -24,8 +24,8 @@ type Props = {
   onSettle: () => void;
 };
 
-const LABEL = 'mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
-const TOGGLE = 'flex h-9 w-9 items-center justify-center rounded-lg border text-black transition-colors';
+const LABEL = 'mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
+const TOGGLE = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-black transition-colors';
 const fontLabels = FONT_OPTIONS.map((f) => f.label);
 const labelFor = (family: string) => FONT_OPTIONS.find((f) => f.family === family)?.label ?? FONT_OPTIONS[0].label;
 const familyFor = (label: string) => FONT_OPTIONS.find((f) => f.label === label)?.family ?? FONT_OPTIONS[0].family;
@@ -46,12 +46,12 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
   }, [layer.text]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div>
         <label htmlFor="text-content" className={LABEL}>Text</label>
         <textarea
           id="text-content"
-          rows={3}
+          rows={2}
           maxLength={MAX_TEXT_LENGTH}
           value={draft}
           onChange={(e) => {
@@ -62,38 +62,39 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
             if (!draft.trim()) setDraft(layer.text); // a text layer can't be empty
             onSettle();
           }}
-          className="w-full resize-none rounded-lg border border-[#EEEEEE] bg-white px-4 py-3 text-sm text-black focus:border-black focus:outline-none"
+          className="w-full resize-none rounded-lg border border-[#EEEEEE] bg-white px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
         />
       </div>
 
-      <div>
-        <label htmlFor="text-font" className={LABEL}>Font</label>
-        <Select
-          id="text-font"
-          value={labelFor(layer.fontFamily)}
-          options={fontLabels}
-          placeholder="Select a font"
-          onChange={(label) => onCommit({ fontFamily: familyFor(label) })}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="min-w-0">
+          <label htmlFor="text-font" className={LABEL}>Font</label>
+          <Select
+            id="text-font"
+            value={labelFor(layer.fontFamily)}
+            options={fontLabels}
+            placeholder="Select a font"
+            onChange={(label) => onCommit({ fontFamily: familyFor(label) })}
+          />
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="text-size" className={LABEL}>Size · {scaleToPercent(layer.scale)}%</label>
+          <input
+            id="text-size"
+            type="range"
+            min={MIN_SIZE}
+            max={MAX_SIZE}
+            value={scaleToPercent(layer.scale)}
+            onChange={(e) => onLive({ scale: percentToScale(Number(e.target.value)) })}
+            onPointerUp={onSettle}
+            onKeyUp={onSettle}
+            onBlur={onSettle}
+            className="mt-2 w-full accent-black"
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="text-size" className={LABEL}>Size · {scaleToPercent(layer.scale)}%</label>
-        <input
-          id="text-size"
-          type="range"
-          min={MIN_SIZE}
-          max={MAX_SIZE}
-          value={scaleToPercent(layer.scale)}
-          onChange={(e) => onLive({ scale: percentToScale(Number(e.target.value)) })}
-          onPointerUp={onSettle}
-          onKeyUp={onSettle}
-          onBlur={onSettle}
-          className="w-full accent-black"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           aria-label="Bold"
@@ -112,7 +113,7 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
         >
           <Italic className="h-4 w-4" />
         </button>
-        <span className="mx-1 h-6 w-px bg-[#EEEEEE]" aria-hidden="true" />
+        <span className="mx-1 h-6 w-px shrink-0 bg-[#EEEEEE]" aria-hidden="true" />
         {ALIGNS.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
@@ -125,6 +126,16 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
             <Icon className="h-4 w-4" />
           </button>
         ))}
+        <input
+          id="text-color"
+          type="color"
+          aria-label="Text color"
+          title="Text color"
+          value={layer.color}
+          onChange={(e) => onLive({ color: e.target.value })}
+          onBlur={onSettle}
+          className="ml-auto h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-[#EEEEEE] bg-white p-0.5"
+        />
       </div>
 
       <div>
@@ -140,18 +151,6 @@ export default function TextInspector({ layer, onLive, onCommit, onSettle }: Pro
           onKeyUp={onSettle}
           onBlur={onSettle}
           className="w-full accent-black"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="text-color" className={LABEL}>Color</label>
-        <input
-          id="text-color"
-          type="color"
-          value={layer.color}
-          onChange={(e) => onLive({ color: e.target.value })}
-          onBlur={onSettle}
-          className="h-11 w-full cursor-pointer rounded-lg border border-[#EEEEEE] bg-white p-1"
         />
       </div>
     </div>

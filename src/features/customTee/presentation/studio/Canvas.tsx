@@ -337,7 +337,7 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
-      className="relative h-[calc(100vh-15rem)] min-h-[420px] w-full overflow-hidden"
+      className="relative h-[calc(100vh-15rem)] min-h-[420px] w-full lg:h-auto lg:min-h-[240px] lg:flex-1 overflow-hidden"
       style={{ cursor: spaceDown ? 'grab' : 'default', touchAction: 'pan-y' }}
     >
       <div

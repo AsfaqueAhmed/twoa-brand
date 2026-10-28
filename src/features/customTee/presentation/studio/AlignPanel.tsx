@@ -28,20 +28,20 @@ const ALIGN: { edge: AlignEdge; label: string; icon: typeof AlignStartVertical }
   { edge: 'bottom', label: 'Align bottom', icon: AlignEndHorizontal },
 ];
 
-const LABEL = 'mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
-const ICON_BTN = 'flex h-9 w-9 items-center justify-center rounded-lg border border-[#EEEEEE] text-black hover:border-black disabled:cursor-not-allowed disabled:text-[#CDCDCD] disabled:hover:border-[#EEEEEE]';
+const LABEL = 'mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
+const ICON_BTN = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#EEEEEE] text-black hover:border-black disabled:cursor-not-allowed disabled:text-[#CDCDCD] disabled:hover:border-[#EEEEEE]';
 
 export default function AlignPanel({ disabled, canDistribute, onAlign, onDistribute }: Props) {
   return (
     <div>
-      <span className={LABEL}>Position</span>
-      <div className="flex flex-wrap gap-1.5">
+      <span className={LABEL}>Arrange</span>
+      <div className="flex gap-1">
         {ALIGN.map(({ edge, label, icon: Icon }) => (
           <button key={edge} type="button" aria-label={label} title={label} disabled={disabled} onClick={() => onAlign(edge)} className={ICON_BTN}>
             <Icon className="h-4 w-4" />
           </button>
         ))}
-        <span className="mx-1 h-9 w-px bg-[#EEEEEE]" aria-hidden="true" />
+        <span className="mx-0.5 h-8 w-px shrink-0 bg-[#EEEEEE]" aria-hidden="true" />
         <button type="button" aria-label="Distribute horizontally" title="Distribute horizontally" disabled={disabled || !canDistribute} onClick={() => onDistribute('horizontal')} className={ICON_BTN}>
           <AlignHorizontalDistributeCenter className="h-4 w-4" />
         </button>

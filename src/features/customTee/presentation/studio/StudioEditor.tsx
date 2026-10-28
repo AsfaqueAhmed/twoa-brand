@@ -36,6 +36,8 @@ type Props = {
 
 type Status = { kind: 'ok' | 'error'; text: string } | null;
 
+type PanelTab = 'layers' | 'properties';
+const TAB_BASE = 'flex-1 rounded-md px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors';
 const SECTION_TITLE = 'mb-3 text-[11px] font-bold uppercase tracking-widest text-black';
 const TEXT_INPUT_TYPES = ['text', 'search', 'number', 'email', 'url', 'tel', 'password'];
 const isFormControl = (t: EventTarget | null) =>
@@ -72,6 +74,15 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const [panelTab, setPanelTab] = useState<PanelTab>('layers');
 
   const color = card.colors.find((c) => c.name === colorName);
   const views = useMemo(() => buildViews(parent, color), [parent, color]);
@@ -85,6 +96,11 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const units = selectionUnits(studio.layers, studio.selectedIds);
   const singleUnit = isSingleUnit(studio.layers, studio.selectedIds);
   const isGroup = singleUnit && studio.selectedIds.length > 1;
+
+  const hasSelection = studio.selectedIds.length > 0;
+  useEffect(() => {
+    setPanelTab(hasSelection ? 'properties' : 'layers');
+  }, [hasSelection]);
 
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -227,8 +243,9 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     }
   };
 
-  const layersList = (
+  const layersList = (maxRows?: number) => (
     <LayersList
+      maxRows={maxRows}
       layers={studio.layers}
       selectedIds={studio.selectedIds}
       onSelect={studio.select}
@@ -240,23 +257,23 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   );
 
   return (
-    <div ref={rootRef} className="overflow-auto bg-white">
-      <div className="mx-auto grid max-w-[1500px] border-b border-[#EEEEEE] lg:grid-cols-[88px_300px_minmax(0,1fr)_360px]">
-        <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1" />
+    <div ref={rootRef} className="bg-white lg:h-full [&:fullscreen]:overflow-auto">
+      <div className="mx-auto grid max-w-[1500px] border-b border-[#EEEEEE] lg:h-full lg:grid-rows-1 lg:grid-cols-[88px_300px_minmax(0,1fr)_360px]">
+        <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1 lg:min-h-0 lg:overflow-hidden" />
 
-        <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
+        <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:min-h-0 lg:overflow-hidden lg:border-b-0 lg:border-r">
           {tool === 'design' && <DesignPanel onFiles={onFiles} busy={uploading} error={uploadError} />}
-          {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} />}
+          {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} maxItems={desktop ? 6 : undefined} />}
           {tool === 'text' && <TextAddPanel onAdd={(init) => studio.addText(init)} />}
           {tool === 'layers' && (
             <div>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-black">Layers</h2>
-              {layersList}
+              {layersList(desktop ? 8 : undefined)}
             </div>
           )}
         </aside>
 
-        <section className="order-1 flex min-w-0 flex-col gap-4 bg-[#F5F5F5] p-4 sm:p-6 lg:order-3">
+        <section className="order-1 flex min-w-0 flex-col gap-4 bg-[#F5F5F5] p-4 sm:p-6 lg:order-3 lg:min-h-0 lg:gap-3 lg:overflow-hidden lg:p-4">
           <StudioToolbar
             canUndo={studio.canUndo}
             canRedo={studio.canRedo}
@@ -291,7 +308,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             }}
             onZoomChange={setZoom}
           />
-          <div className="flex justify-center gap-3">
+          <div className="flex shrink-0 justify-center gap-3">
             {views.map((v) => (
               <button
                 key={v.id}
@@ -307,7 +324,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           </div>
         </section>
 
-        <aside className="order-4 space-y-6 border-t border-[#EEEEEE] p-5 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-l lg:border-t-0">
+        <aside className="order-4 space-y-6 border-t border-[#EEEEEE] p-5 lg:flex lg:min-h-0 lg:flex-col lg:space-y-0 lg:gap-3 lg:overflow-hidden lg:border-l lg:border-t-0 lg:p-4">
           <ProductPanel
             card={card}
             image={view?.image}
@@ -320,13 +337,28 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               setStatus(null);
             }}
           />
-          <div className="border-t border-[#EEEEEE] pt-5">
-            <h2 className={SECTION_TITLE}>Design Layers</h2>
-            {layersList}
+          <div role="tablist" aria-label="Editor panel" className="hidden rounded-lg bg-[#F5F5F5] p-0.5 lg:flex">
+            {(['layers', 'properties'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={panelTab === t}
+                onClick={() => setPanelTab(t)}
+                className={`${TAB_BASE} ${panelTab === t ? 'bg-black text-white' : 'text-[#717171] hover:text-black'}`}
+              >
+                {t === 'layers' ? 'Layers' : 'Properties'}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-hidden">
+          <div className={`border-t border-[#EEEEEE] pt-5 lg:border-t-0 lg:pt-0 ${panelTab === 'properties' ? 'lg:hidden' : ''}`}>
+            <h2 className={`${SECTION_TITLE} lg:sr-only`}>Design Layers</h2>
+            {layersList(desktop ? 5 : undefined)}
           </div>
           {studio.selectedIds.length > 0 && (
-            <section aria-label="Properties" className="space-y-5 border-t border-[#EEEEEE] pt-5">
-              <h2 className={SECTION_TITLE}>Properties</h2>
+            <section aria-label="Properties" className={`space-y-5 border-t border-[#EEEEEE] pt-5 lg:space-y-3 lg:border-t-0 lg:pt-0 ${panelTab === 'layers' ? 'lg:hidden' : ''}`}>
+              <h2 className={`${SECTION_TITLE} lg:sr-only`}>Properties</h2>
               {selectedText && (
                 <TextInspector
                   layer={selectedText}
@@ -364,7 +396,12 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               )}
             </section>
           )}
+            {!hasSelection && panelTab === 'properties' && (
+              <p className="hidden rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171] lg:block">Select a layer to edit its properties.</p>
+            )}
+          </div>
 
+          <div className="space-y-6 lg:mt-auto lg:space-y-2">
           {status && (
             <p role={status.kind === 'error' ? 'alert' : 'status'} className={`rounded-lg px-4 py-3 text-xs ${status.kind === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'}`}>
               {status.text}
@@ -376,7 +413,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               type="button"
               disabled
               title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-lg bg-[#EEEEEE] px-4 py-3.5 text-[11px] font-bold uppercase tracking-widest text-[#9A9A9A]"
+              className="flex items-center justify-center gap-2 rounded-lg bg-[#EEEEEE] px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-[#9A9A9A]"
             >
               <ShoppingBag className="h-4 w-4" />
               Add to Cart
@@ -385,13 +422,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               type="button"
               disabled={saving}
               onClick={save}
-              className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? 'Saving…' : 'Save Design'}
             </button>
           </div>
           <p className="text-center text-[10px] text-[#717171]">Add to Cart and pricing are coming soon.</p>
+          </div>
         </aside>
       </div>
     </div>
