@@ -4,7 +4,7 @@ import { orderToDraftLines } from './orderEdit';
 
 const product: Product = {
   id: 'p1', name: 'Tee', description: '', price: 999, image: 'tee.png', category: 'c', rating: 0, parentProductId: 'pp1',
-  parentProduct: { id: 'pp1', name: 'pp', sizeOrder: ['M'], stockBySize: { M: 4 } },
+  parentProduct: { id: 'pp1', name: 'pp', category: '', sizeOrder: ['M'], stockBySize: { M: 4 } },
 };
 const order: Order = {
   id: 'ord_x', userId: 'guest', userName: 'A', userEmail: '', address: 'x', phone: '017',
@@ -39,7 +39,7 @@ describe('orderToDraftLines', () => {
     expect((l[0] as any).item.product.parentProduct).toBeUndefined();
   });
   it('does not re-parent when the live product moved to another parent', () => {
-    const moved: Product = { ...product, parentProductId: 'pp2', parentProduct: { id: 'pp2', name: 'x', sizeOrder: ['M'], stockBySize: { M: 1 } } };
+    const moved: Product = { ...product, parentProductId: 'pp2', parentProduct: { id: 'pp2', name: 'x', category: '', sizeOrder: ['M'], stockBySize: { M: 1 } } };
     const l = orderToDraftLines({ ...order, items: [order.items[0]] }, [moved]);
     expect((l[0] as any).item.product.parentProductId).toBe('pp1');
     expect((l[0] as any).item.product.parentProduct).toBeUndefined();

@@ -35,7 +35,7 @@ function mk(id: string, over: Partial<Product> = {}, stock?: Record<string, numb
     parentProduct:
       stockBySize === null
         ? undefined
-        : { id: `pp-${id}`, name: 'PP', sizeOrder: Object.keys(stockBySize), stockBySize },
+        : { id: `pp-${id}`, name: 'PP', category: '', sizeOrder: Object.keys(stockBySize), stockBySize },
     ...over,
   };
 }
@@ -219,7 +219,7 @@ describe('distinctParentIds', () => {
 });
 
 describe('attachParentProducts', () => {
-  const parent = (id: string): ParentProduct => ({ id, name: id, sizeOrder: ['S'], stockBySize: { S: 4 } });
+  const parent = (id: string): ParentProduct => ({ id, name: id, category: '', sizeOrder: ['S'], stockBySize: { S: 4 } });
   it('attaches the matching parent and leaves others undefined', () => {
     const items = [mk('a', { parentProductId: 'p1' }, null), mk('b', {}, null), mk('c', { parentProductId: 'missing' }, null)];
     const out = attachParentProducts(items, [parent('p1')]);

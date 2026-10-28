@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { pickRecommendations } from './recommendations';
 import type { CartItem, ParentProduct, Product } from '@/shared/domain/types';
 
-const inStock: ParentProduct = { id: 'pp', name: 'pool', sizeOrder: ['M'], stockBySize: { M: 5 } };
-const soldOut: ParentProduct = { id: 'pp0', name: 'pool0', sizeOrder: ['M'], stockBySize: { M: 0 } };
+const inStock: ParentProduct = { id: 'pp', name: 'pool', category: '', sizeOrder: ['M'], stockBySize: { M: 5 } };
+const soldOut: ParentProduct = { id: 'pp0', name: 'pool0', category: '', sizeOrder: ['M'], stockBySize: { M: 0 } };
 
 const make = (id: string, category: string, rating: number, parentProduct: ParentProduct = inStock): Product => ({
   id, name: id, description: '', price: 10, image: '', category, rating, parentProduct,

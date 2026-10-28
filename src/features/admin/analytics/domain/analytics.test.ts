@@ -98,7 +98,7 @@ describe('buildCustomers', () => {
 describe('lowStockProducts', () => {
   const p = (id: string, stock?: Record<string, number>): Product => ({
     id, name: id, description: '', price: 1, image: `${id}.png`, category: 'c', rating: 0,
-    parentProduct: stock ? { id: 'pp', name: 'pp', sizeOrder: Object.keys(stock), stockBySize: stock } : undefined,
+    parentProduct: stock ? { id: 'pp', name: 'pp', category: '', sizeOrder: Object.keys(stock), stockBySize: stock } : undefined,
   });
   it('sums sizes, filters by threshold, sorts ascending, skips no-parent', () => {
     const r = lowStockProducts([p('a', { S: 5, M: 5 }), p('b', { S: 3 }), p('c', { S: 50 }), p('d')], 10, 5);

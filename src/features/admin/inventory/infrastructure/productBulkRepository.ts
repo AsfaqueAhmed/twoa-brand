@@ -1,4 +1,6 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
+import { categoryColumns } from '@/features/admin/parentProducts/domain/parentCategory';
+import { cascadeCategoryToProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { nextStock, validateStockAmount, type StockAdjustMode } from '../domain/productList';
 
 export async function setProductFeatured(id: string, featured: boolean): Promise<void> {
@@ -12,13 +14,14 @@ export async function setProductsActive(ids: string[], active: boolean): Promise
   if (error) throw new Error(error.message);
 }
 
-export async function changeProductsCategory(ids: string[], category: string, subcategory: string): Promise<void> {
-  if (ids.length === 0) return;
-  const { error } = await supabase
-    .from('products')
-    .update({ category, subcategory: subcategory.trim() ? subcategory : null })
-    .in('id', ids);
+// Categories belong to parent products: update the parents, then copy the values
+// onto every linked product (the denormalized products.category/subcategory).
+export async function changeParentsCategory(parentIds: string[], category: string, subcategory: string): Promise<void> {
+  if (parentIds.length === 0) return;
+  const cols = categoryColumns(category, subcategory);
+  const { error } = await supabase.from('parent_products').update(cols).in('id', parentIds);
   if (error) throw new Error(error.message);
+  await cascadeCategoryToProducts(parentIds, cols.category, cols.subcategory);
 }
 
 export async function deleteProducts(ids: string[]): Promise<void> {

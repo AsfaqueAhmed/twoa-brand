@@ -6,7 +6,7 @@ const base: Product = { id: '1', name: 'Tee', description: '', price: 10, image:
 
 const withStock = (stockBySize: Record<string, number>): Product => ({
   ...base,
-  parentProduct: { id: 'p', name: 'Tee', sizeOrder: Object.keys(stockBySize), stockBySize },
+  parentProduct: { id: 'p', name: 'Tee', category: '', sizeOrder: Object.keys(stockBySize), stockBySize },
 });
 
 describe('catalog size helpers', () => {

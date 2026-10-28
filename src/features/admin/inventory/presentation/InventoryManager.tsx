@@ -10,8 +10,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { fetchAllProductsForAdmin } from '@/features/catalog/infrastructure/firestoreProductsRepository';
 import {
   fetchCategories,
-  persistNewCategory,
-  persistNewSubcategory,
   type CategoryDoc,
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
@@ -23,7 +21,7 @@ import ImageCropperModal from './ImageCropperModal';
 import { pruneSelection } from '@/features/admin/orders/domain/orderView';
 import {
   adjustParentStock,
-  changeProductsCategory,
+  changeParentsCategory,
   deleteProducts,
   setProductFeatured,
   setProductsActive,
@@ -123,14 +121,6 @@ export default function InventoryManager() {
     loadCategories();
   }, [loadCategories]);
 
-  // New category addition state
-  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [newCategoryInput, setNewCategoryInput] = useState('');
-
-  // New subcategory addition state
-  const [isAddingNewSubcategory, setIsAddingNewSubcategory] = useState(false);
-  const [newSubcategoryInput, setNewSubcategoryInput] = useState('');
-
   // Single variant addition form state
   const [newVariantName, setNewVariantName] = useState('');
   const [newVariantColor, setNewVariantColor] = useState('#000000');
@@ -159,10 +149,6 @@ export default function InventoryManager() {
     setProductGallery([]);
     setProductHighlights([]);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
   };
 
@@ -172,10 +158,6 @@ export default function InventoryManager() {
     setProductGallery(p.gallery ?? []);
     setProductHighlights(p.highlights ?? []);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
   };
 
@@ -188,31 +170,7 @@ export default function InventoryManager() {
     setProductGallery(p.gallery ?? []);
     setProductHighlights(p.highlights ?? []);
     setEditorError('');
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
     setIsEditingProduct(true);
-  };
-
-  const handleConfirmNewCategory = async () => {
-    const trimmed = newCategoryInput.trim();
-    if (!trimmed) return;
-    setEditingProduct((prev) => (prev ? { ...prev, category: trimmed } : null));
-    setIsAddingNewCategory(false);
-    setNewCategoryInput('');
-    await persistNewCategory(trimmed);
-    await loadCategories();
-  };
-
-  const handleConfirmNewSubcategory = async () => {
-    const trimmed = newSubcategoryInput.trim();
-    if (!trimmed || !editingProduct?.category) return;
-    setEditingProduct((prev) => (prev ? { ...prev, subcategory: trimmed } : null));
-    setIsAddingNewSubcategory(false);
-    setNewSubcategoryInput('');
-    await persistNewSubcategory(editingProduct.category, trimmed);
-    await loadCategories();
   };
 
   const handleTriggerCrop = (target: 'primary' | 'variant' | 'gallery') => {
@@ -270,10 +228,10 @@ export default function InventoryManager() {
     e.preventDefault();
     if (!editingProduct) return;
 
-    const { id, name, description, price, image, category, subcategory, parentProductId } = editingProduct;
+    const { id, name, description, price, image, parentProductId } = editingProduct;
 
-    if (!id || !name || !description || price === undefined || !image || !category) {
-      setEditorError('Please fill in all required fields (ID, Name, Description, Price, Primary Image, Category).');
+    if (!id || !name || !description || price === undefined || !image) {
+      setEditorError('Please fill in all required fields (ID, Name, Description, Price, Primary Image).');
       return;
     }
 
@@ -287,6 +245,11 @@ export default function InventoryManager() {
       return;
     }
 
+    // Category/subcategory belong to the parent product; products store a denormalized copy.
+    const parent = parentProducts.find((pp) => pp.id === parentProductId);
+    const category = parent?.category ?? '';
+    const subcategory = parent?.subcategory ?? '';
+
     setIsSavingProduct(true);
     setEditorError('');
 
@@ -299,7 +262,7 @@ export default function InventoryManager() {
         originalPrice: editingProduct.originalPrice ? Number(editingProduct.originalPrice) : null,
         image,
         category,
-        subcategory: subcategory || '',
+        subcategory,
         rating: editingProduct.rating || 5,
         parentProductId,
         variants: productVariants,
@@ -410,23 +373,6 @@ export default function InventoryManager() {
       setSplittingProductId(null);
     }
   };
-
-  // Categories: sourced from the persisted `categories` collection, merged with any
-  // legacy category names still only present on existing product docs.
-  const existingCategories = Array.from(
-    new Set([...categoryDocs.map((c) => c.name), ...products.map((p) => p.category).filter(Boolean)])
-  ).sort();
-
-  // Subcategories for the currently selected category, same merge strategy.
-  const existingSubcategories = Array.from(
-    new Set([
-      ...(categoryDocs.find((c) => c.name === editingProduct?.category)?.subcategories || []),
-      ...products
-        .filter((p) => !editingProduct?.category || p.category === editingProduct.category)
-        .map((p) => p.subcategory)
-        .filter((s): s is string => !!s),
-    ])
-  ).sort();
 
   const filterCategories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
 
@@ -673,145 +619,17 @@ export default function InventoryManager() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Category */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                      Category*
-                    </label>
-                    {!isAddingNewCategory ? (
-                      <select
-                        required
-                        value={editingProduct.category || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_new__') {
-                            setIsAddingNewCategory(true);
-                          } else {
-                            setEditingProduct((prev) => ({ ...prev, category: e.target.value }));
-                          }
-                        }}
-                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                      >
-                        <option value="" disabled>
-                          Select a category…
-                        </option>
-                        {Array.from(
-                          new Set([...existingCategories, ...(editingProduct.category ? [editingProduct.category] : [])])
-                        )
-                          .sort()
-                          .map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        <option value="__add_new__">+ Add New Category</option>
-                      </select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={newCategoryInput}
-                          onChange={(e) => setNewCategoryInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleConfirmNewCategory();
-                            }
-                          }}
-                          placeholder="New category name"
-                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleConfirmNewCategory}
-                          className="bg-black hover:bg-[#333333] text-white text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingNewCategory(false);
-                            setNewCategoryInput('');
-                          }}
-                          className="border border-[#EEEEEE] hover:border-black text-black text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Subcategory */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#717171] mb-1.5">
-                      Subcategory (Optional)
-                    </label>
-                    {!isAddingNewSubcategory ? (
-                      <select
-                        value={editingProduct.subcategory || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__add_new__') {
-                            setIsAddingNewSubcategory(true);
-                          } else {
-                            setEditingProduct((prev) => ({ ...prev, subcategory: e.target.value }));
-                          }
-                        }}
-                        className="w-full rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                      >
-                        <option value="">None</option>
-                        {Array.from(
-                          new Set([
-                            ...existingSubcategories,
-                            ...(editingProduct.subcategory ? [editingProduct.subcategory] : []),
-                          ])
-                        )
-                          .sort()
-                          .map((sub) => (
-                            <option key={sub} value={sub}>
-                              {sub}
-                            </option>
-                          ))}
-                        <option value="__add_new__">+ Add New Subcategory</option>
-                      </select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={newSubcategoryInput}
-                          onChange={(e) => setNewSubcategoryInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleConfirmNewSubcategory();
-                            }
-                          }}
-                          placeholder="New subcategory name"
-                          className="flex-1 rounded-lg border border-[#EEEEEE] bg-white py-2.5 px-3.5 text-xs text-black focus:border-black focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleConfirmNewSubcategory}
-                          className="bg-black hover:bg-[#333333] text-white text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingNewSubcategory(false);
-                            setNewSubcategoryInput('');
-                          }}
-                          className="border border-[#EEEEEE] hover:border-black text-black text-[10px] font-bold uppercase tracking-widest px-3 shrink-0"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Category (read-only: owned by the parent product) */}
+                {(() => {
+                  const selectedParent = parentProducts.find((pp) => pp.id === editingProduct.parentProductId);
+                  return (
+                    <p className="text-[11px] text-[#717171]" id="product-parent-category">
+                      {selectedParent
+                        ? `Category: ${selectedParent.category || 'Uncategorized'} / Subcategory: ${selectedParent.subcategory || 'None'} (from parent product)`
+                        : 'Category and subcategory come from the parent product. Select a parent product to apply them.'}
+                    </p>
+                  );
+                })()}
 
                 {/* Primary Image */}
                 <div>
@@ -1301,13 +1119,15 @@ export default function InventoryManager() {
 
       {bulkModal === 'category' && (
         <BulkCategoryModal
-          count={selectedIds.length}
+          parentCount={bulkParents.parentIds.length}
+          productCount={selectedIds.length}
+          skipped={bulkParents.skipped}
           categories={categoryDocs}
           busy={bulkBusy}
           error={bulkModalError}
           onClose={() => setBulkModal(null)}
           onApply={(category, subcategory) =>
-            runBulk(() => changeProductsCategory(selectedIds, category, subcategory), true)
+            runBulk(() => changeParentsCategory(bulkParents.parentIds, category, subcategory), true)
           }
         />
       )}

@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const from = vi.fn();
 vi.mock('@/shared/infrastructure/supabase/client', () => ({ supabase: { from: (...a: unknown[]) => from(...a) } }));
 
-import { adjustParentStock, changeProductsCategory, deleteProducts, setProductsActive } from './productBulkRepository';
+import { adjustParentStock, changeParentsCategory, deleteProducts, setProductsActive } from './productBulkRepository';
 
 beforeEach(() => from.mockReset());
 
 describe('productBulkRepository guards', () => {
   it('no-ops on empty id lists without touching the network', async () => {
     await setProductsActive([], true);
-    await changeProductsCategory([], 'Hats', '');
+    await changeParentsCategory([], 'Hats', '');
     await deleteProducts([]);
     await adjustParentStock([], 'set', 5);
     expect(from).not.toHaveBeenCalled();
@@ -42,6 +42,30 @@ describe('productBulkRepository guards', () => {
     from.mockImplementation(() => ({ select: () => ({ in: vi.fn().mockResolvedValue({ data: [], error: null }) }), upsert }));
     await adjustParentStock(['p1'], 'add', 3);
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('updates parents then cascades category to their linked products', async () => {
+    const calls: string[] = [];
+    const mk = (table: string) => ({
+      update: (v: unknown) => ({
+        in: (col: string, ids: string[]) => {
+          calls.push(`${table}:${JSON.stringify(v)}:${col}:${ids.join(',')}`);
+          return Promise.resolve({ error: null });
+        },
+      }),
+    });
+    from.mockImplementation(mk);
+    await changeParentsCategory(['a', 'b'], ' Hats ', '');
+    expect(calls).toEqual([
+      'parent_products:{"category":"Hats","subcategory":null}:id:a,b',
+      'products:{"category":"Hats","subcategory":null}:parent_product_id:a,b',
+    ]);
+  });
+
+  it('does not cascade when the parent update fails', async () => {
+    from.mockImplementation(() => ({ update: () => ({ in: () => Promise.resolve({ error: { message: 'nope' } }) }) }));
+    await expect(changeParentsCategory(['a'], 'Hats', '')).rejects.toThrow('nope');
+    expect(from).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces database errors', async () => {
