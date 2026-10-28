@@ -19,3 +19,20 @@ export function fitViewport(container: { w: number; h: number }, content: { w: n
   const zoom = clampZoom(Math.min(1, (container.w - padding * 2) / content.w, (container.h - padding * 2) / content.h));
   return { zoom, panX: (container.w - content.w * zoom) / 2, panY: (container.h - content.h * zoom) / 2 };
 }
+
+export const MIN_VISIBLE_FRACTION = 0.25;
+
+// Keeps at least `minVisible` of the stage (on each axis) inside the container, so the product can never be panned away.
+// Returns the same viewport object when nothing needs clamping.
+export function clampPan(
+  vp: Viewport,
+  container: { w: number; h: number },
+  content: { w: number; h: number },
+  minVisible = MIN_VISIBLE_FRACTION,
+): Viewport {
+  const stageW = content.w * vp.zoom;
+  const stageH = content.h * vp.zoom;
+  const panX = Math.min(container.w - minVisible * stageW, Math.max(-(1 - minVisible) * stageW, vp.panX));
+  const panY = Math.min(container.h - minVisible * stageH, Math.max(-(1 - minVisible) * stageH, vp.panY));
+  return panX === vp.panX && panY === vp.panY ? vp : { ...vp, panX, panY };
+}

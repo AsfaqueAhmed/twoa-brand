@@ -5,7 +5,7 @@ import { type Layer, type LayerPatch, MAX_TEXT_LENGTH, TEXT_FONT_FRACTION, norma
 import { expandToGroups, isSingleUnit } from '../../domain/grouping';
 import { type Box, type CanvasPx, type Size, boxCenter, boxesIntersect, layerBox, limitMoveDelta, limitScaleFactor, rotateLayersAround, rotationFits, scaleLayersAround, unionBox } from '../../domain/geometry';
 import { type Guide, snapAngle, snapBox } from '../../domain/snapping';
-import { type Viewport, clampZoom, fitViewport, panBy, zoomAt } from '../../domain/viewport';
+import { type Viewport, clampPan, clampZoom, fitViewport, panBy, zoomAt } from '../../domain/viewport';
 
 export type CanvasHandle = { zoomBy: (factor: number) => void; setZoom: (zoom: number) => void; fit: () => void };
 
@@ -56,7 +56,11 @@ const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
   const [editingId, setEditingId] = useState<string | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
 
-  const applyViewport = (next: Viewport) => {
+  const applyViewport = (requested: Viewport) => {
+    // Never let the product be panned (or zoomed) mostly out of view: keep at least 25% of the stage visible.
+    const c = containerRef.current;
+    const st = stageRef.current;
+    const next = c && st && st.offsetWidth && st.offsetHeight ? clampPan(requested, { w: c.clientWidth, h: c.clientHeight }, { w: st.offsetWidth, h: st.offsetHeight }) : requested;
     vpRef.current = next; // update right away: rapid wheel/pinch events fire several times per frame, before React re-renders
     setVp(next);
     onZoomChange(next.zoom);

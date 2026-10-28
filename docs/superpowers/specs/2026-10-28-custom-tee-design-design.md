@@ -141,3 +141,4 @@ Black-and-white styling is unchanged (guides are black lines with a white outlin
 - Double-click isolates a single member of a group: it gets no handles, and Ungroup ungroups the whole group. Clicking a member row in the layers list selects just that member.
 - In-place text editing is limited to 200 characters.
 - On narrow (touch) layouts the canvas does not capture page scroll (a plain wheel scrolls the page); there is no pinch-zoom or touch pan, so use the zoom buttons.
+- Panning (and zooming) can never move the product out of view: at least 25% of the tee image stays inside the canvas on both axes.
