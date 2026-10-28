@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingBag, History, LogIn, LogOut, Loader2, Sliders } from 'lucide-react';
+import { ShoppingBag, History, LogIn, LogOut, Loader2, Sliders, Shirt } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/features/auth/presentation/AuthProvider';
 import { useCart } from '@/features/cart/presentation/CartProvider';
@@ -11,10 +11,15 @@ export default function Navbar() {
   const { count: cartCount } = useCart();
   const pathname = usePathname();
   const router = useRouter();
-  const currentTab: 'shop' | 'orders' | 'admin' =
-    pathname.startsWith('/admin') ? 'admin' : pathname.startsWith('/orders') ? 'orders' : 'shop';
-  const setTab = (tab: 'shop' | 'orders' | 'admin') =>
-    router.push(tab === 'shop' ? '/' : tab === 'orders' ? '/orders' : '/admin');
+  const currentTab: 'shop' | 'custom' | 'orders' | 'admin' = pathname.startsWith('/admin')
+    ? 'admin'
+    : pathname.startsWith('/orders')
+      ? 'orders'
+      : pathname.startsWith('/custom-tee')
+        ? 'custom'
+        : 'shop';
+  const setTab = (tab: 'shop' | 'custom' | 'orders' | 'admin') =>
+    router.push(tab === 'shop' ? '/' : tab === 'custom' ? '/custom-tee' : tab === 'orders' ? '/orders' : '/admin');
   const onOpenCart = () => router.push('/cart');
   // Product, cart and checkout pages carry their own sticky action bar on mobile.
   const hideBottomNav = ['/product', '/cart', '/checkout'].some((p) => pathname.startsWith(p));
@@ -46,6 +51,21 @@ export default function Navbar() {
             >
               Shop All
               {currentTab === 'shop' && (
+                <motion.div layoutId="active-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
+              )}
+            </button>
+            <button
+              id="tab-custom-btn"
+              onClick={() => setTab('custom')}
+              className={`relative px-3 py-2 text-[12px] font-semibold uppercase tracking-wider transition-colors ${
+                currentTab === 'custom' ? 'text-black' : 'text-[#717171] hover:text-black'
+              }`}
+            >
+              <div className="flex items-center space-x-1">
+                <Shirt className="h-3.5 w-3.5" />
+                <span>Custom Tee</span>
+              </div>
+              {currentTab === 'custom' && (
                 <motion.div layoutId="active-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
               )}
             </button>
@@ -156,6 +176,16 @@ export default function Navbar() {
         >
           <ShoppingBag className="h-5 w-5" />
           <span>Shop All</span>
+        </button>
+        <button
+          id="mobile-tab-custom-btn"
+          onClick={() => setTab('custom')}
+          className={`flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+            currentTab === 'custom' ? 'text-black' : 'text-[#919191]'
+          }`}
+        >
+          <Shirt className="h-5 w-5" />
+          <span>Custom</span>
         </button>
         <button
           id="mobile-tab-orders-btn"
