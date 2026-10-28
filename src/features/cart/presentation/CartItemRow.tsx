@@ -23,7 +23,6 @@ export default function CartItemRow({ item }: { item: CartItem }) {
     <div className={`${CART_ROW_GRID} flex flex-wrap items-center gap-x-3 gap-y-3 py-4 sm:py-5 border-b border-[#EEEEEE] last:border-b-0`} id={`cart-row-${itemKey}`}>
       {/* Product */}
       <div className="flex w-full gap-3 sm:gap-4 min-w-0 sm:w-auto">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <ThumbImage
           src={selectedVariant?.image || product.image}
           alt={product.name}
@@ -55,7 +54,6 @@ export default function CartItemRow({ item }: { item: CartItem }) {
                     className={`h-8 w-8 overflow-hidden border ${active ? 'border-black ring-1 ring-black' : 'border-[#EEEEEE]'}`}
                   >
                     {v.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <ThumbImage src={v.image} alt={v.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <span className="block h-full w-full" style={{ backgroundColor: v.colorCode || '#EEEEEE' }} />

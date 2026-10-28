@@ -8,7 +8,7 @@ const BUCKET = 'images';
 const CACHE_CONTROL = '31536000';
 const FULL_MAX_EDGE = 1600;
 const FULL_QUALITY = 0.82;
-const THUMB_MAX_EDGE = 480;
+const THUMB_MAX_EDGE = 640;
 const THUMB_QUALITY = 0.8;
 
 function extensionForDataUrl(dataUrl: string): string {
@@ -60,22 +60,22 @@ async function uploadOriginal(storagePath: string, dataUrl: string): Promise<str
   return publicUrl(path);
 }
 
-// Uploads a cropped data URL as `<storagePath>.full.webp` (max 1600px) plus a
-// `<storagePath>.thumb.webp` (max 480px) and returns the FULL public URL.
+// Uploads a cropped data URL as `<storagePath>.full.webp` (max `options.maxEdge`, default 1600px) plus a
+// `<storagePath>.thumb.webp` (max 640px) and returns the FULL public URL.
 // storagePath must be unique per upload (include a timestamp): objects are
 // cached for a year and never overwritten.
 export async function uploadProductImage(
   storagePath: string,
   dataUrl: string,
-  options: { thumbnail?: boolean } = {},
+  options: { thumbnail?: boolean; maxEdge?: number } = {},
 ): Promise<string> {
-  const { thumbnail = true } = options;
+  const { thumbnail = true, maxEdge = FULL_MAX_EDGE } = options;
 
   let img: HTMLImageElement;
   let full: Blob | null;
   try {
     img = await loadImage(dataUrl);
-    full = await encodeWebp(img, FULL_MAX_EDGE, FULL_QUALITY);
+    full = await encodeWebp(img, maxEdge, FULL_QUALITY);
   } catch {
     return uploadOriginal(storagePath, dataUrl);
   }

@@ -82,7 +82,6 @@ export default function ProductPerformancePage() {
                         <td className="py-3 pl-5 pr-3 text-[#717171]">{p.rank}</td>
                         <td className="px-3">
                           <div className="flex items-center gap-3">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <ThumbImage src={p.image} alt="" className="h-10 w-10 rounded-lg border border-[#EEEEEE] object-cover" />
                             <span className="font-medium text-black">{p.name}</span>
                           </div>

@@ -53,7 +53,6 @@ export default function CartRecommendations() {
               className="text-left space-y-2"
             >
               <div className="relative aspect-[4/5] overflow-hidden bg-[#F5F5F5]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <ThumbImage src={p.image} alt={p.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                 {percent !== undefined && (
                   <span className="absolute top-2 left-2 bg-red-500 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">

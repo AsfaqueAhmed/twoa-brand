@@ -3,6 +3,9 @@ import { uploadProductImage } from '@/features/admin/inventory/infrastructure/pr
 import { toBanner } from '@/features/catalog/infrastructure/homeBannersRepository';
 import type { HomeBanner } from '@/features/catalog/domain/banner';
 
+// Matches the cropper output so banners are never downscaled below it.
+const BANNER_MAX_EDGE = 1920;
+
 export type BannerFormPayload = Omit<HomeBanner, 'id' | 'position' | 'createdAt'>;
 
 function toRow(payload: Partial<BannerFormPayload>): Record<string, unknown> {
@@ -72,5 +75,5 @@ export async function removeBannerImage(url?: string): Promise<void> {
 // Each upload gets a unique path so replacing an image never overwrites the
 // file a live banner still points to.
 export async function uploadBannerImage(id: string, kind: 'desktop' | 'mobile', dataUrl: string): Promise<string> {
-  return uploadProductImage(`banners/${id}-${kind}-${Date.now()}`, dataUrl, { thumbnail: false });
+  return uploadProductImage(`banners/${id}-${kind}-${Date.now()}`, dataUrl, { thumbnail: false, maxEdge: BANNER_MAX_EDGE });
 }

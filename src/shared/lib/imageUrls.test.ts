@@ -10,6 +10,11 @@ describe('thumbnailUrl', () => {
   it('preserves query strings', () => {
     expect(thumbnailUrl(`${base}.full.webp?v=2`)).toBe(`${base}.thumb.webp?v=2`);
   });
+  it('preserves #hash fragments', () => {
+    expect(thumbnailUrl(`${base}.full.webp#frag`)).toBe(`${base}.thumb.webp#frag`);
+    expect(thumbnailUrl(`${base}.full.webp?v=2#frag`)).toBe(`${base}.thumb.webp?v=2#frag`);
+    expect(isThumbnailable(`${base}.full.webp#frag`)).toBe(true);
+  });
   it('leaves legacy images unchanged', () => {
     expect(thumbnailUrl(`${base}.jpg`)).toBe(`${base}.jpg`);
     expect(thumbnailUrl(`${base}.png`)).toBe(`${base}.png`);

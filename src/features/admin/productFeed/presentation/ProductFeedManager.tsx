@@ -142,7 +142,6 @@ export default function ProductFeedManager() {
               <tr key={row.id} className={TABLE_ROW}>
                 <td className="py-3 pl-5 pr-3">
                   <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <ThumbImage
                       src={row.image_link}
                       alt={row.title}

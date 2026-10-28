@@ -8,7 +8,6 @@ export default function TopSellers({ items }: { items: TopProduct[] }) {
       {items.map((p, i) => (
         <div key={p.productId}>
           <div className="relative aspect-[4/5] overflow-hidden rounded bg-neutral-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <ThumbImage src={p.image} alt={p.name} className="h-full w-full object-cover" />
             <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black text-xs font-bold text-white">{i + 1}</span>
           </div>
