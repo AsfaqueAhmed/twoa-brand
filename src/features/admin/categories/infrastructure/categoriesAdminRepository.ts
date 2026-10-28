@@ -1,26 +1,29 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
 import { categorySlug } from '@/features/catalog/domain/categorySlug';
 
+// True when any product or parent product uses the category (and subcategory, when given).
+async function countInUse(category: string, sub?: string): Promise<boolean> {
+  for (const table of ['products', 'parent_products']) {
+    let q = supabase.from(table).select('id', { count: 'exact', head: true }).eq('category', category);
+    if (sub !== undefined) q = q.eq('subcategory', sub);
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    if ((count ?? 0) > 0) return true;
+  }
+  return false;
+}
+
 export async function deleteCategory(category: { id: string; name: string }): Promise<void> {
-  const { count, error: countError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact', head: true })
-    .eq('category', category.name);
-  if (countError) throw new Error(countError.message);
-  if ((count ?? 0) > 0) throw new Error('Category still has products.');
+  const inUse = await countInUse(category.name);
+  if (inUse) throw new Error('Category still has products or parent products.');
 
   const { error } = await supabase.from('categories').delete().eq('id', category.id);
   if (error) throw new Error(error.message);
 }
 
 export async function deleteSubcategory(categoryName: string, sub: string): Promise<void> {
-  const { count, error: countError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact', head: true })
-    .eq('category', categoryName)
-    .eq('subcategory', sub);
-  if (countError) throw new Error(countError.message);
-  if ((count ?? 0) > 0) throw new Error('Subcategory still has products.');
+  const inUse = await countInUse(categoryName, sub);
+  if (inUse) throw new Error('Subcategory still has products or parent products.');
 
   const id = categorySlug(categoryName);
   const { data: row, error: fetchError } = await supabase

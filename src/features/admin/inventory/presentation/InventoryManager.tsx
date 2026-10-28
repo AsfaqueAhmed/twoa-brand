@@ -14,6 +14,7 @@ import {
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { saveProduct, deleteProduct } from '../infrastructure/firestoreProductAdminRepository';
 import { uploadProductImage } from '../infrastructure/productImageUpload';
+import { resolveProductCategory } from '@/features/admin/parentProducts/domain/parentCategory';
 import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
 import { fetchSizeCharts } from '@/features/admin/sizeCharts/infrastructure/firestoreSizeChartsRepository';
 import type { SizeChart } from '@/shared/domain/types';
@@ -140,8 +141,6 @@ export default function InventoryManager() {
       price: 0,
       originalPrice: undefined,
       image: '',
-      category: '',
-      subcategory: '',
       rating: 5,
       parentProductId: undefined,
     });
@@ -246,9 +245,12 @@ export default function InventoryManager() {
     }
 
     // Category/subcategory belong to the parent product; products store a denormalized copy.
-    const parent = parentProducts.find((pp) => pp.id === parentProductId);
-    const category = parent?.category ?? '';
-    const subcategory = parent?.subcategory ?? '';
+    const resolved = resolveProductCategory(parentProducts.find((pp) => pp.id === parentProductId));
+    if ('error' in resolved) {
+      setEditorError(resolved.error);
+      return;
+    }
+    const { category, subcategory } = resolved;
 
     setIsSavingProduct(true);
     setEditorError('');
@@ -322,6 +324,9 @@ export default function InventoryManager() {
     setSplittingProductId(p.id);
     try {
       const [firstVariant, ...restVariants] = p.variants;
+      const splitParent = parentProducts.find((pp) => pp.id === p.parentProductId);
+      const splitCategory = splitParent?.category?.trim() ? splitParent.category : p.category;
+      const splitSubcategory = splitParent?.category?.trim() ? splitParent.subcategory || '' : p.subcategory || '';
       const usedIds = new Set(products.map((prod) => prod.id));
 
       await saveProduct({
@@ -331,8 +336,8 @@ export default function InventoryManager() {
         price: p.price,
         originalPrice: p.originalPrice ?? null,
         image: firstVariant.image || p.image,
-        category: p.category,
-        subcategory: p.subcategory || '',
+        category: splitCategory,
+        subcategory: splitSubcategory,
         rating: p.rating,
         parentProductId: p.parentProductId || null,
         variants: [],
@@ -356,8 +361,8 @@ export default function InventoryManager() {
           price: p.price,
           originalPrice: p.originalPrice ?? null,
           image: variant.image || p.image,
-          category: p.category,
-          subcategory: p.subcategory || '',
+          category: splitCategory,
+          subcategory: splitSubcategory,
           rating: p.rating,
           parentProductId: p.parentProductId || null,
           variants: [],

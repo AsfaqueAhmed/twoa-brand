@@ -68,6 +68,15 @@ describe('productBulkRepository guards', () => {
     expect(from).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a partial failure when the cascade to linked products fails', async () => {
+    from.mockImplementation((table: string) => ({
+      update: () => ({ in: () => Promise.resolve({ error: table === 'products' ? { message: 'cascade boom' } : null }) }),
+    }));
+    await expect(changeParentsCategory(['a'], 'Hats', '')).rejects.toThrow(
+      'Parents updated, but linked products failed. Retry to finish. cascade boom',
+    );
+  });
+
   it('surfaces database errors', async () => {
     from.mockImplementation(() => ({ select: () => ({ in: vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }) }) }));
     await expect(adjustParentStock(['p1'], 'set', 1)).rejects.toThrow('boom');

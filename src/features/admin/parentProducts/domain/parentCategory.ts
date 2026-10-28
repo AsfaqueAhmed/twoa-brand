@@ -21,6 +21,16 @@ export function categoryColumns(category?: string, subcategory?: string): { cate
   return { category: (category ?? '').trim(), subcategory: (subcategory ?? '').trim() || null };
 }
 
+// The category a product inherits from its parent; an error message when it can't be resolved safely.
+export function resolveProductCategory(
+  parent: { category?: string; subcategory?: string } | undefined | null,
+): { category: string; subcategory: string } | { error: string } {
+  if (!parent) return { error: 'Parent product not loaded. Reload and retry.' };
+  const category = (parent.category ?? '').trim();
+  if (!category) return { error: 'This parent product has no category. Set one on the Parent Products page first.' };
+  return { category, subcategory: (parent.subcategory ?? '').trim() };
+}
+
 export function parentCategoryLabel(category?: string): string {
   return category?.trim() ? category : UNCATEGORIZED;
 }

@@ -1,13 +1,16 @@
-import type { Product } from '@/shared/domain/types';
+import type { Product, ParentProduct } from '@/shared/domain/types';
 import { categorySlug } from '@/features/catalog/domain/categorySlug';
 import type { CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
+
+export type SubNode = { name: string; productCount: number; parentCount: number; persisted: boolean };
 
 export type CategoryNode = {
   id: string;
   name: string;
   productCount: number;
+  parentCount: number;
   persisted: boolean;
-  subcategories: { name: string; productCount: number; persisted: boolean }[];
+  subcategories: SubNode[];
 };
 
 const byName = (a: { name: string }, b: { name: string }) =>
@@ -16,14 +19,15 @@ const byName = (a: { name: string }, b: { name: string }) =>
 export function buildCategoryTree(
   categories: CategoryDoc[],
   products: Pick<Product, 'category' | 'subcategory'>[],
+  parents: Pick<ParentProduct, 'category' | 'subcategory'>[] = [],
 ): CategoryNode[] {
-  const nodes = new Map<string, CategoryNode & { subs: Map<string, { name: string; productCount: number; persisted: boolean }> }>();
+  const nodes = new Map<string, CategoryNode & { subs: Map<string, SubNode> }>();
 
   // Nodes are keyed by exact stored name, matching exact-match product counts and server-side delete counts.
   const ensure = (name: string, persisted: boolean, id?: string) => {
     let node = nodes.get(name);
     if (!node) {
-      node = { id: id ?? categorySlug(name), name, productCount: 0, persisted, subcategories: [], subs: new Map() };
+      node = { id: id ?? categorySlug(name), name, productCount: 0, parentCount: 0, persisted, subcategories: [], subs: new Map() };
       nodes.set(name, node);
     }
     return node;
@@ -31,7 +35,7 @@ export function buildCategoryTree(
   const ensureSub = (node: ReturnType<typeof ensure>, name: string, persisted: boolean) => {
     let sub = node.subs.get(name);
     if (!sub) {
-      sub = { name, productCount: 0, persisted };
+      sub = { name, productCount: 0, parentCount: 0, persisted };
       node.subs.set(name, sub);
     }
     return sub;
@@ -47,6 +51,12 @@ export function buildCategoryTree(
     const node = ensure(p.category, false);
     node.productCount += 1;
     if (p.subcategory && p.subcategory.trim()) ensureSub(node, p.subcategory, false).productCount += 1;
+  }
+  for (const pp of parents) {
+    if (!pp.category || !pp.category.trim()) continue;
+    const node = ensure(pp.category, false);
+    node.parentCount += 1;
+    if (pp.subcategory && pp.subcategory.trim()) ensureSub(node, pp.subcategory, false).parentCount += 1;
   }
 
   return Array.from(nodes.values())

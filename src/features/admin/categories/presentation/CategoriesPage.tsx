@@ -14,15 +14,17 @@ import {
 import { deleteCategory, deleteSubcategory } from '@/features/admin/categories/infrastructure/categoriesAdminRepository';
 import { buildCategoryTree, type CategoryNode } from '@/features/admin/categories/domain/categoryTree';
 import { validateNewCategory, validateNewSubcategory } from '@/features/admin/categories/domain/validateCategory';
-import type { Product } from '@/shared/domain/types';
+import { fetchParentProducts } from '@/features/admin/parentProducts/infrastructure/firestoreParentProductsAdminRepository';
+import type { Product, ParentProduct } from '@/shared/domain/types';
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong');
-const REMOVE_HINT = 'Remove its products first';
+const REMOVE_HINT = 'Remove its products and parent products first';
 
-function CountPill({ n }: { n: number }) {
+function CountPill({ n, parents }: { n: number; parents: number }) {
   return (
     <span className="rounded-full bg-[#F5F5F5] px-2 py-0.5 text-xs font-medium text-[#717171]">
       {n} {n === 1 ? 'product' : 'products'}
+      {parents > 0 && `, ${parents} ${parents === 1 ? 'parent' : 'parents'}`}
     </span>
   );
 }
@@ -30,6 +32,7 @@ function CountPill({ n }: { n: number }) {
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [products, setProducts] = useState<Pick<Product, 'category' | 'subcategory'>[]>([]);
+  const [parents, setParents] = useState<Pick<ParentProduct, 'category' | 'subcategory'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -45,10 +48,11 @@ export default function CategoriesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [c, p] = await Promise.all([fetchCategories(), fetchAllProductsForAdmin()]);
+        const [c, p, pp] = await Promise.all([fetchCategories(), fetchAllProductsForAdmin(), fetchParentProducts()]);
         if (cancelled) return;
         setCategories(c);
         setProducts(p);
+        setParents(pp);
         setLoadError(null);
       } catch (e) {
         if (!cancelled) setLoadError(errMsg(e));
@@ -60,7 +64,7 @@ export default function CategoriesPage() {
   }, [tick]);
 
   const reload = useCallback(() => { setLoadError(null); setLoading(true); setTick((t) => t + 1); }, []);
-  const tree = useMemo(() => buildCategoryTree(categories, products), [categories, products]);
+  const tree = useMemo(() => buildCategoryTree(categories, products, parents), [categories, products, parents]);
 
   const toggle = (name: string) =>
     setExpanded((prev) => {
@@ -157,7 +161,7 @@ export default function CategoriesPage() {
               <ul className="divide-y divide-[#EEEEEE]">
                 {tree.map((cat) => {
                   const open = expanded.has(cat.name);
-                  const blocked = cat.productCount > 0 || !cat.persisted;
+                  const blocked = cat.productCount > 0 || cat.parentCount > 0 || !cat.persisted;
                   return (
                     <li key={cat.name} className="py-2">
                       <div className="flex items-center gap-2">
@@ -167,7 +171,7 @@ export default function CategoriesPage() {
                         </button>
                         <Folder className="h-4 w-4 text-[#717171]" />
                         <span className="text-sm font-medium">{cat.name}</span>
-                        <CountPill n={cat.productCount} />
+                        <CountPill n={cat.productCount} parents={cat.parentCount} />
                         <div className="ml-auto flex items-center gap-1">
                           <button type="button" disabled={busy}
                             onClick={() => { setAddingSubFor(addingSubFor === cat.name ? null : cat.name); setNewSub(''); setActionError(null); }}
@@ -195,11 +199,11 @@ export default function CategoriesPage() {
                             <li className="py-1.5 text-xs text-[#717171]">No subcategories</li>
                           )}
                           {cat.subcategories.map((sub) => {
-                            const subBlocked = sub.productCount > 0 || !sub.persisted;
+                            const subBlocked = sub.productCount > 0 || sub.parentCount > 0 || !sub.persisted;
                             return (
                               <li key={sub.name} className="flex items-center gap-2 py-1.5">
                                 <span className="text-sm">{sub.name}</span>
-                                <CountPill n={sub.productCount} />
+                                <CountPill n={sub.productCount} parents={sub.parentCount} />
                                 <button type="button" disabled={busy || subBlocked} onClick={() => removeSub(cat, sub.name)}
                                   title={subBlocked ? REMOVE_HINT : 'Delete subcategory'} aria-label={`Delete ${sub.name}`}
                                   className={`ml-auto ${trashClass}`}>

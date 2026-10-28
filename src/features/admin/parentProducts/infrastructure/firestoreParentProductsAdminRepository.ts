@@ -24,8 +24,6 @@ export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: st
     .upsert({ id: pp.id, name: pp.name, image: pp.image || '', size_order: pp.sizeOrder, ...cols });
   if (parentError) throw parentError;
 
-  await cascadeCategoryToProducts([pp.id], cols.category, cols.subcategory);
-
   const stockRows = pp.sizeOrder.map((size) => ({ parent_id: pp.id, size, stock: Number(pp.stockBySize[size]) || 0 }));
   if (stockRows.length > 0) {
     const { error: stockError } = await supabase
@@ -43,6 +41,9 @@ export async function saveParentProduct(pp: ParentProduct, previousSizeOrder: st
       .in('size', removedSizes);
     if (deleteError) throw deleteError;
   }
+
+  // Last, so a cascade failure never leaves stock half-written; re-saving retries it safely.
+  await cascadeCategoryToProducts([pp.id], cols.category, cols.subcategory);
 }
 
 // sizeOrder is unused now — the parent_product_size_stock rows cascade-delete

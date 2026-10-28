@@ -28,11 +28,32 @@ describe('buildCategoryTree', () => {
     ]);
     const kids = tree.find((c) => c.name === 'Kids Wear')!;
     expect(kids).toMatchObject({ id: 'kids-wear', persisted: false, productCount: 1 });
-    expect(kids.subcategories).toEqual([{ name: 'Caps', productCount: 1, persisted: false }]);
+    expect(kids.subcategories).toEqual([{ name: 'Caps', productCount: 1, parentCount: 0, persisted: false }]);
     const men = tree.find((c) => c.name === 'Men')!;
     expect(men.persisted).toBe(true);
     expect(men.subcategories.find((s) => s.name === 'Jackets')!.persisted).toBe(false);
     expect(men.subcategories.find((s) => s.name === 'Shirts')!.persisted).toBe(true);
+  });
+
+  it('counts parent products per category and subcategory, including unpersisted ones', () => {
+    const tree = buildCategoryTree(
+      cats,
+      [],
+      [
+        { category: 'Men', subcategory: 'Shirts' },
+        { category: 'Men' },
+        { category: 'Hats', subcategory: 'Caps' },
+        { category: '  ' },
+      ],
+    );
+    const men = tree.find((c) => c.name === 'Men')!;
+    expect(men.parentCount).toBe(2);
+    expect(men.productCount).toBe(0);
+    expect(men.subcategories.find((s) => s.name === 'Shirts')!.parentCount).toBe(1);
+    expect(men.subcategories.find((s) => s.name === 'pants')!.parentCount).toBe(0);
+    const hats = tree.find((c) => c.name === 'Hats')!;
+    expect(hats).toMatchObject({ persisted: false, parentCount: 1 });
+    expect(hats.subcategories[0]).toMatchObject({ name: 'Caps', parentCount: 1 });
   });
 
   it('sorts categories and subcategories case-insensitively', () => {

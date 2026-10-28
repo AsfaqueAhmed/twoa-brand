@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   persistNewCategory,
   persistNewSubcategory,
@@ -16,6 +16,8 @@ type Props = {
   /** Called after a new category/subcategory is persisted so the caller can reload the list. */
   onPersisted: () => Promise<void> | void;
   onError: (message: string) => void;
+  /** Reports whether an add-new persist + reload is in flight (so the caller can disable Save). */
+  onBusyChange?: (busy: boolean) => void;
 };
 
 const FIELD =
@@ -25,11 +27,14 @@ const ADD_BTN = 'bg-black hover:bg-[#333333] text-white text-[10px] font-bold up
 const CANCEL_BTN = 'border border-[#EEEEEE] hover:border-black text-black text-[10px] font-bold uppercase tracking-widest px-3 shrink-0';
 
 // Category (required) + dependent Subcategory (optional) selects with inline "add new" flows.
-export default function CategoryFields({ categories, category, subcategory, onChange, onPersisted, onError }: Props) {
+export default function CategoryFields({ categories, category, subcategory, onChange, onPersisted, onError, onBusyChange }: Props) {
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [addingSub, setAddingSub] = useState(false);
   const [newSub, setNewSub] = useState('');
+  const [persisting, setPersisting] = useState(false);
+
+  useEffect(() => { onBusyChange?.(persisting); }, [persisting, onBusyChange]);
 
   const categoryOptions = parentCategoryOptions(categories, category);
   const subOptions = Array.from(
@@ -45,11 +50,14 @@ export default function CategoryFields({ categories, category, subcategory, onCh
     onChange(trimmed, '');
     setAddingCategory(false);
     setNewCategory('');
+    setPersisting(true);
     try {
       await persistNewCategory(trimmed);
       await onPersisted();
     } catch (err: any) {
       onError(err?.message || 'Failed to save the new category.');
+    } finally {
+      setPersisting(false);
     }
   };
 
@@ -59,11 +67,14 @@ export default function CategoryFields({ categories, category, subcategory, onCh
     onChange(category, trimmed);
     setAddingSub(false);
     setNewSub('');
+    setPersisting(true);
     try {
       await persistNewSubcategory(category, trimmed);
       await onPersisted();
     } catch (err: any) {
       onError(err?.message || 'Failed to save the new subcategory.');
+    } finally {
+      setPersisting(false);
     }
   };
 

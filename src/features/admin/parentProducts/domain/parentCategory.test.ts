@@ -4,6 +4,7 @@ import {
   categoryColumns,
   parentCategoryLabel,
   parentCategoryOptions,
+  resolveProductCategory,
   validateParentCategory,
 } from './parentCategory';
 
@@ -43,5 +44,21 @@ describe('parentCategoryOptions', () => {
     expect(parentCategoryOptions(cats, 'Legacy')).toEqual(['Legacy', 'Men', 'Women']);
     expect(parentCategoryOptions(cats, 'Men')).toEqual(['Men', 'Women']);
     expect(parentCategoryOptions(cats, '')).toEqual(['Men', 'Women']);
+  });
+});
+
+describe('resolveProductCategory', () => {
+  it('errors when the parent is not loaded', () => {
+    expect(resolveProductCategory(undefined)).toEqual({ error: 'Parent product not loaded. Reload and retry.' });
+  });
+  it('errors when the parent has no category', () => {
+    expect(resolveProductCategory({ category: '  ' })).toEqual({
+      error: 'This parent product has no category. Set one on the Parent Products page first.',
+    });
+    expect(resolveProductCategory({})).toHaveProperty('error');
+  });
+  it('returns trimmed category and subcategory', () => {
+    expect(resolveProductCategory({ category: ' Hats ', subcategory: ' Caps ' })).toEqual({ category: 'Hats', subcategory: 'Caps' });
+    expect(resolveProductCategory({ category: 'Hats' })).toEqual({ category: 'Hats', subcategory: '' });
   });
 });

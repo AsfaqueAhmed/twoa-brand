@@ -2,8 +2,8 @@
 -- remain as a denormalized copy of the parent's values (kept in sync by the
 -- admin app on every parent save), so storefront queries are unchanged.
 alter table parent_products
-  add column category text not null default '',
-  add column subcategory text;
+  add column if not exists category text not null default '',
+  add column if not exists subcategory text;
 
 -- Backfill from the first linked product (no-op on empty tables).
 update parent_products pp

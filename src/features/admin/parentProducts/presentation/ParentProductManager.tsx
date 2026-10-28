@@ -61,6 +61,7 @@ export default function ParentProductManager() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPersistingCategory, setIsPersistingCategory] = useState(false);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
@@ -358,6 +359,7 @@ export default function ParentProductManager() {
                   onChange={(category, subcategory) => setForm((prev) => ({ ...prev, category, subcategory }))}
                   onPersisted={loadCategories}
                   onError={setError}
+                  onBusyChange={setIsPersistingCategory}
                 />
 
                 {/* Image */}
@@ -481,7 +483,7 @@ export default function ParentProductManager() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving}
+                    disabled={isSaving || isPersistingCategory}
                     className="bg-black hover:bg-[#333333] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors disabled:bg-[#717171]"
                   >
                     {isSaving ? 'Saving...' : 'Save Parent Product'}

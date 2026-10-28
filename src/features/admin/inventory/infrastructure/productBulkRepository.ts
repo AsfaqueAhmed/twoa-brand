@@ -21,7 +21,12 @@ export async function changeParentsCategory(parentIds: string[], category: strin
   const cols = categoryColumns(category, subcategory);
   const { error } = await supabase.from('parent_products').update(cols).in('id', parentIds);
   if (error) throw new Error(error.message);
-  await cascadeCategoryToProducts(parentIds, cols.category, cols.subcategory);
+  try {
+    await cascadeCategoryToProducts(parentIds, cols.category, cols.subcategory);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Parents updated, but linked products failed. Retry to finish. ${msg}`);
+  }
 }
 
 export async function deleteProducts(ids: string[]): Promise<void> {
