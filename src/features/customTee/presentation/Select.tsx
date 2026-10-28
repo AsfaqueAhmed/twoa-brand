@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
 type Props = {
@@ -11,20 +12,38 @@ type Props = {
   onChange: (value: string) => void;
 };
 
+type PanelPos = { left: number; width: number; top?: number; bottom?: number; maxHeight: number };
+
+const PANEL_MAX_HEIGHT = 224;
+
 // Custom listbox so the dropdown panel is white and matches the storefront (a native <select> menu can't be styled).
+// The panel is portaled to <body> and positioned from the button, so it is never clipped by the dialog's scroll area
+// and the dialog's height can follow its content.
 export default function Select({ id, value, options, placeholder, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<PanelPos | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!buttonRef.current?.contains(t) && !panelRef.current?.contains(t)) setOpen(false);
+    };
+    const onScrollOrResize = (e: Event) => {
+      if (e.target instanceof Node && panelRef.current?.contains(e.target)) return; // scrolling the list itself
+      setOpen(false);
     };
     document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -32,7 +51,17 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
   }, [open, active, id]);
 
   const openList = () => {
-    buttonRef.current?.focus(); // some browsers don't focus a clicked button; keys (Escape/arrows) must reach this control
+    const button = buttonRef.current;
+    if (!button) return;
+    button.focus(); // some browsers don't focus a clicked button; keys (Escape/arrows) must reach this control
+    const rect = button.getBoundingClientRect();
+    const below = window.innerHeight - rect.bottom - 12;
+    const above = rect.top - 12;
+    if (below < 140 && above > below) {
+      setPos({ left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 4, maxHeight: Math.min(PANEL_MAX_HEIGHT, above) });
+    } else {
+      setPos({ left: rect.left, width: rect.width, top: rect.bottom + 4, maxHeight: Math.min(PANEL_MAX_HEIGHT, below) });
+    }
     setActive(Math.max(0, options.indexOf(value)));
     setOpen(true);
   };
@@ -58,7 +87,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div className="relative">
       <button
         ref={buttonRef}
         id={id}
@@ -76,31 +105,36 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
         <span className="truncate">{value || placeholder}</span>
         <ChevronDown className={`ml-3 h-4 w-4 shrink-0 text-[#717171] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <ul
-          id={`${id}-list`}
-          role="listbox"
-          className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-        >
-          {options.map((o, i) => (
-            <li
-              key={o}
-              id={`${id}-opt-${i}`}
-              role="option"
-              aria-selected={o === value}
-              onMouseEnter={() => setActive(i)}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => choose(o)}
-              className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm text-black ${
-                i === active ? 'bg-[#F5F5F5]' : 'bg-white'
-              }`}
-            >
-              <span className="truncate">{o}</span>
-              {o === value && <Check className="ml-3 h-4 w-4 shrink-0" />}
-            </li>
-          ))}
-        </ul>
-      )}
+      {open &&
+        pos &&
+        createPortal(
+          <ul
+            ref={panelRef}
+            id={`${id}-list`}
+            role="listbox"
+            style={{ position: 'fixed', left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxHeight }}
+            className="z-[60] overflow-y-auto rounded-lg border border-[#EEEEEE] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+          >
+            {options.map((o, i) => (
+              <li
+                key={o}
+                id={`${id}-opt-${i}`}
+                role="option"
+                aria-selected={o === value}
+                onMouseEnter={() => setActive(i)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(o)}
+                className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm text-black ${
+                  i === active ? 'bg-[#F5F5F5]' : 'bg-white'
+                }`}
+              >
+                <span className="truncate">{o}</span>
+                {o === value && <Check className="ml-3 h-4 w-4 shrink-0" />}
+              </li>
+            ))}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }
