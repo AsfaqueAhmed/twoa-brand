@@ -4,7 +4,7 @@ export type StudioDesign = {
   parentProductId: string;
   size: string;
   colorName?: string;
-  layers: Layer[];
+  layersByView: Record<string, Layer[]>;
 };
 
 export const DESIGN_STORAGE_KEY = 'custom-tee-design';
@@ -12,6 +12,7 @@ export const MAX_ARTWORK_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const VIEW_KEY = /^view-\d{1,2}$/;
 const LAYER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -53,27 +54,36 @@ function parseLayer(v: unknown): Layer | null {
   return null;
 }
 
+function parseLayerList(list: unknown): Layer[] {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  const out: Layer[] = [];
+  for (const raw of list) {
+    const l = parseLayer(raw);
+    if (!l || seen.has(l.id)) continue;
+    seen.add(l.id);
+    out.push(l);
+  }
+  return out;
+}
+
 export function parseDesign(raw: string | null): StudioDesign | null {
   if (!raw) return null;
   try {
     const v = JSON.parse(raw);
     if (!v || typeof v.parentProductId !== 'string' || typeof v.size !== 'string') return null;
-    const seen = new Set<string>();
-    const layers: Layer[] = [];
-    if (Array.isArray(v.layers)) {
-      for (const raw of v.layers) {
-        const l = parseLayer(raw);
-        if (!l || seen.has(l.id)) continue;
-        seen.add(l.id);
-        layers.push(l);
+    const layersByView: Record<string, Layer[]> = {};
+    if (v.layersByView && typeof v.layersByView === 'object' && !Array.isArray(v.layersByView)) {
+      for (const [key, list] of Object.entries(v.layersByView)) {
+        if (!VIEW_KEY.test(key)) continue;
+        const layers = parseLayerList(list);
+        if (layers.length > 0) layersByView[key] = layers;
       }
+    } else {
+      const legacy = parseLayerList(v.layers); // older designs stored a single `layers` array
+      if (legacy.length > 0) layersByView['view-0'] = legacy;
     }
-    return {
-      parentProductId: v.parentProductId,
-      size: v.size,
-      colorName: typeof v.colorName === 'string' ? v.colorName : undefined,
-      layers,
-    };
+    return { parentProductId: v.parentProductId, size: v.size, colorName: typeof v.colorName === 'string' ? v.colorName : undefined, layersByView };
   } catch {
     return null;
   }

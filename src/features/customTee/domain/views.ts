@@ -1,10 +1,15 @@
 import type { ParentProduct, ProductVariant } from '@/shared/domain/types';
+import { getParentImages } from '@/features/catalog/domain/parentImages';
 
-export type ViewId = 'front' | 'back' | 'left' | 'right';
-export type StudioView = { id: ViewId; label: string; image: string };
+export type StudioView = { id: string; label: string; image: string };
 
-// Front only until parents carry back/left/right images (phase B); callers render tabs from this list.
+export const viewIdAt = (index: number): string => `view-${index}`;
+
+// One view per titled parent image; the selected color variant's image replaces the first view's image.
 export function buildViews(parent: ParentProduct, color?: ProductVariant): StudioView[] {
-  const image = color?.image || parent.image || '';
-  return image ? [{ id: 'front', label: 'Front', image }] : [];
+  return getParentImages(parent).map((img, i) => ({
+    id: viewIdAt(i),
+    label: img.title,
+    image: i === 0 ? color?.image || img.url : img.url,
+  }));
 }

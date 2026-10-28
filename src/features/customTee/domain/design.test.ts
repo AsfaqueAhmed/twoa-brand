@@ -15,14 +15,15 @@ describe('validateArtworkFile', () => {
 });
 
 describe('design serialization', () => {
+  const layers = [
+    createImageLayer({ id: 'i', name: 'a.png', src: 'data:image/png;base64,AAAA', aspect: 2 }),
+    createTextLayer({ id: 't', text: 'Hi', fontFamily: FONT_OPTIONS[1].family, color: '#ff0000' }),
+  ];
   const design: StudioDesign = {
     parentProductId: 'p1',
     size: 'M',
     colorName: 'Black',
-    layers: [
-      createImageLayer({ id: 'i', name: 'a.png', src: 'data:image/png;base64,AAAA', aspect: 2 }),
-      createTextLayer({ id: 't', text: 'Hi', fontFamily: FONT_OPTIONS[1].family, color: '#ff0000' }),
-    ],
+    layersByView: { 'view-0': layers },
   };
   it('round-trips a design', () => {
     expect(parseDesign(serializeDesign(design))).toEqual(design);
@@ -37,35 +38,58 @@ describe('design serialization', () => {
       parentProductId: 'p1',
       size: 'M',
       layers: [
-        { ...design.layers[0], src: 'https://evil.example/x.png' }, // only data:image/ sources are allowed
-        { ...design.layers[0], id: 'bad-aspect', aspect: 0 },
-        { ...design.layers[1], color: 'url(javascript:alert(1))', fontFamily: 'Comic Sans' },
+        { ...layers[0], src: 'https://evil.example/x.png' }, // only data:image/ sources are allowed
+        { ...layers[0], id: 'bad-aspect', aspect: 0 },
+        { ...layers[1], color: 'url(javascript:alert(1))', fontFamily: 'Comic Sans' },
         { type: 'text', id: 'empty', name: 'x', text: '', x: 0.5, y: 0.5, scale: 0.4, rotation: 0 },
         'garbage',
       ],
     });
     const parsed = parseDesign(raw)!;
-    expect(parsed.layers).toHaveLength(1);
-    expect(parsed.layers[0]).toMatchObject({ type: 'text', color: DEFAULT_TEXT_COLOR, fontFamily: FONT_OPTIONS[0].family });
+    expect(parsed.layersByView['view-0']).toHaveLength(1);
+    expect(parsed.layersByView['view-0'][0]).toMatchObject({ type: 'text', color: DEFAULT_TEXT_COLOR, fontFamily: FONT_OPTIONS[0].family });
   });
   it('drops layers with unsafe or duplicate ids and non-6-digit colors', () => {
     const raw = JSON.stringify({
       parentProductId: 'p1',
       size: 'M',
       layers: [
-        { ...design.layers[0], id: 'a"b]' },
-        { ...design.layers[0], id: 'ok-1' },
-        { ...design.layers[0], id: 'ok-1', name: 'dup' },
-        { ...design.layers[1], id: 'short', color: '#abc' },
+        { ...layers[0], id: 'a"b]' },
+        { ...layers[0], id: 'ok-1' },
+        { ...layers[0], id: 'ok-1', name: 'dup' },
+        { ...layers[1], id: 'short', color: '#abc' },
       ],
     });
     const parsed = parseDesign(raw)!;
-    expect(parsed.layers.map((l) => l.id)).toEqual(['ok-1', 'short']);
-    expect(parsed.layers[0].name).toBe('a.png');
-    expect(parsed.layers[1]).toMatchObject({ color: DEFAULT_TEXT_COLOR });
+    expect(parsed.layersByView['view-0'].map((l) => l.id)).toEqual(['ok-1', 'short']);
+    expect(parsed.layersByView['view-0'][0].name).toBe('a.png');
+    expect(parsed.layersByView['view-0'][1]).toMatchObject({ color: DEFAULT_TEXT_COLOR });
   });
   it('clamps out-of-range layer numbers', () => {
-    const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layers: [{ ...design.layers[0], x: 5, scale: 99 }] });
-    expect(parseDesign(raw)!.layers[0]).toMatchObject({ x: 1, scale: 1.5 });
+    const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layers: [{ ...layers[0], x: 5, scale: 99 }] });
+    expect(parseDesign(raw)!.layersByView['view-0'][0]).toMatchObject({ x: 1, scale: 1.5 });
+  });
+});
+
+describe('per-view layers', () => {
+  const img = (id: string) => createImageLayer({ id, name: `${id}.png`, src: 'data:image/png;base64,AAAA', aspect: 1 });
+  it('round-trips layers for several views and drops empty views', () => {
+    const design = { parentProductId: 'p', size: 'M', layersByView: { 'view-0': [img('a')], 'view-1': [img('b'), createTextLayer({ id: 't', text: 'Hi' })] } };
+    expect(parseDesign(serializeDesign(design))).toEqual(design);
+    const withEmpty = { ...design, layersByView: { ...design.layersByView, 'view-2': [] } };
+    expect(Object.keys(parseDesign(serializeDesign(withEmpty))!.layersByView)).toEqual(['view-0', 'view-1']);
+  });
+  it('loads the legacy layers array into view-0', () => {
+    const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layers: [img('a')] });
+    expect(Object.keys(parseDesign(raw)!.layersByView)).toEqual(['view-0']);
+    expect(parseDesign(raw)!.layersByView['view-0'][0].id).toBe('a');
+  });
+  it('ignores view keys that are not view-<digits>', () => {
+    const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layersByView: { 'view-0': [img('a')], __proto__x: [img('b')], 'view-': [img('c')], constructor: [img('d')] } });
+    expect(Object.keys(parseDesign(raw)!.layersByView)).toEqual(['view-0']);
+  });
+  it('de-duplicates layer ids within a view', () => {
+    const raw = JSON.stringify({ parentProductId: 'p', size: 'M', layersByView: { 'view-0': [img('a'), img('a')] } });
+    expect(parseDesign(raw)!.layersByView['view-0']).toHaveLength(1);
   });
 });
