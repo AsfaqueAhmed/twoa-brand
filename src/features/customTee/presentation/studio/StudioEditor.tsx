@@ -4,18 +4,24 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Save, ShoppingBag } from 'lucide-react';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
-import { type AlignEdge, type Layer } from '../../domain/layers';
+import { type Layer } from '../../domain/layers';
+import { isSingleUnit, selectionUnits } from '../../domain/grouping';
+import type { CanvasPx, Size } from '../../domain/geometry';
 import { DESIGN_STORAGE_KEY, type StudioDesign, pruneLayersByView, serializeDesign, validateArtworkFile } from '../../domain/design';
 import { HANDOFF_KEY, resolveStudioTarget } from '../../domain/studioTarget';
 import { buildViews } from '../../domain/views';
 import { fileToDataUrl } from '../../application/imageUpload';
 import { useStudioState } from '../../application/useStudioState';
-import Canvas from './Canvas';
+import Canvas, { type CanvasHandle } from './Canvas';
 import StudioToolbar from './StudioToolbar';
 import ToolRail, { type ToolTab } from './ToolRail';
 import DesignPanel from './DesignPanel';
 import ImagesPanel from './ImagesPanel';
-import TextPanel from './TextPanel';
+import TextAddPanel from './TextAddPanel';
+import TextInspector from './TextInspector';
+import ImageInspector from './ImageInspector';
+import SelectionInspector from './SelectionInspector';
+import AlignPanel from './AlignPanel';
 import LayersList from './LayersList';
 import ProductPanel from './ProductPanel';
 import PositionScalePanel from './PositionScalePanel';
@@ -46,9 +52,13 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const [colorName, setColorName] = useState<string | undefined>(
     initialColor && card.colors.some((c) => c.name === initialColor) ? initialColor : card.colors[0]?.name,
   );
+  const canvasRef = useRef<CanvasHandle>(null);
   const [zoom, setZoom] = useState(1);
+  const [stagePx, setStagePx] = useState<CanvasPx>({ w: 520, h: 520 });
+  const [layerSizes, setLayerSizes] = useState<Record<string, Size>>({});
+  const stagePxRef = useRef(stagePx);
+  stagePxRef.current = stagePx;
   const [fullscreen, setFullscreen] = useState(false);
-  const [selectedSize, setSelectedSize] = useState<{ w: number; h: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,9 +71,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const view = views.find((v) => v.id === activeViewId) ?? views[0];
   const initialPruned = useMemo(() => pruneLayersByView(initialLayersByView, views.map((v) => v.id)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const studio = useStudioState(initialPruned, view?.id ?? 'view-0');
-  useEffect(() => setSelectedSize(null), [view?.id]);
   const sizes = parent.sizeOrder.filter((s) => (parent.stockBySize[s] ?? 0) > 0);
   const selectedText = studio.selected?.type === 'text' ? studio.selected : null;
+  const selectedImage = studio.selected?.type === 'image' ? studio.selected : null;
+  const units = selectionUnits(studio.layers, studio.selectedIds);
+  const singleUnit = isSingleUnit(studio.layers, studio.selectedIds);
+  const isGroup = singleUnit && studio.selectedIds.length > 1;
+  const selectedLayers = studio.layers.filter((l) => studio.selectedIds.includes(l.id));
+  const allOpacity = selectedLayers.length > 0 ? selectedLayers[0].opacity : 1;
 
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -133,13 +148,30 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
       const s = studioRef.current;
-      if ((e.key === 'Delete' || e.key === 'Backspace') && s.selectedId) {
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if ((e.key === 'Delete' || e.key === 'Backspace') && s.selectedIds.length > 0) {
         e.preventDefault();
-        s.remove(s.selectedId);
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        s.removeSelected();
+      } else if (mod && key === 'z') {
         e.preventDefault();
         if (e.shiftKey) s.redo();
         else s.undo();
+      } else if (mod && key === 'a') {
+        e.preventDefault();
+        s.selectAll();
+      } else if (mod && key === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) s.ungroup();
+        else s.group();
+      } else if (e.key === 'Escape') {
+        s.select([]);
+      } else if (s.selectedIds.length > 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = (e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0) / stagePxRef.current.w;
+        const dy = (e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0) / stagePxRef.current.h;
+        s.nudge(s.selectedIds, dx, dy);
       }
     };
     document.addEventListener('keydown', onKey);
@@ -179,12 +211,12 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const layersList = (
     <LayersList
       layers={studio.layers}
-      selectedId={studio.selectedId}
+      selectedIds={studio.selectedIds}
       onSelect={studio.select}
-      onToggle={studio.toggle}
-      onRemove={studio.remove}
-      onMove={studio.move}
-      onReorder={studio.reorder}
+      onSetVisible={studio.setVisible}
+      onRemove={studio.removeIds}
+      onMoveUnit={studio.moveUnit}
+      onReorderUnit={studio.reorderUnit}
     />
   );
 
@@ -196,9 +228,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
           {tool === 'design' && <DesignPanel onFiles={onFiles} busy={uploading} error={uploadError} />}
           {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} />}
-          {tool === 'text' && (
-            <TextPanel selected={selectedText} onAdd={studio.addText} onLiveChange={studio.patchLive} onSettle={studio.settleGesture} />
-          )}
+          {tool === 'text' && <TextAddPanel onAdd={(init) => studio.addText(init)} />}
           {tool === 'layers' && (
             <div>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-black">Layers</h2>
@@ -217,24 +247,31 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             activeView={view?.id ?? 'view-0'}
             onView={setActiveViewId}
             zoom={zoom}
-            onZoom={setZoom}
+            onZoomIn={() => canvasRef.current?.zoomBy(1.25)}
+            onZoomOut={() => canvasRef.current?.zoomBy(0.8)}
+            onZoomReset={() => canvasRef.current?.setZoom(1)}
+            onFit={() => canvasRef.current?.fit()}
             fullscreen={fullscreen}
             onFullscreen={toggleFullscreen}
             fullscreenSupported={fullscreenSupported}
           />
-          <div className="overflow-auto py-4">
-            <Canvas
-              baseImage={view?.image}
-              baseAlt={`${parent.name} ${view?.label ?? ''}`.trim()}
-              layers={studio.layers}
-              selectedId={studio.selectedId}
-              zoom={zoom}
-              onSelect={studio.select}
-              onLiveChange={studio.patchLive}
-              onSettle={studio.settleGesture}
-              onSelectedSize={setSelectedSize}
-            />
-          </div>
+          <p className="text-[10px] text-[#717171]">Wheel to pan · Ctrl/Cmd + wheel to zoom · Space + drag to pan · Shift-click or drag a box to multi-select · Cmd/Ctrl + G to group</p>
+          <Canvas
+            ref={canvasRef}
+            baseImage={view?.image}
+            baseAlt={`${parent.name} ${view?.label ?? ''}`.trim()}
+            layers={studio.layers}
+            selectedIds={studio.selectedIds}
+            onSelect={studio.select}
+            onLiveChange={studio.patchManyLive}
+            onSettle={studio.settleGesture}
+            onCommitText={(id, text) => studio.patch(id, { text, name: text.split('\n')[0].slice(0, 24) })}
+            onMeasure={(m) => {
+              setStagePx(m.stage);
+              setLayerSizes(m.sizes);
+            }}
+            onZoomChange={setZoom}
+          />
           <div className="flex justify-center gap-3">
             {views.map((v) => (
               <button
@@ -264,18 +301,53 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               setStatus(null);
             }}
           />
+          {studio.selectedIds.length > 0 && (
+            <section aria-label="Properties" className="space-y-5 border-t border-[#EEEEEE] pt-5">
+              <h2 className={SECTION_TITLE}>Properties</h2>
+              {selectedText && (
+                <TextInspector
+                  layer={selectedText}
+                  onLive={(p) => studio.patchLive(selectedText.id, p)}
+                  onCommit={(p) => studio.patch(selectedText.id, p)}
+                  onSettle={studio.settleGesture}
+                />
+              )}
+              {selectedImage && (
+                <ImageInspector layer={selectedImage} onLive={(p) => studio.patchLive(selectedImage.id, p)} onSettle={studio.settleGesture} />
+              )}
+              {studio.selectedIds.length > 1 && (
+                <SelectionInspector
+                  count={studio.selectedIds.length}
+                  isGroup={isGroup}
+                  canGroup={studio.selectedIds.length > 1}
+                  onGroup={studio.group}
+                  onUngroup={studio.ungroup}
+                  onDelete={studio.removeSelected}
+                  opacity={allOpacity}
+                  onOpacityLive={(v) => studio.patchManyLive(Object.fromEntries(studio.selectedIds.map((id) => [id, { opacity: v }])))}
+                  onSettle={studio.settleGesture}
+                />
+              )}
+              <AlignPanel
+                disabled={false}
+                canDistribute={units.length >= 3}
+                onAlign={(edge) => studio.align(edge, layerSizes, stagePx)}
+                onDistribute={(axis) => studio.distribute(axis, layerSizes, stagePx)}
+              />
+              {studio.selected && (
+                <PositionScalePanel
+                  layer={studio.selected}
+                  onFlip={(axis) => studio.flip(studio.selected!.id, axis)}
+                  onScaleLive={(scale) => studio.patchLive(studio.selected!.id, { scale })}
+                  onSettle={studio.settleGesture}
+                />
+              )}
+            </section>
+          )}
           <div>
             <h2 className={SECTION_TITLE}>Design Layers</h2>
             {layersList}
           </div>
-          <PositionScalePanel
-            layer={studio.selected}
-            size={selectedSize}
-            onAlign={(edge: AlignEdge) => studio.selectedId && selectedSize && studio.align(studio.selectedId, selectedSize, edge)}
-            onFlip={(axis) => studio.selectedId && studio.flip(studio.selectedId, axis)}
-            onScaleLive={(scale) => studio.selectedId && studio.patchLive(studio.selectedId, { scale })}
-            onSettle={studio.settleGesture}
-          />
 
           {status && (
             <p role={status.kind === 'error' ? 'alert' : 'status'} className={`rounded-lg px-4 py-3 text-xs ${status.kind === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'}`}>
