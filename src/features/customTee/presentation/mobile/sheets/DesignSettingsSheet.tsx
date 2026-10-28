@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   AlignCenter,
   AlignEndHorizontal,
@@ -17,9 +16,7 @@ import {
   Copy,
   FlipHorizontal,
   FlipVertical,
-  Lock,
   Trash2,
-  Unlock,
 } from 'lucide-react';
 import type { AlignEdge, Layer, LayerPatch } from '../../../domain/layers';
 
@@ -43,8 +40,6 @@ export default function DesignSettingsSheet({
   onDuplicate,
   onDelete,
 }: Props) {
-  const [aspectLocked, setAspectLocked] = useState(true);
-
   // Position in inches relative to center (0, 0 at center or absolute inches)
   const posXInches = ((layer.x - 0.5) * PRINT_AREA_INCHES).toFixed(1);
   const posYInches = ((layer.y - 0.5) * PRINT_AREA_INCHES).toFixed(1);
@@ -193,18 +188,6 @@ export default function DesignSettingsSheet({
               className="w-full text-xs font-bold text-zinc-900 focus:outline-none"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setAspectLocked(!aspectLocked)}
-            aria-label={aspectLocked ? 'Aspect ratio locked' : 'Aspect ratio unlocked'}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
-              aspectLocked
-                ? 'border-zinc-300 bg-zinc-100 text-black'
-                : 'border-zinc-200 bg-white text-zinc-400'
-            }`}
-          >
-            {aspectLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-          </button>
         </div>
       </div>
 

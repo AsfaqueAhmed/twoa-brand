@@ -24,7 +24,7 @@ export default function MobileHeader({
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black hover:bg-gray-100 active:scale-95 transition-transform"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-black hover:bg-gray-100 active:scale-95 transition-transform"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -43,7 +43,7 @@ export default function MobileHeader({
           onClick={onSave}
           disabled={saving}
           aria-label="Save"
-          className="flex items-center justify-center rounded-full bg-black px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50"
+          className="flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50"
         >
           {saving ? (
             <span className="flex items-center gap-1.5">

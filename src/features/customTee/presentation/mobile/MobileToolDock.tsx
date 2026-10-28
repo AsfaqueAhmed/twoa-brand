@@ -1,8 +1,8 @@
 'use client';
 
-import { Edit3, Image as ImageIcon, Layers as LayersIcon, Type } from 'lucide-react';
+import { Edit3, Image as ImageIcon, Layers as LayersIcon, Shirt, Type } from 'lucide-react';
 
-export type MobileToolTab = 'design' | 'text' | 'images' | 'layers';
+export type MobileToolTab = 'product' | 'design' | 'text' | 'images' | 'layers';
 
 type Props = {
   activeTab: MobileToolTab | null;
@@ -10,6 +10,7 @@ type Props = {
 };
 
 const ITEMS: { id: MobileToolTab; label: string; icon: typeof Edit3 }[] = [
+  { id: 'product', label: 'Tee', icon: Shirt },
   { id: 'design', label: 'Design', icon: Edit3 },
   { id: 'text', label: 'Text', icon: Type },
   { id: 'images', label: 'Images', icon: ImageIcon },
@@ -22,7 +23,7 @@ export default function MobileToolDock({ activeTab, onSelectTab }: Props) {
       aria-label="Tool Navigation"
       className="sticky bottom-0 z-20 w-full border-t border-[#EEEEEE] bg-white/95 backdrop-blur-md px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5">
         {ITEMS.map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id;
           return (

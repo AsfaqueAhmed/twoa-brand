@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
@@ -9,7 +9,6 @@ import {
   type Layer,
   type LayerPatch,
   alignLayer,
-  createTextLayer,
 } from '../../domain/layers';
 import {
   DESIGN_STORAGE_KEY,
@@ -31,6 +30,8 @@ import AddDesignSheet from './sheets/AddDesignSheet';
 import TextEditorSheet from './sheets/TextEditorSheet';
 import DesignSettingsSheet from './sheets/DesignSettingsSheet';
 import LayersListSheet from './sheets/LayersListSheet';
+import ProductSheet from './sheets/ProductSheet';
+import { Copy, Settings2, Trash2 } from 'lucide-react';
 
 type Props = {
   parent: ParentProduct;
@@ -41,7 +42,7 @@ type Props = {
   refreshParents: () => Promise<ParentProduct[]>;
 };
 
-type SheetType = 'add-design' | 'text' | 'settings' | 'layers' | null;
+type SheetType = 'product' | 'add-design' | 'text' | 'settings' | 'layers' | null;
 
 export default function MobileStudioEditor({
   parent,
@@ -68,6 +69,7 @@ export default function MobileStudioEditor({
 
   const color = card.colors.find((c) => c.name === colorName);
   const views = useMemo(() => buildViews(parent, color), [parent, color]);
+  const sizes = useMemo(() => parent.sizeOrder.filter((s) => (parent.stockBySize[s] ?? 0) > 0), [parent]);
   const [activeViewId, setActiveViewId] = useState(views[0]?.id ?? 'view-0');
   const view = views.find((v) => v.id === activeViewId) ?? views[0];
 
@@ -88,7 +90,9 @@ export default function MobileStudioEditor({
   // Tool Dock selection
   const handleSelectTab = (tab: MobileToolTab) => {
     setActiveTool(tab);
-    if (tab === 'design') {
+    if (tab === 'product') {
+      setActiveSheet('product');
+    } else if (tab === 'design') {
       setActiveSheet('add-design');
     } else if (tab === 'text') {
       setActiveSheet('text');
@@ -102,6 +106,7 @@ export default function MobileStudioEditor({
   const closeSheet = () => {
     setActiveSheet(null);
     setActiveTool(null);
+    setUploadError(null);
   };
 
   // Upload handler
@@ -163,28 +168,9 @@ export default function MobileStudioEditor({
     }
   };
 
-  // Duplicate selected layer
+  // Duplicate selected layer (keeps position, size, rotation, flip and opacity)
   const handleDuplicate = () => {
-    const l = studio.selected;
-    if (!l) return;
-    if (l.type === 'image') {
-      studio.addImage({
-        id: `asset-${Date.now()}`,
-        name: `${l.name} (Copy)`,
-        src: l.src,
-        aspect: l.aspect,
-      });
-    } else {
-      studio.addText({
-        text: l.text,
-        fontFamily: l.fontFamily,
-        color: l.color,
-        bold: l.bold,
-        italic: l.italic,
-        align: l.align,
-        letterSpacing: l.letterSpacing,
-      });
-    }
+    if (studio.selected) studio.duplicate(studio.selected.id);
   };
 
   // Alignment
@@ -238,7 +224,7 @@ export default function MobileStudioEditor({
   const subtitle = `${colorName || parent.name} • Size ${size}`;
 
   return (
-    <div className="flex h-screen w-full flex-col bg-white overflow-hidden font-sans select-none">
+    <div className="relative flex h-dvh w-full flex-col bg-white overflow-hidden font-sans select-none">
       {/* Header */}
       <MobileHeader
         title="Design Studio"
@@ -264,20 +250,45 @@ export default function MobileStudioEditor({
         baseAlt={`${parent.name} ${view?.label || ''}`}
         layers={studio.layers}
         selectedIds={studio.selectedIds}
-        onSelect={(ids) => {
-          studio.select(ids);
-          if (ids.length > 0) {
-            setActiveSheet('settings');
-          }
-        }}
+        onSelect={studio.select}
         onLiveChange={studio.patchManyLive}
         onSettle={studio.settleGesture}
         canUndo={studio.canUndo}
         canRedo={studio.canRedo}
         onUndo={studio.undo}
         onRedo={studio.redo}
-        onOpenSettings={() => setActiveSheet('settings')}
       />
+
+      {/* Selection bar: edit/duplicate/delete without a sheet covering the canvas */}
+      {studio.selected && activeSheet === null && (
+        <div className="absolute inset-x-4 bottom-[88px] z-30 mx-auto flex max-w-sm items-center justify-between rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-lg backdrop-blur-md animate-in fade-in duration-150">
+          <span className="min-w-0 flex-1 truncate px-3 text-xs font-bold text-zinc-900">{studio.selected.name}</span>
+          <button
+            type="button"
+            onClick={() => setActiveSheet('settings')}
+            aria-label="Edit settings"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-700 hover:bg-zinc-100 active:scale-95"
+          >
+            <Settings2 className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            aria-label="Duplicate layer"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-700 hover:bg-zinc-100 active:scale-95"
+          >
+            <Copy className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => studio.removeSelected()}
+            aria-label="Delete layer"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-red-600 hover:bg-red-50 active:scale-95"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* Fixed Bottom Tool Dock */}
       <MobileToolDock activeTab={activeTool} onSelectTab={handleSelectTab} />
@@ -287,7 +298,9 @@ export default function MobileStudioEditor({
         isOpen={activeSheet !== null}
         onClose={closeSheet}
         title={
-          activeSheet === 'add-design'
+          activeSheet === 'product'
+            ? 'Tee Options'
+            : activeSheet === 'add-design'
             ? 'Add Design'
             : activeSheet === 'text'
             ? 'Text'
@@ -298,6 +311,20 @@ export default function MobileStudioEditor({
             : ''
         }
       >
+        {activeSheet === 'product' && (
+          <ProductSheet
+            card={card}
+            sizes={sizes}
+            size={size}
+            colorName={colorName}
+            onColor={(name) => {
+              setColorName(name);
+              setActiveViewId(views[0]?.id ?? 'view-0');
+            }}
+            onSize={setSize}
+          />
+        )}
+
         {activeSheet === 'add-design' && (
           <AddDesignSheet
             assets={studio.assets}

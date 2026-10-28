@@ -69,6 +69,22 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
     [addAndSelect], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const duplicate = useCallback(
+    (id: string) => {
+      const src = layers.find((l) => l.id === id);
+      if (!src) return;
+      addAndSelect({
+        ...src,
+        id: nextId('layer'),
+        groupId: undefined,
+        name: `${src.name} copy`,
+        x: Math.min(0.95, src.x + 0.04),
+        y: Math.min(0.95, src.y + 0.04),
+      });
+    },
+    [layers, addAndSelect], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const applyPatches = (ls: Layer[], patches: Record<string, LayerPatch>): Layer[] => {
     let out = ls;
     for (const [id, p] of Object.entries(patches)) out = updateLayer(out, id, p);
@@ -94,6 +110,7 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
     rememberAsset,
     addImage,
     addText,
+    duplicate,
     patch: (id: string, p: LayerPatch) => change((ls) => updateLayer(ls, id, p)),
     patchMany: (ids: string[], p: LayerPatch) => change((ls) => applyPatches(ls, Object.fromEntries(ids.map((id) => [id, p])))),
     patchLive: (id: string, p: LayerPatch) => setHistory((h) => live(h, mapView(h.present, viewId, (ls) => updateLayer(ls, id, p)))),
