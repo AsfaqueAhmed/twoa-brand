@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/infrastructure/supabase/client';
-import { categorySlug } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
+import { categorySlug } from '@/features/catalog/domain/categorySlug';
 
 export async function deleteCategory(category: { id: string; name: string }): Promise<void> {
   const { count, error: countError } = await supabase

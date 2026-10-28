@@ -1,6 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-vi.mock('@/shared/infrastructure/supabase/client', () => ({ supabase: {} }));
-
+import { describe, it, expect } from 'vitest';
 import { buildCategoryTree } from './categoryTree';
 
 const cats = [

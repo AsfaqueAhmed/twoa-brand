@@ -1,5 +1,6 @@
 import type { Product } from '@/shared/domain/types';
-import { categorySlug, type CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
+import { categorySlug } from '@/features/catalog/domain/categorySlug';
+import type { CategoryDoc } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 
 export type CategoryNode = {
   id: string;
@@ -18,6 +19,7 @@ export function buildCategoryTree(
 ): CategoryNode[] {
   const nodes = new Map<string, CategoryNode & { subs: Map<string, { name: string; productCount: number; persisted: boolean }> }>();
 
+  // Nodes are keyed by exact stored name, matching exact-match product counts and server-side delete counts.
   const ensure = (name: string, persisted: boolean, id?: string) => {
     let node = nodes.get(name);
     if (!node) {

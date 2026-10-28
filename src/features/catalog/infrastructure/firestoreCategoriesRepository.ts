@@ -6,9 +6,9 @@ export interface CategoryDoc {
   subcategories: string[];
 }
 
-export function categorySlug(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
+import { categorySlug } from '@/features/catalog/domain/categorySlug';
+
+export { categorySlug } from '@/features/catalog/domain/categorySlug';
 
 export async function fetchCategories(): Promise<CategoryDoc[]> {
   const { data, error } = await supabase.from('categories').select('*');
@@ -19,7 +19,7 @@ export async function fetchCategories(): Promise<CategoryDoc[]> {
 export async function persistNewCategory(name: string): Promise<void> {
   const id = categorySlug(name);
   if (!id) return;
-  const { error } = await supabase.from('categories').upsert({ id, name, subcategories: [] });
+  const { error } = await supabase.from('categories').upsert({ id, name, subcategories: [] }, { onConflict: 'id', ignoreDuplicates: true });
   if (error) throw error;
 }
 

@@ -13,6 +13,7 @@ import {
 } from '@/features/catalog/infrastructure/firestoreCategoriesRepository';
 import { deleteCategory, deleteSubcategory } from '@/features/admin/categories/infrastructure/categoriesAdminRepository';
 import { buildCategoryTree, type CategoryNode } from '@/features/admin/categories/domain/categoryTree';
+import { validateNewCategory, validateNewSubcategory } from '@/features/admin/categories/domain/validateCategory';
 import type { Product } from '@/shared/domain/types';
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong');
@@ -58,7 +59,7 @@ export default function CategoriesPage() {
     return () => { cancelled = true; };
   }, [tick]);
 
-  const reload = useCallback(() => { setLoading(true); setTick((t) => t + 1); }, []);
+  const reload = useCallback(() => { setLoadError(null); setLoading(true); setTick((t) => t + 1); }, []);
   const tree = useMemo(() => buildCategoryTree(categories, products), [categories, products]);
 
   const toggle = (name: string) =>
@@ -87,10 +88,8 @@ export default function CategoriesPage() {
     e.preventDefault();
     const name = newCategory.trim();
     if (!isValidCategoryName(name)) { setAddError('Enter a category name.'); return; }
-    if (tree.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
-      setAddError('That category already exists.');
-      return;
-    }
+    const invalid = validateNewCategory(name, tree);
+    if (invalid) { setAddError(invalid); return; }
     setAddError(null);
     if (await run(() => persistNewCategory(name))) setNewCategory('');
   };
@@ -99,10 +98,8 @@ export default function CategoriesPage() {
     e.preventDefault();
     const name = newSub.trim();
     if (!isValidCategoryName(name)) { setActionError('Enter a subcategory name.'); return; }
-    if (cat.subcategories.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-      setActionError('That subcategory already exists.');
-      return;
-    }
+    const invalid = validateNewSubcategory(name, cat);
+    if (invalid) { setActionError(invalid); return; }
     if (await run(() => persistNewSubcategory(cat.name, name))) {
       setNewSub('');
       setAddingSubFor(null);
@@ -141,6 +138,7 @@ export default function CategoriesPage() {
                 className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Add category</button>
             </form>
             {addError && <p role="alert" className="mt-2 text-sm text-red-600">{addError}</p>}
+            {tree.length === 0 && actionError && <p role="alert" className="mt-2 text-sm text-red-600">{actionError}</p>}
           </AdminCard>
 
           {tree.length === 0 ? (
