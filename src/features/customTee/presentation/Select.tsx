@@ -10,6 +10,8 @@ type Props = {
   options: string[];
   placeholder: string;
   onChange: (value: string) => void;
+  /** Optional per-option style, e.g. to preview a font in its own typeface. */
+  optionStyle?: (option: string) => React.CSSProperties;
 };
 
 type PanelPos = { left: number; width: number; top?: number; bottom?: number; maxHeight: number };
@@ -19,7 +21,7 @@ const PANEL_MAX_HEIGHT = 224;
 // Custom listbox so the dropdown panel is white and matches the storefront (a native <select> menu can't be styled).
 // The panel is portaled to <body> and positioned from the button, so it is never clipped by the dialog's scroll area
 // and the dialog's height can follow its content.
-export default function Select({ id, value, options, placeholder, onChange }: Props) {
+export default function Select({ id, value, options, placeholder, onChange, optionStyle }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [pos, setPos] = useState<PanelPos | null>(null);
@@ -104,7 +106,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
           open ? 'border-black' : 'border-[#EEEEEE] hover:border-black focus:border-black'
         } ${value ? 'text-black' : 'text-[#717171]'}`}
       >
-        <span className="truncate">{value || placeholder}</span>
+        <span className="truncate" style={value ? optionStyle?.(value) : undefined}>{value || placeholder}</span>
         <ChevronDown className={`ml-3 h-4 w-4 shrink-0 text-[#717171] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open &&
@@ -131,7 +133,7 @@ export default function Select({ id, value, options, placeholder, onChange }: Pr
                   i === active ? 'bg-[#F5F5F5]' : 'bg-white'
                 }`}
               >
-                <span className="truncate">{o}</span>
+                <span className="truncate" style={optionStyle?.(o)}>{o}</span>
                 {o === value && <Check className="ml-3 h-4 w-4 shrink-0" />}
               </li>
             ))}

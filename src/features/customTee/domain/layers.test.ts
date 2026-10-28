@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_FAMILY } from './fonts';
 import { describe, it, expect } from 'vitest';
 import {
   type Layer,
@@ -47,7 +48,7 @@ describe('create + clamp', () => {
   });
   it('creates a text layer with defaults', () => {
     const l = createTextLayer({ id: 't', text: 'Hello' });
-    expect(l).toMatchObject({ type: 'text', text: 'Hello', name: 'Hello', color: DEFAULT_TEXT_COLOR, fontFamily: FONT_OPTIONS[0].family });
+    expect(l).toMatchObject({ type: 'text', text: 'Hello', name: 'Hello', color: DEFAULT_TEXT_COLOR, fontFamily: DEFAULT_FONT_FAMILY });
   });
   it('clamps position, scale and rotation', () => {
     const c = clampLayer({ ...img('a'), x: -1, y: 2, scale: 9, rotation: 270 });

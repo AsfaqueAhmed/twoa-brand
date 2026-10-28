@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_FAMILY } from './fonts';
 import { describe, it, expect } from 'vitest';
 import { createImageLayer, createTextLayer, FONT_OPTIONS, DEFAULT_TEXT_COLOR } from './layers';
 import { validateArtworkFile, serializeDesign, parseDesign, pruneLayersByView, MAX_ARTWORK_BYTES, type StudioDesign } from './design';
@@ -47,7 +48,7 @@ describe('design serialization', () => {
     });
     const parsed = parseDesign(raw)!;
     expect(parsed.layersByView['view-0']).toHaveLength(1);
-    expect(parsed.layersByView['view-0'][0]).toMatchObject({ type: 'text', color: DEFAULT_TEXT_COLOR, fontFamily: FONT_OPTIONS[0].family });
+    expect(parsed.layersByView['view-0'][0]).toMatchObject({ type: 'text', color: DEFAULT_TEXT_COLOR, fontFamily: DEFAULT_FONT_FAMILY });
   });
   it('drops layers with unsafe or duplicate ids and non-6-digit colors', () => {
     const raw = JSON.stringify({

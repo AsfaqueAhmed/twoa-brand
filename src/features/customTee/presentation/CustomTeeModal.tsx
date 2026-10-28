@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCustomTeeData } from '../application/useCustomTeeData';
 import { EMPTY_SELECTION, type Selection, type SelectionStep, validateSelection } from '../domain/selection';
-import { HANDOFF_KEY } from '../domain/studioTarget';
+import { HANDOFF_KEY, resolveStudioTarget } from '../domain/studioTarget';
+import { DESIGN_STORAGE_KEY, parseDesign } from '../domain/design';
 import Modal from './Modal';
 import Stepper from './Stepper';
 import SelectionStepOne from './SelectionStepOne';
 import SelectionStepTwo from './SelectionStepTwo';
+import SavedDesignChoice from './SavedDesignChoice';
 
 // Clears the selection from the step that became invalid onward.
 function truncateSelection(sel: Selection, resetTo: SelectionStep): Selection {
@@ -30,6 +32,48 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [startedNew, setStartedNew] = useState(false);
+
+  // A design saved earlier this session, if its tee is still available: offer to continue it instead of re-picking.
+  const saved = useMemo(() => {
+    if (loading || error || typeof window === 'undefined') return null;
+    let design;
+    try {
+      design = parseDesign(sessionStorage.getItem(DESIGN_STORAGE_KEY));
+    } catch {
+      return null;
+    }
+    if (!design) return null;
+    const layerCount = Object.values(design.layersByView).reduce((n, ls) => n + ls.length, 0);
+    if (layerCount === 0) return null;
+    const parent = parents.find((p) => p.id === design.parentProductId);
+    const size =
+      parent && resolveStudioTarget(parents, { parentProductId: parent.id, size: design.size })
+        ? design.size
+        : parent?.sizeOrder.find((sz) => (parent.stockBySize[sz] ?? 0) > 0);
+    if (!parent || !size) return null;
+    return { design, parent, size, layerCount };
+  }, [loading, error, parents]);
+
+  const continueSaved = () => {
+    if (!saved) return;
+    try {
+      sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: saved.parent.id, size: saved.size }));
+    } catch {
+      // the studio also receives the tee and size via query params
+    }
+    onClose();
+    router.push(`/custom-tee/studio?tee=${encodeURIComponent(saved.parent.id)}&size=${encodeURIComponent(saved.size)}`);
+  };
+
+  const startNew = () => {
+    try {
+      sessionStorage.removeItem(DESIGN_STORAGE_KEY);
+    } catch {
+      // nothing to clear if storage is unavailable
+    }
+    setStartedNew(true);
+  };
 
   const onChange = (s: Selection) => {
     setNotice(null);
@@ -69,6 +113,17 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
     body = <p className="py-10 text-center text-sm text-[#717171]">Loading tees…</p>;
   } else if (error) {
     body = <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>;
+  } else if (saved && !startedNew) {
+    body = (
+      <SavedDesignChoice
+        teeName={saved.parent.name}
+        colorName={saved.design.colorName}
+        size={saved.size}
+        layerCount={saved.layerCount}
+        onContinue={continueSaved}
+        onStartNew={startNew}
+      />
+    );
   } else {
     body = (
       <>

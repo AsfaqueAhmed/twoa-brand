@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Type, X } from 'lucide-react';
 import {
   MAX_LETTER_SPACING,
@@ -11,6 +12,8 @@ import {
   type TextLayer,
 } from '../../../domain/layers';
 import { MOBILE_FONTS, ensureGoogleFontsLoaded } from '../fonts';
+import { FONT_CATEGORIES, type FontCategory } from '../../../domain/fonts';
+import { SheetFooterContext } from '../MobileBottomSheet';
 
 type TextSubTab = 'font' | 'style' | 'color' | 'effects';
 
@@ -40,10 +43,12 @@ export default function TextEditorSheet({
   onUpdateText,
   onDone,
 }: Props) {
+  const footerEl = useContext(SheetFooterContext);
+  const [fontCategory, setFontCategory] = useState<FontCategory | 'All'>('All');
   const [subTab, setSubTab] = useState<TextSubTab>('font');
   const [text, setText] = useState(activeTextLayer?.text ?? 'বিকেলের আলো');
   const [fontFamily, setFontFamily] = useState(
-    activeTextLayer?.fontFamily ?? MOBILE_FONTS[0].family,
+    activeTextLayer?.fontFamily ?? (MOBILE_FONTS.find((f) => f.label === 'Noto Sans Bengali') ?? MOBILE_FONTS[0]).family,
   );
   const [textColor, setTextColor] = useState(activeTextLayer?.color ?? '#111111');
   const [isBold, setIsBold] = useState(activeTextLayer?.bold ?? false);
@@ -186,32 +191,41 @@ export default function TextEditorSheet({
 
       {/* Font Tab Content */}
       {subTab === 'font' && (
-        <div className="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-          {MOBILE_FONTS.map((f) => {
-            const isSelected = fontFamily === f.family;
-            return (
+        <div className="space-y-3">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
+            {(['All', ...FONT_CATEGORIES] as const).map((cat) => (
               <button
-                key={f.id}
+                key={cat}
                 type="button"
-                onClick={() => handleFontChange(f.family)}
-                className={`flex flex-col items-center justify-center rounded-2xl border p-3 text-center transition active:scale-98 ${
-                  isSelected
-                    ? 'border-black bg-zinc-50 ring-1.5 ring-black'
-                    : 'border-zinc-200 bg-white hover:border-zinc-300'
+                onClick={() => setFontCategory(cat)}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  fontCategory === cat ? 'bg-black text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                 }`}
               >
-                <span
-                  className="text-2xl font-bold text-zinc-900 leading-none"
-                  style={{ fontFamily: f.family }}
-                >
-                  {f.sampleLetter}
-                </span>
-                <span className="mt-2 block truncate text-[11px] font-semibold text-zinc-700 w-full">
-                  {f.label}
-                </span>
+                {cat}
               </button>
-            );
-          })}
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {MOBILE_FONTS.filter((f) => fontCategory === 'All' || f.category === fontCategory).map((f) => {
+              const isSelected = fontFamily === f.family;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => handleFontChange(f.family)}
+                  className={`flex flex-col items-center justify-center rounded-2xl border p-3 text-center transition active:scale-98 ${
+                    isSelected ? 'border-black bg-zinc-50 ring-1 ring-black' : 'border-zinc-200 bg-white hover:border-zinc-300'
+                  }`}
+                >
+                  <span className="text-2xl text-zinc-900 leading-none" style={{ fontFamily: f.family }}>
+                    {f.sampleLetter}
+                  </span>
+                  <span className="mt-2 block w-full truncate text-[11px] font-semibold text-zinc-700">{f.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -340,15 +354,20 @@ export default function TextEditorSheet({
         </div>
       )}
 
-      {/* Primary Action Button */}
-      <button
-        type="button"
-        onClick={handleAddOrSubmit}
-        disabled={!text.trim()}
-        className="w-full rounded-2xl bg-black py-3 text-xs font-bold uppercase tracking-widest text-white shadow-md hover:bg-zinc-800 active:scale-98 transition disabled:opacity-50"
-      >
-        {activeTextLayer ? 'Apply Changes' : 'Add Text to Canvas'}
-      </button>
+      {/* Primary action: pinned to the sheet footer when available */}
+      {(() => {
+        const action = (
+          <button
+            type="button"
+            onClick={handleAddOrSubmit}
+            disabled={!text.trim()}
+            className="w-full rounded-2xl bg-black py-3.5 text-xs font-bold uppercase tracking-widest text-white shadow-md hover:bg-zinc-800 active:scale-98 transition disabled:opacity-50"
+          >
+            {activeTextLayer ? 'Apply Changes' : 'Add Text to Canvas'}
+          </button>
+        );
+        return footerEl ? createPortal(action, footerEl) : action;
+      })()}
     </div>
   );
 }

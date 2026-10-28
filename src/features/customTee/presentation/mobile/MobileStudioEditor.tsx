@@ -98,6 +98,9 @@ export default function MobileStudioEditor({
     }
   };
 
+  // Property editors keep the design visible above them instead of dimming it.
+  const compactSheet = activeSheet === 'settings' || activeSheet === 'text';
+
   const closeSheet = () => {
     setActiveSheet(null);
     setActiveTool(null);
@@ -222,7 +225,7 @@ export default function MobileStudioEditor({
       <MobileHeader
         title="Design Studio"
         subtitle={subtitle}
-        onBack={() => router.push('/custom-tee')}
+        onBack={() => router.push('/')}
         onSave={save}
         saving={saving}
       />
@@ -251,6 +254,7 @@ export default function MobileStudioEditor({
         onUndo={studio.undo}
         onRedo={studio.redo}
         onMeasure={setMeasure}
+        compact={compactSheet}
       />
 
       {/* Selection bar: edit/duplicate/delete without a sheet covering the canvas */}
@@ -291,6 +295,8 @@ export default function MobileStudioEditor({
       <MobileBottomSheet
         isOpen={activeSheet !== null}
         onClose={closeSheet}
+        modal={!compactSheet}
+        maxHeightClass={compactSheet ? 'max-h-[50dvh]' : undefined}
         title={
           activeSheet === 'add-design'
             ? 'Add Design'
@@ -333,6 +339,7 @@ export default function MobileStudioEditor({
             onAlign={handleAlign}
             onFlip={handleFlip}
             onDuplicate={handleDuplicate}
+            onDone={closeSheet}
             onDelete={() => {
               studio.removeSelected();
               closeSheet();

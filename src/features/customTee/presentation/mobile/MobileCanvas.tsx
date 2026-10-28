@@ -24,6 +24,8 @@ type Props = {
   onUndo: () => void;
   onRedo: () => void;
   /** Reports the stage size and every visible layer's unrotated box (canvas fractions) for align/snap. */
+  /** A property sheet is open below: shrink the stage into the space above it so the design stays visible. */
+  compact?: boolean;
   onMeasure?: (m: { stage: CanvasPx; sizes: Record<string, Size> }) => void;
 };
 
@@ -64,6 +66,7 @@ export default function MobileCanvas({
   onUndo,
   onRedo,
   onMeasure,
+  compact = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -216,7 +219,10 @@ export default function MobileCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative flex min-h-[480px] flex-1 touch-none select-none flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-stone-100 via-stone-50 to-stone-100 pt-12 pb-28"
+      className={`relative flex flex-1 touch-none select-none flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-stone-100 via-stone-50 to-stone-100 pt-12 ${
+        compact ? 'min-h-0 pb-[var(--sheet-h)]' : 'min-h-[480px] pb-28'
+      }`}
+      style={compact ? ({ '--sheet-h': '50dvh' } as React.CSSProperties) : undefined}
       onPointerDown={onContainerPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -267,7 +273,9 @@ export default function MobileCanvas({
           transformOrigin: 'center center',
           transition: pinchStart.current ? 'none' : 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className="relative aspect-square w-full max-w-[420px] max-h-[60vh] shrink-0 touch-none flex items-center justify-center"
+        className={`relative aspect-square w-full shrink-0 touch-none flex items-center justify-center max-h-[60vh] ${
+          compact ? 'max-w-[min(420px,calc(50dvh-6.5rem))]' : 'max-w-[420px]'
+        }`}
       >
         {baseImage ? (
           <img
@@ -389,7 +397,7 @@ export default function MobileCanvas({
       </div>
 
       {/* Bottom Floating Controls: view switcher */}
-      {views.length >= 2 && (
+      {!compact && views.length >= 2 && (
         <div className="absolute bottom-3 left-0 right-0 z-20 flex flex-col items-center gap-2.5 pointer-events-none">
           <div className="pointer-events-auto flex rounded-full bg-white/95 p-1 border border-zinc-200 shadow-md backdrop-blur-md">
             {views.map((v) => (

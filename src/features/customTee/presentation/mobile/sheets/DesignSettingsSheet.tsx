@@ -22,6 +22,7 @@ import {
   percentToScale,
   scaleToPercent,
 } from '../../../domain/layers';
+import TextEditorSheet from './TextEditorSheet';
 
 type Props = {
   layer: Layer;
@@ -32,6 +33,7 @@ type Props = {
   onFlip: (axis: 'x' | 'y') => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onDone: () => void;
 };
 
 const MIN_PERCENT = scaleToPercent(MIN_SCALE);
@@ -59,6 +61,8 @@ export default function DesignSettingsSheet({
   onFlip,
   onDuplicate,
   onDelete,
+  onDone,
+  onPatch,
 }: Props) {
   const percent = scaleToPercent(layer.scale);
   const [text, setText] = useState(String(percent));
@@ -69,23 +73,28 @@ export default function DesignSettingsSheet({
 
   return (
     <div className="space-y-5 pb-6">
+      {layer.type === 'image' && (
       <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white">
-            {layer.type === 'image' ? (
-              <img src={layer.src} alt={layer.name} className="h-full w-full object-contain" />
-            ) : (
-              <span className="font-bold text-sm text-zinc-800 truncate px-1">{layer.text.slice(0, 3)}</span>
-            )}
+            <img src={layer.src} alt={layer.name} className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-xs font-bold text-zinc-900">{layer.name}</h3>
-            <p className="text-[11px] font-medium text-zinc-500">{layer.type === 'image' ? 'Image' : 'Text'}</p>
+            <p className="text-[11px] font-medium text-zinc-500">Image</p>
           </div>
         </div>
       </div>
+      )}
 
-      <div>
+      {layer.type === 'text' && (
+        <div>
+          <span className={LABEL}>Text</span>
+          <TextEditorSheet activeTextLayer={layer} onAddText={() => {}} onUpdateText={onPatch} onDone={onDone} />
+        </div>
+      )}
+
+      <div className="border-t border-zinc-100 pt-4">
         <span className={LABEL}>Flip</span>
         <div className="flex gap-2">
           <button type="button" aria-label="Flip horizontal" aria-pressed={!!layer.flipX} onClick={() => onFlip('x')} className={`${ICON_BTN} ${layer.flipX ? '!border-black !bg-black !text-white' : ''}`}>
@@ -97,7 +106,7 @@ export default function DesignSettingsSheet({
         </div>
       </div>
 
-      <div>
+      <div className="border-t border-zinc-100 pt-4">
         <label htmlFor="layer-scale" className={LABEL}>Scale</label>
         <div className="flex items-center gap-3">
           <input
@@ -136,7 +145,7 @@ export default function DesignSettingsSheet({
         </div>
       </div>
 
-      <div>
+      <div className="border-t border-zinc-100 pt-4">
         <span className={LABEL}>Arrange</span>
         <div className="flex flex-wrap gap-2">
           {ALIGN.map(({ edge, label, icon: Icon }) => (

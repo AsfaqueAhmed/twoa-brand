@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_FAMILY, FONT_CATALOG } from './fonts';
 export type LayerBase = {
   id: string;
   name: string;
@@ -60,13 +61,7 @@ export const TEXT_PRESETS = [
   { kind: 'body', label: 'Add body text', text: 'Body text', scale: 0.2, bold: false },
 ] as const;
 
-export const FONT_OPTIONS = [
-  { label: 'Sans', family: 'Arial, Helvetica, sans-serif' },
-  { label: 'Serif', family: 'Georgia, "Times New Roman", serif' },
-  { label: 'Mono', family: '"Courier New", Courier, monospace' },
-  { label: 'Impact', family: 'Impact, "Arial Black", sans-serif' },
-  { label: 'Script', family: '"Brush Script MT", "Segoe Script", cursive' },
-] as const;
+export const FONT_OPTIONS = FONT_CATALOG;
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
@@ -115,7 +110,7 @@ export function createTextLayer(init: {
     id: init.id,
     name: init.text.slice(0, 24) || 'Text',
     text: init.text,
-    fontFamily: init.fontFamily ?? FONT_OPTIONS[0].family,
+    fontFamily: init.fontFamily ?? DEFAULT_FONT_FAMILY,
     color: init.color ?? DEFAULT_TEXT_COLOR,
     bold: init.bold ?? false,
     italic: init.italic ?? false,

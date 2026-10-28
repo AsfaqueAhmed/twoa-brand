@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_FAMILY } from './fonts';
 import { type Layer, FONT_OPTIONS, DEFAULT_TEXT_COLOR, MAX_TEXT_LENGTH, clampLayer } from './layers';
 import { normalizeGroups } from './grouping';
 
@@ -58,7 +59,7 @@ function parseLayer(v: unknown): Layer | null {
   }
   if (o.type === 'text') {
     if (typeof o.text !== 'string' || !o.text || o.text.length > MAX_TEXT_LENGTH) return null;
-    const family = FONT_OPTIONS.find((f) => f.family === o.fontFamily)?.family ?? FONT_OPTIONS[0].family;
+    const family = FONT_OPTIONS.find((f) => f.family === o.fontFamily)?.family ?? DEFAULT_FONT_FAMILY;
     const color = typeof o.color === 'string' && HEX_COLOR.test(o.color) ? o.color : DEFAULT_TEXT_COLOR;
     return clampLayer({
       ...base,
