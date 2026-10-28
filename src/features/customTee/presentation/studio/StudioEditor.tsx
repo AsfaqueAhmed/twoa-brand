@@ -320,6 +320,10 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               setStatus(null);
             }}
           />
+          <div className="border-t border-[#EEEEEE] pt-5">
+            <h2 className={SECTION_TITLE}>Design Layers</h2>
+            {layersList}
+          </div>
           {studio.selectedIds.length > 0 && (
             <section aria-label="Properties" className="space-y-5 border-t border-[#EEEEEE] pt-5">
               <h2 className={SECTION_TITLE}>Properties</h2>
@@ -360,10 +364,6 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               )}
             </section>
           )}
-          <div>
-            <h2 className={SECTION_TITLE}>Design Layers</h2>
-            {layersList}
-          </div>
 
           {status && (
             <p role={status.kind === 'error' ? 'alert' : 'status'} className={`rounded-lg px-4 py-3 text-xs ${status.kind === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'}`}>

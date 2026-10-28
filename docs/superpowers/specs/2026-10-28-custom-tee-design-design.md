@@ -121,7 +121,7 @@ Black-and-white styling is unchanged (guides are black lines with a white outlin
 ## Panels
 
 - **Left Text tab only adds text:** "Add a heading", "Add a subheading", "Add body text" presets. It never shows editing fields for a selected layer.
-- **Right bar = selection-aware Properties** (between the product panel and the layers list, shown only with a selection): text layer -> content, font, size, bold, italic, align, letter spacing, color; image layer -> layer name only; 2+ layers or a group -> group/ungroup, delete. For any selection: Align (and Distribute when 3+ units). A single layer also gets Flip and Scale.
+- **Right bar = selection-aware Properties** (below the Design Layers list, shown only with a selection): text layer -> content, font, size, bold, italic, align, letter spacing, color; image layer -> layer name only; 2+ layers or a group -> group/ungroup, delete. For any selection: Align (and Distribute when 3+ units). A single layer also gets Flip and Scale.
 
 ## Layer model additions
 
