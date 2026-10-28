@@ -46,6 +46,8 @@ export interface Product {
   sizeChartId?: string; // references a reusable SizeChart template
   gallery?: string[]; // extra product photos shown as thumbnails (main image stays in `image`)
   highlights?: ProductHighlight[]; // admin-entered feature row
+  isActive?: boolean; // false hides the product from the storefront (undefined = active)
+  isFeatured?: boolean;
   parentProduct?: ParentProduct; // read-time join attached by the application layer; never persisted on the product doc
 }
 
