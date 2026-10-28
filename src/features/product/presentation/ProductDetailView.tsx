@@ -191,7 +191,7 @@ export default function ProductDetailView({
                 isSelected ? 'border-2 border-black' : 'border border-[#E4E1DA]'
               }`}
             >
-              <img src={url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              <img src={url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
             </button>
           );
         })}
@@ -316,7 +316,7 @@ export default function ProductDetailView({
                         style={!v.image && v.colorCode ? { backgroundColor: v.colorCode } : undefined}
                       >
                         {v.image && (
-                          <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={v.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                         )}
                       </button>
                     );

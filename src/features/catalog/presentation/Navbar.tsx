@@ -32,7 +32,7 @@ export default function Navbar() {
             id="brand-logo-trigger"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-7 w-auto sm:h-10" />
+            <img src="/branding/logo-wordmark.png" alt="2A — Authentic &amp; Aesthetic" className="h-7 w-auto sm:h-10" loading="eager" fetchPriority="high" decoding="async" />
           </div>
 
           {/* Navigation Tabs (desktop/tablet only — mobile uses the bottom nav bar) */}
@@ -116,6 +116,7 @@ export default function Navbar() {
                   alt={user.displayName || 'Profile'}
                   className="h-8 w-8 rounded-full border border-[#EEEEEE]"
                   referrerPolicy="no-referrer"
+                  decoding="async"
                 />
                 <button
                   id="sign-out-btn"

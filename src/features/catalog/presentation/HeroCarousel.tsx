@@ -123,6 +123,8 @@ export default function HeroCarousel({
                   alt={banner.headline ? '' : 'Banner'}
                   className="h-full w-full object-cover"
                   loading={i === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={i === 0 ? "high" : undefined}
+                  decoding="async"
                   referrerPolicy="no-referrer"
                 />
               </picture>
