@@ -42,14 +42,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             type="button"
             aria-expanded={open}
             onClick={() => setOpenGroups((s) => ({ ...s, [g.label]: !open }))}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm text-white/80 hover:bg-white/10"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#444444] hover:bg-[#F5F5F5] hover:text-black"
           >
             <Icon className="h-4 w-4" />
             <span className="flex-1 text-left">{g.label}</span>
             <ChevronDown aria-hidden="true" className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
           {open && (
-            <div className="ml-4 border-l border-white/10 pl-3">
+            <div className="ml-4 border-l border-[#EEEEEE] pl-3">
               {g.children.map((c) => {
                 const isActive = c.href === active;
                 return (
@@ -58,7 +58,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     href={c.href}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={onNavigate}
-                    className={`block rounded-md px-3 py-2 text-[13px] ${isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'}`}
+                    className={`block rounded-md px-3 py-2 text-[13px] ${isActive ? 'bg-black font-semibold text-white' : 'text-[#717171] hover:bg-[#F5F5F5] hover:text-black'}`}
                   >
                     {c.label}
                   </Link>
@@ -76,7 +76,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         href={g.href!}
         aria-current={isActive ? 'page' : undefined}
         onClick={onNavigate}
-        className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm ${isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10'}`}
+        className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm ${isActive ? 'bg-black font-semibold text-white' : 'text-[#444444] hover:bg-[#F5F5F5] hover:text-black'}`}
       >
         <Icon className="h-4 w-4" />
         <span className="flex-1">{g.label}</span>
@@ -88,11 +88,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   };
 
   const sidebar = (label: string, onNavigate?: () => void) => (
-    <nav className="flex h-full flex-col gap-1 overflow-y-auto bg-[#1B1B1B] p-3" aria-label={label}>
+    <nav className="flex h-full flex-col gap-1 overflow-y-auto border-r border-[#EEEEEE] bg-white p-3" aria-label={label}>
       {NAV_SECTIONS.map((section, i) => (
         <div key={section.title ?? i} className="mb-2">
           {section.title && (
-            <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-white/40">{section.title}</div>
+            <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-[#A1A1A1]">{section.title}</div>
           )}
           {section.items.map((g) => renderGroup(g, onNavigate))}
         </div>
@@ -111,13 +111,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={closeDrawer} />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col">
-            <div className="flex justify-end bg-[#1B1B1B] px-3 pt-3">
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col shadow-xl">
+            <div className="flex justify-end border-r border-[#EEEEEE] bg-white px-3 pt-3">
               <button
                 type="button"
                 onClick={closeDrawer}
                 aria-label="Close admin menu"
-                className="rounded-md p-2 text-white/80 hover:bg-white/10"
+                className="rounded-md p-2 text-[#444444] hover:bg-[#F5F5F5]"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
