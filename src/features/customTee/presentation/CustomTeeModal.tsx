@@ -1,15 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCustomTeeData } from '../application/useCustomTeeData';
 import { EMPTY_SELECTION, type Selection, type SelectionStep, validateSelection } from '../domain/selection';
-import { buildParentCard } from '../domain/cards';
+import { HANDOFF_KEY } from '../domain/studioTarget';
 import Modal from './Modal';
 import Stepper from './Stepper';
 import SelectionStepOne from './SelectionStepOne';
 import SelectionStepTwo from './SelectionStepTwo';
-
-const HANDOFF_KEY = 'custom-tee-selection';
 
 // Clears the selection from the step that became invalid onward.
 function truncateSelection(sel: Selection, resetTo: SelectionStep): Selection {
@@ -25,18 +24,12 @@ function truncateSelection(sel: Selection, resetTo: SelectionStep): Selection {
 }
 
 export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
   const { parents, products, loading, error, refreshParents } = useCustomTeeData();
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   const [step, setStep] = useState<1 | 2>(1);
-  const [handedOff, setHandedOff] = useState<Selection | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const card = useMemo(() => {
-    if (!handedOff) return null;
-    const parent = parents.find((p) => p.id === handedOff.parentId);
-    return parent ? buildParentCard(parent, products, handedOff.size) : null;
-  }, [parents, products, handedOff]);
 
   const onChange = (s: Selection) => {
     setNotice(null);
@@ -58,7 +51,8 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
       }
       setNotice(null);
       sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ parentProductId: current.parentId, size: current.size }));
-      setHandedOff(current);
+      onClose();
+      router.push(`/custom-tee/studio?tee=${encodeURIComponent(current.parentId)}&size=${encodeURIComponent(current.size)}`);
     } catch {
       setNotice('Could not check stock. Please try again.');
     } finally {
@@ -71,37 +65,6 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
     body = <p className="py-10 text-center text-sm text-[#717171]">Loading tees…</p>;
   } else if (error) {
     body = <p role="alert" className="py-10 text-center text-sm text-red-600">{error}</p>;
-  } else if (handedOff && card) {
-    body = (
-      <div className="flex flex-1 flex-col space-y-5">
-        <h2 className="text-center text-sm font-bold uppercase tracking-widest text-black">Tee selected</h2>
-        <ul className="space-y-1 text-sm text-black">
-          <li>Tee: {card.parent.name} (SKU {card.code})</li>
-          <li>Category: {card.parent.category} / {card.parent.subcategory}</li>
-          <li>Size: {handedOff.size}</li>
-        </ul>
-        {/* Phase C: the Design Studio opens here with this parent and size. */}
-        <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">
-          The Design Studio is coming soon. Your selection is saved for this session.
-        </p>
-        <div className="sticky bottom-0 mt-auto flex gap-3 bg-white pb-6 pt-8">
-          <button
-            type="button"
-            onClick={() => setHandedOff(null)}
-            className="rounded-lg border border-[#EEEEEE] px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black"
-          >
-            Change tee
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-lg bg-black px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
   } else {
     body = (
       <>
@@ -126,7 +89,7 @@ export default function CustomTeeModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal onClose={onClose} title="Design your tee">
-      {!handedOff && <h2 className="mb-6 text-center text-sm font-bold uppercase tracking-widest text-black">Design your tee</h2>}
+      <h2 className="mb-6 text-center text-sm font-bold uppercase tracking-widest text-black">Design your tee</h2>
       {body}
     </Modal>
   );
