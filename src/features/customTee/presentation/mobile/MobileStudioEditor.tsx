@@ -30,8 +30,8 @@ import AddDesignSheet from './sheets/AddDesignSheet';
 import TextEditorSheet from './sheets/TextEditorSheet';
 import DesignSettingsSheet from './sheets/DesignSettingsSheet';
 import LayersListSheet from './sheets/LayersListSheet';
-import ProductSheet from './sheets/ProductSheet';
 import { Copy, Settings2, Trash2 } from 'lucide-react';
+import type { CanvasPx, Size } from '../../domain/geometry';
 
 type Props = {
   parent: ParentProduct;
@@ -42,7 +42,7 @@ type Props = {
   refreshParents: () => Promise<ParentProduct[]>;
 };
 
-type SheetType = 'product' | 'add-design' | 'text' | 'settings' | 'layers' | null;
+type SheetType = 'add-design' | 'text' | 'settings' | 'layers' | null;
 
 export default function MobileStudioEditor({
   parent,
@@ -53,12 +53,9 @@ export default function MobileStudioEditor({
   refreshParents,
 }: Props) {
   const router = useRouter();
-  const [size, setSize] = useState(initialSize);
-  const [colorName, setColorName] = useState<string | undefined>(
-    initialColor && card.colors.some((c) => c.name === initialColor)
-      ? initialColor
-      : card.colors[0]?.name,
-  );
+  const size = initialSize;
+  const colorName =
+    initialColor && card.colors.some((c) => c.name === initialColor) ? initialColor : card.colors[0]?.name;
 
   const [activeSheet, setActiveSheet] = useState<SheetType>(null);
   const [activeTool, setActiveTool] = useState<MobileToolTab | null>(null);
@@ -66,10 +63,10 @@ export default function MobileStudioEditor({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [measure, setMeasure] = useState<{ stage: CanvasPx; sizes: Record<string, Size> } | null>(null);
 
   const color = card.colors.find((c) => c.name === colorName);
   const views = useMemo(() => buildViews(parent, color), [parent, color]);
-  const sizes = useMemo(() => parent.sizeOrder.filter((s) => (parent.stockBySize[s] ?? 0) > 0), [parent]);
   const [activeViewId, setActiveViewId] = useState(views[0]?.id ?? 'view-0');
   const view = views.find((v) => v.id === activeViewId) ?? views[0];
 
@@ -90,9 +87,7 @@ export default function MobileStudioEditor({
   // Tool Dock selection
   const handleSelectTab = (tab: MobileToolTab) => {
     setActiveTool(tab);
-    if (tab === 'product') {
-      setActiveSheet('product');
-    } else if (tab === 'design') {
+    if (tab === 'design') {
       setActiveSheet('add-design');
     } else if (tab === 'text') {
       setActiveSheet('text');
@@ -173,12 +168,10 @@ export default function MobileStudioEditor({
     if (studio.selected) studio.duplicate(studio.selected.id);
   };
 
-  // Alignment
+  // Alignment: same measured-box align as the web studio
   const handleAlign = (edge: AlignEdge) => {
-    const l = studio.selected;
-    if (!l) return;
-    const sz = { w: l.scale, h: l.scale / (l.type === 'image' ? l.aspect || 1 : 2.5) };
-    studio.patch(l.id, alignLayer(l, sz, edge));
+    if (!measure || !studio.selected) return;
+    studio.align(edge, measure.sizes, measure.stage);
   };
 
   // Flip
@@ -257,6 +250,7 @@ export default function MobileStudioEditor({
         canRedo={studio.canRedo}
         onUndo={studio.undo}
         onRedo={studio.redo}
+        onMeasure={setMeasure}
       />
 
       {/* Selection bar: edit/duplicate/delete without a sheet covering the canvas */}
@@ -298,9 +292,7 @@ export default function MobileStudioEditor({
         isOpen={activeSheet !== null}
         onClose={closeSheet}
         title={
-          activeSheet === 'product'
-            ? 'Tee Options'
-            : activeSheet === 'add-design'
+          activeSheet === 'add-design'
             ? 'Add Design'
             : activeSheet === 'text'
             ? 'Text'
@@ -311,20 +303,6 @@ export default function MobileStudioEditor({
             : ''
         }
       >
-        {activeSheet === 'product' && (
-          <ProductSheet
-            card={card}
-            sizes={sizes}
-            size={size}
-            colorName={colorName}
-            onColor={(name) => {
-              setColorName(name);
-              setActiveViewId(views[0]?.id ?? 'view-0');
-            }}
-            onSize={setSize}
-          />
-        )}
-
         {activeSheet === 'add-design' && (
           <AddDesignSheet
             assets={studio.assets}
@@ -350,6 +328,8 @@ export default function MobileStudioEditor({
           <DesignSettingsSheet
             layer={studio.selected}
             onPatch={(patch) => studio.patch(studio.selected!.id, patch)}
+            onLive={(patch) => studio.patchLive(studio.selected!.id, patch)}
+            onSettle={studio.settleGesture}
             onAlign={handleAlign}
             onFlip={handleFlip}
             onDuplicate={handleDuplicate}

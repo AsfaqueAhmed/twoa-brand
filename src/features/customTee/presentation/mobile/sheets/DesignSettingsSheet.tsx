@@ -1,335 +1,161 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import {
-  AlignCenter,
+  AlignCenterHorizontal,
+  AlignCenterVertical,
   AlignEndHorizontal,
-  AlignHorizontalDistributeCenter,
-  AlignHorizontalJustifyCenter,
-  AlignHorizontalSpaceAround,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
+  AlignEndVertical,
   AlignStartHorizontal,
-  AlignVerticalDistributeCenter,
-  AlignVerticalJustifyCenter,
-  AlignVerticalSpaceAround,
+  AlignStartVertical,
   Copy,
-  FlipHorizontal,
-  FlipVertical,
+  FlipHorizontal2,
+  FlipVertical2,
   Trash2,
 } from 'lucide-react';
-import type { AlignEdge, Layer, LayerPatch } from '../../../domain/layers';
+import {
+  type AlignEdge,
+  type Layer,
+  type LayerPatch,
+  MAX_SCALE,
+  MIN_SCALE,
+  percentToScale,
+  scaleToPercent,
+} from '../../../domain/layers';
 
 type Props = {
   layer: Layer;
   onPatch: (patch: LayerPatch) => void;
+  onLive: (patch: LayerPatch) => void;
+  onSettle: () => void;
   onAlign: (edge: AlignEdge) => void;
   onFlip: (axis: 'x' | 'y') => void;
   onDuplicate: () => void;
   onDelete: () => void;
 };
 
-// Map fractional canvas coordinates to practical inches display (assuming 10in printable area)
-const PRINT_AREA_INCHES = 10;
+const MIN_PERCENT = scaleToPercent(MIN_SCALE);
+const MAX_PERCENT = scaleToPercent(MAX_SCALE);
 
+const LABEL = 'mb-2 block text-[11px] font-bold uppercase tracking-wider text-zinc-500';
+const ICON_BTN =
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-black active:scale-95 transition';
+
+const ALIGN: { edge: AlignEdge; label: string; icon: typeof AlignStartVertical }[] = [
+  { edge: 'left', label: 'Align left', icon: AlignStartVertical },
+  { edge: 'center', label: 'Align center', icon: AlignCenterVertical },
+  { edge: 'right', label: 'Align right', icon: AlignEndVertical },
+  { edge: 'top', label: 'Align top', icon: AlignStartHorizontal },
+  { edge: 'middle', label: 'Align middle', icon: AlignCenterHorizontal },
+  { edge: 'bottom', label: 'Align bottom', icon: AlignEndHorizontal },
+];
+
+// Same properties as the web studio: flip, scale (slider + percent) and arrange. Rotation is the canvas handle.
 export default function DesignSettingsSheet({
   layer,
-  onPatch,
+  onLive,
+  onSettle,
   onAlign,
   onFlip,
   onDuplicate,
   onDelete,
 }: Props) {
-  // Position in inches relative to center (0, 0 at center or absolute inches)
-  const posXInches = ((layer.x - 0.5) * PRINT_AREA_INCHES).toFixed(1);
-  const posYInches = ((layer.y - 0.5) * PRINT_AREA_INCHES).toFixed(1);
-
-  // Dimensions in inches
-  const aspect = layer.type === 'image' ? layer.aspect || 1 : 2.5;
-  const widthInches = (layer.scale * PRINT_AREA_INCHES).toFixed(1);
-  const heightInches = (layer.scale * (PRINT_AREA_INCHES / aspect)).toFixed(1);
-
-  const opacityPct = Math.round((layer.opacity ?? 1) * 100);
-
-  const handleRotationChange = (deg: number) => {
-    onPatch({ rotation: deg });
-  };
-
-  const handleOpacityChange = (pct: number) => {
-    onPatch({ opacity: Math.max(0.1, Math.min(1, pct / 100)) });
-  };
-
-  const handleWidthChange = (valStr: string) => {
-    const val = parseFloat(valStr);
-    if (!isNaN(val) && val > 0.5 && val <= 15) {
-      onPatch({ scale: val / PRINT_AREA_INCHES });
-    }
-  };
-
-  const handleHeightChange = (valStr: string) => {
-    const val = parseFloat(valStr);
-    if (!isNaN(val) && val > 0.5 && val <= 15) {
-      onPatch({ scale: (val * aspect) / PRINT_AREA_INCHES });
-    }
-  };
-
-  const handleXChange = (valStr: string) => {
-    const val = parseFloat(valStr);
-    if (!isNaN(val)) {
-      onPatch({ x: Math.max(0, Math.min(1, val / PRINT_AREA_INCHES + 0.5)) });
-    }
-  };
-
-  const handleYChange = (valStr: string) => {
-    const val = parseFloat(valStr);
-    if (!isNaN(val)) {
-      onPatch({ y: Math.max(0, Math.min(1, val / PRINT_AREA_INCHES + 0.5)) });
-    }
-  };
+  const percent = scaleToPercent(layer.scale);
+  const [text, setText] = useState(String(percent));
+  const boxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (document.activeElement !== boxRef.current) setText(String(percent));
+  }, [percent, layer.id]);
 
   return (
     <div className="space-y-5 pb-6">
-      {/* Selected Layer Card */}
       <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white">
             {layer.type === 'image' ? (
               <img src={layer.src} alt={layer.name} className="h-full w-full object-contain" />
             ) : (
-              <span className="font-bold text-sm text-zinc-800 truncate px-1">
-                {layer.text.slice(0, 3)}
-              </span>
+              <span className="font-bold text-sm text-zinc-800 truncate px-1">{layer.text.slice(0, 3)}</span>
             )}
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-xs font-bold text-zinc-900">{layer.name}</h3>
-            <p className="text-[11px] font-medium text-zinc-500">
-              {layer.type === 'image'
-                ? `${widthInches}" × ${heightInches}" • Layer`
-                : `${layer.fontFamily.split(',')[0].replace(/['"]/g, '')}`}
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label="Delete layer"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-400 hover:bg-red-50 hover:text-red-600 active:scale-95 transition"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Position Section */}
-      <div>
-        <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Position
-        </span>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-black transition">
-            <span className="text-xs font-bold text-zinc-400 mr-2">X</span>
-            <input
-              type="text"
-              defaultValue={`${posXInches} in`}
-              key={`x-${posXInches}`}
-              onBlur={(e) => handleXChange(e.target.value.replace(/[^0-9.-]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleXChange((e.target as HTMLInputElement).value.replace(/[^0-9.-]/g, ''));
-              }}
-              className="w-full text-xs font-bold text-zinc-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex items-center rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-black transition">
-            <span className="text-xs font-bold text-zinc-400 mr-2">Y</span>
-            <input
-              type="text"
-              defaultValue={`${posYInches} in`}
-              key={`y-${posYInches}`}
-              onBlur={(e) => handleYChange(e.target.value.replace(/[^0-9.-]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleYChange((e.target as HTMLInputElement).value.replace(/[^0-9.-]/g, ''));
-              }}
-              className="w-full text-xs font-bold text-zinc-900 focus:outline-none"
-            />
+            <p className="text-[11px] font-medium text-zinc-500">{layer.type === 'image' ? 'Image' : 'Text'}</p>
           </div>
         </div>
       </div>
 
-      {/* Size Section with Aspect Lock */}
       <div>
-        <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Size
-        </span>
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-black transition">
-            <span className="text-xs font-bold text-zinc-400 mr-2">W</span>
-            <input
-              type="text"
-              defaultValue={`${widthInches} in`}
-              key={`w-${widthInches}`}
-              onBlur={(e) => handleWidthChange(e.target.value.replace(/[^0-9.-]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleWidthChange((e.target as HTMLInputElement).value.replace(/[^0-9.-]/g, ''));
-              }}
-              className="w-full text-xs font-bold text-zinc-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-1 items-center rounded-xl border border-zinc-200 bg-white px-3 py-2 focus-within:border-black transition">
-            <span className="text-xs font-bold text-zinc-400 mr-2">H</span>
-            <input
-              type="text"
-              defaultValue={`${heightInches} in`}
-              key={`h-${heightInches}`}
-              onBlur={(e) => handleHeightChange(e.target.value.replace(/[^0-9.-]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleHeightChange((e.target as HTMLInputElement).value.replace(/[^0-9.-]/g, ''));
-              }}
-              className="w-full text-xs font-bold text-zinc-900 focus:outline-none"
-            />
-          </div>
+        <span className={LABEL}>Flip</span>
+        <div className="flex gap-2">
+          <button type="button" aria-label="Flip horizontal" aria-pressed={!!layer.flipX} onClick={() => onFlip('x')} className={`${ICON_BTN} ${layer.flipX ? '!border-black !bg-black !text-white' : ''}`}>
+            <FlipHorizontal2 className="h-5 w-5" />
+          </button>
+          <button type="button" aria-label="Flip vertical" aria-pressed={!!layer.flipY} onClick={() => onFlip('y')} className={`${ICON_BTN} ${layer.flipY ? '!border-black !bg-black !text-white' : ''}`}>
+            <FlipVertical2 className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
-      {/* Rotate Section */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Rotate</span>
-          <span className="text-xs font-mono font-bold text-zinc-900">{Math.round(layer.rotation)}°</span>
-        </div>
+        <label htmlFor="layer-scale" className={LABEL}>Scale</label>
         <div className="flex items-center gap-3">
           <input
+            id="layer-scale"
             type="range"
-            min={-180}
-            max={180}
-            step={1}
-            value={Math.round(layer.rotation)}
-            onChange={(e) => handleRotationChange(parseInt(e.target.value, 10))}
-            className="w-full accent-black cursor-pointer"
+            min={MIN_PERCENT}
+            max={MAX_PERCENT}
+            value={percent}
+            onChange={(e) => onLive({ scale: percentToScale(Number(e.target.value)) })}
+            onPointerUp={onSettle}
+            onKeyUp={onSettle}
+            onBlur={onSettle}
+            className="min-w-0 flex-1 accent-black"
           />
+          <div className="flex shrink-0 items-center rounded-xl border border-zinc-200 px-3 py-2">
+            <input
+              aria-label="Scale percent"
+              type="number"
+              min={MIN_PERCENT}
+              max={MAX_PERCENT}
+              ref={boxRef}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                const n = e.target.value.trim() === '' ? NaN : Number(e.target.value);
+                if (Number.isFinite(n) && n >= MIN_PERCENT && n <= MAX_PERCENT) onLive({ scale: percentToScale(n) });
+              }}
+              onBlur={() => {
+                setText(String(percent));
+                onSettle();
+              }}
+              className="w-12 bg-transparent text-sm font-bold text-zinc-900 focus:outline-none"
+            />
+            <span className="text-sm text-zinc-500">%</span>
+          </div>
         </div>
       </div>
 
-      {/* Flip Section */}
       <div>
-        <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Flip
-        </span>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => onFlip('x')}
-            className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-bold transition active:scale-98 ${
-              layer.flipX ? 'border-black bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-700'
-            }`}
-          >
-            <FlipHorizontal className="h-4 w-4" />
-            <span>Flip H</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onFlip('y')}
-            className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-bold transition active:scale-98 ${
-              layer.flipY ? 'border-black bg-zinc-900 text-white' : 'border-zinc-200 bg-white text-zinc-700'
-            }`}
-          >
-            <FlipVertical className="h-4 w-4" />
-            <span>Flip V</span>
-          </button>
+        <span className={LABEL}>Arrange</span>
+        <div className="flex flex-wrap gap-2">
+          {ALIGN.map(({ edge, label, icon: Icon }) => (
+            <button key={edge} type="button" aria-label={label} title={label} onClick={() => onAlign(edge)} className={ICON_BTN}>
+              <Icon className="h-5 w-5" />
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Align Section (6 buttons) */}
-      <div>
-        <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-          Align
-        </span>
-        <div className="grid grid-cols-6 gap-1.5 rounded-2xl border border-zinc-200 bg-zinc-50 p-1.5">
-          <button
-            type="button"
-            onClick={() => onAlign('left')}
-            title="Align Left"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <AlignLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onAlign('center')}
-            title="Align Center Horizontal"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <AlignCenter className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onAlign('right')}
-            title="Align Right"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <AlignRight className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onAlign('top')}
-            title="Align Top"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <span className="rotate-90">
-              <AlignLeft className="h-4 w-4" />
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onAlign('middle')}
-            title="Align Middle Vertical"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <span className="rotate-90">
-              <AlignCenter className="h-4 w-4" />
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onAlign('bottom')}
-            title="Align Bottom"
-            className="flex h-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-2xs hover:bg-zinc-100 hover:text-black active:scale-95 transition"
-          >
-            <span className="rotate-90">
-              <AlignRight className="h-4 w-4" />
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Opacity Section */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Opacity</span>
-          <span className="text-xs font-mono font-bold text-zinc-900">{opacityPct}%</span>
-        </div>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          step={1}
-          value={opacityPct}
-          onChange={(e) => handleOpacityChange(parseInt(e.target.value, 10))}
-          className="w-full accent-black cursor-pointer"
-        />
-      </div>
-
-      {/* Action Buttons */}
       <div className="space-y-2 pt-2">
         <button
           type="button"
           onClick={onDuplicate}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white py-3 text-xs font-bold text-zinc-900 shadow-2xs hover:bg-zinc-50 active:scale-98 transition"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white py-3 text-xs font-bold text-zinc-900 hover:bg-zinc-50 active:scale-98 transition"
         >
           <Copy className="h-4 w-4" />
           <span>Duplicate Layer</span>
         </button>
-
         <button
           type="button"
           onClick={onDelete}

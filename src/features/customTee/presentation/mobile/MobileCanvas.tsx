@@ -3,8 +3,10 @@
 import { useRef, useState, useEffect } from 'react';
 import { Maximize2, RotateCcw, RotateCw, Search } from 'lucide-react';
 import type { Layer, LayerPatch } from '../../domain/layers';
-import { MAX_SCALE, MIN_SCALE, TEXT_FONT_FRACTION } from '../../domain/layers';
+import { MAX_SCALE, MIN_SCALE, TEXT_FONT_FRACTION, normalizeRotation } from '../../domain/layers';
 import type { StudioView } from '../../domain/views';
+import { type Box, type CanvasPx, type Size, layerBox, limitMoveDelta } from '../../domain/geometry';
+import { type Guide, snapAngle, snapBox } from '../../domain/snapping';
 
 type Props = {
   views: StudioView[];
@@ -21,11 +23,14 @@ type Props = {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  /** Reports the stage size and every visible layer's unrotated box (canvas fractions) for align/snap. */
+  onMeasure?: (m: { stage: CanvasPx; sizes: Record<string, Size> }) => void;
 };
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const TAP_ZOOM = 1.35;
+const SNAP_PX = 6;
 
 type Drag = {
   pointerId: number;
@@ -37,6 +42,8 @@ type Drag = {
   startLayerY: number;
   startScale: number;
   startDist: number;
+  startBox?: Box;
+  others: Box[];
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -56,12 +63,16 @@ export default function MobileCanvas({
   canRedo,
   onUndo,
   onRedo,
+  onMeasure,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   // Unscaled stage width: layer sizes are fractions of it, exactly like the desktop canvas.
   const [stageW, setStageW] = useState(0);
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const sizesRef = useRef<Record<string, Size>>({});
+  const lastMeasure = useRef('');
 
   const dragRef = useRef<Drag | null>(null);
   const pinchPointers = useRef(new Map<number, { x: number; y: number }>());
@@ -77,6 +88,24 @@ export default function MobileCanvas({
     return () => observer.disconnect();
   }, []);
 
+  // Report every visible layer's unrotated box (as canvas fractions) for snapping, align and distribute.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !stage.offsetWidth || !stage.offsetHeight) return;
+    const next: Record<string, Size> = {};
+    for (const l of layers) {
+      if (!l.visible) continue;
+      const content = stage.querySelector<HTMLElement>(`[data-layer-id="${CSS.escape(l.id)}"] [data-layer-content]`);
+      if (content) next[l.id] = { w: content.offsetWidth / stage.offsetWidth, h: content.offsetHeight / stage.offsetHeight };
+    }
+    const key = `${stage.offsetWidth}x${stage.offsetHeight}|` + Object.entries(next).map(([id, sz]) => `${id}:${sz.w.toFixed(4)},${sz.h.toFixed(4)}`).join(';');
+    if (key !== lastMeasure.current) {
+      lastMeasure.current = key;
+      sizesRef.current = next;
+      onMeasure?.({ stage: { w: stage.offsetWidth, h: stage.offsetHeight }, sizes: next });
+    }
+  });
+
   const centerOf = (layerX: number, layerY: number) => {
     const rect = stageRef.current!.getBoundingClientRect();
     return { x: rect.left + layerX * rect.width, y: rect.top + layerY * rect.height, rect };
@@ -86,6 +115,10 @@ export default function MobileCanvas({
     e.stopPropagation();
     if (!stageRef.current) return;
     const c = centerOf(layer.x, layer.y);
+    const canvas = { w: stageRef.current.offsetWidth, h: stageRef.current.offsetHeight };
+    const sizes = sizesRef.current;
+    const startBox = sizes[layer.id] ? layerBox(layer, sizes[layer.id], canvas) : undefined;
+    const others = layers.filter((o) => o.visible && o.id !== layer.id && sizes[o.id]).map((o) => layerBox(o, sizes[o.id], canvas));
     dragRef.current = {
       pointerId: e.pointerId,
       kind,
@@ -96,6 +129,8 @@ export default function MobileCanvas({
       startLayerY: layer.y,
       startScale: layer.scale,
       startDist: Math.max(1, Math.hypot(e.clientX - c.x, e.clientY - c.y)),
+      startBox,
+      others,
     };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -123,9 +158,20 @@ export default function MobileCanvas({
     const rect = stageRef.current.getBoundingClientRect();
 
     if (drag.kind === 'move') {
-      const nx = clamp(drag.startLayerX + (e.clientX - drag.startX) / rect.width, 0.05, 0.95);
-      const ny = clamp(drag.startLayerY + (e.clientY - drag.startY) / rect.height, 0.05, 0.95);
-      onLiveChange({ [drag.layerId]: { x: nx, y: ny } });
+      let dx = (e.clientX - drag.startX) / rect.width;
+      let dy = (e.clientY - drag.startY) / rect.height;
+      let found: Guide[] = [];
+      if (drag.startBox) {
+        const moved: Box = { left: drag.startBox.left + dx, right: drag.startBox.right + dx, top: drag.startBox.top + dy, bottom: drag.startBox.bottom + dy };
+        const snap = snapBox(moved, drag.others, { x: SNAP_PX / rect.width, y: SNAP_PX / rect.height });
+        dx += snap.dx;
+        dy += snap.dy;
+        found = snap.guides;
+      }
+      const start = layers.find((l) => l.id === drag.layerId);
+      if (start) ({ dx, dy } = limitMoveDelta([{ ...start, x: drag.startLayerX, y: drag.startLayerY }], [drag.layerId], dx, dy));
+      setGuides(found);
+      onLiveChange({ [drag.layerId]: { x: drag.startLayerX + dx, y: drag.startLayerY + dy } });
     } else if (drag.kind === 'scale') {
       // Any corner: scale by how far the pointer is from the layer centre, relative to where the drag began.
       const c = centerOf(drag.startLayerX, drag.startLayerY);
@@ -134,7 +180,7 @@ export default function MobileCanvas({
     } else {
       const c = centerOf(drag.startLayerX, drag.startLayerY);
       const deg = (Math.atan2(e.clientY - c.y, e.clientX - c.x) * 180) / Math.PI + 90; // top handle reads as 0°
-      onLiveChange({ [drag.layerId]: { rotation: Math.round(deg) } });
+      onLiveChange({ [drag.layerId]: { rotation: Math.round(snapAngle(normalizeRotation(deg), 15, 4)) } });
     }
   };
 
@@ -145,6 +191,7 @@ export default function MobileCanvas({
     }
     if (dragRef.current && dragRef.current.pointerId === e.pointerId) {
       dragRef.current = null;
+      setGuides([]);
       onSettle();
     }
   };
@@ -253,11 +300,13 @@ export default function MobileCanvas({
                     transform: `translate(-50%, -50%) rotate(${l.rotation || 0}deg) scale(${flipX}, ${flipY})`,
                     opacity: l.opacity ?? 1,
                   }}
+                  data-layer-id={l.id}
                   className="pointer-events-auto cursor-move select-none"
                   onPointerDown={(e) => onLayerPointerDown(e, l)}
                 >
                   {l.type === 'image' ? (
                     <div
+                      data-layer-content
                       style={{ width: `${l.scale * stageW}px`, aspectRatio: l.aspect || 1 }}
                       className="relative flex items-center justify-center"
                     >
@@ -270,6 +319,7 @@ export default function MobileCanvas({
                     </div>
                   ) : (
                     <div
+                      data-layer-content
                       style={{
                         fontFamily: l.fontFamily,
                         fontSize: `${l.scale * TEXT_FONT_FRACTION * stageW}px`,
@@ -322,6 +372,20 @@ export default function MobileCanvas({
               );
             })}
         </div>
+
+        {/* Smart guides */}
+        {guides.map((g) => (
+          <div
+            key={`${g.axis}-${g.position}`}
+            aria-hidden="true"
+            className="pointer-events-none absolute"
+            style={
+              g.axis === 'x'
+                ? { left: `${g.position * 100}%`, top: 0, bottom: 0, width: 1, background: '#000', boxShadow: '0 0 0 0.5px rgba(255,255,255,.85)' }
+                : { top: `${g.position * 100}%`, left: 0, right: 0, height: 1, background: '#000', boxShadow: '0 0 0 0.5px rgba(255,255,255,.85)' }
+            }
+          />
+        ))}
       </div>
 
       {/* Bottom Floating Controls: view switcher */}
