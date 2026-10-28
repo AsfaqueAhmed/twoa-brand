@@ -1,0 +1,38 @@
+'use client';
+
+import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
+
+type Props = { title: string; onClose: () => void; children: React.ReactNode };
+
+// Portal dialog: Escape + backdrop close, focuses the first control on open.
+export default function BulkModalShell({ title, onClose, children }: Props) {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    panelRef.current?.querySelector<HTMLElement>('select, input, button:not([data-close])')?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1A1A1A]/40" onClick={onClose} />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md rounded-xl border border-[#EEEEEE] bg-white p-6 shadow-2xl"
+      >
+        <h3 id={titleId} className="mb-4 text-base font-bold text-black">{title}</h3>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}

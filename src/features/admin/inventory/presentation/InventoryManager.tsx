@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, RefreshCw, XCircle, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Product, ProductVariant, ParentProduct, ProductHighlight } from '@/shared/domain/types';
@@ -22,10 +22,17 @@ import type { SizeChart } from '@/shared/domain/types';
 import ImageCropperModal from './ImageCropperModal';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { pruneSelection } from '@/features/admin/orders/domain/orderView';
-import { setProductFeatured } from '../infrastructure/productBulkRepository';
+import {
+  adjustParentStock,
+  changeProductsCategory,
+  deleteProducts,
+  setProductFeatured,
+  setProductsActive,
+} from '../infrastructure/productBulkRepository';
 import {
   DEFAULT_FILTERS,
   activeFilterCount,
+  distinctParentIds,
   filterProducts,
   paginate,
   productStats,
@@ -36,17 +43,24 @@ import {
 import ProductsHeader from './list/ProductsHeader';
 import ProductStatsRow from './list/ProductStatsRow';
 import ProductFilterBar from './list/ProductFilterBar';
-import ProductsTable from './list/ProductsTable';
+import ProductsTable, { type ProductsListProps } from './list/ProductsTable';
+import ProductsGrid from './list/ProductsGrid';
+import ProductBulkToolbar, { type ProductViewMode } from './list/ProductBulkToolbar';
+import BulkCategoryModal from './list/BulkCategoryModal';
+import BulkStockModal from './list/BulkStockModal';
 import ProductsPagination from './list/ProductsPagination';
 
 export default function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
   const refreshProducts = useCallback(async () => {
-    setProductsLoading(true);
+    // Only the first load shows the spinner; later reloads are silent.
+    if (!hasLoadedRef.current) setProductsLoading(true);
     try {
       setProducts(await fetchAllProductsForAdmin());
+      hasLoadedRef.current = true;
     } finally {
       setProductsLoading(false);
     }
@@ -464,6 +478,42 @@ export default function InventoryManager() {
     setPage(1);
   };
 
+  // Bulk actions
+  const [viewMode, setViewMode] = useState<ProductViewMode>('list');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkModal, setBulkModal] = useState<'category' | 'stock' | null>(null);
+  const [bulkModalError, setBulkModalError] = useState('');
+  const bulkParents = useMemo(() => distinctParentIds(products, selectedIds), [products, selectedIds]);
+
+  const openBulkModal = (m: 'category' | 'stock') => {
+    setBulkModalError('');
+    setBulkModal(m);
+  };
+
+  // Runs a repository call, silently reloads, and reports errors inline
+  // (inside the open modal when there is one, otherwise in the list banner).
+  const runBulk = async (action: () => Promise<void>, inModal = false) => {
+    setBulkBusy(true);
+    setBulkModalError('');
+    try {
+      await action();
+      await refreshProducts();
+      if (inModal) setBulkModal(null);
+    } catch (err: any) {
+      const msg = err.message || 'Bulk action failed.';
+      if (inModal) setBulkModalError(msg);
+      else setListError(msg);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const n = selectedIds.length;
+    if (n === 0 || !window.confirm(`Delete ${n} products? This cannot be undone.`)) return;
+    runBulk(() => deleteProducts(selectedIds));
+  };
+
   // Optimistic featured toggle; reverts and reports inline on failure.
   const handleToggleFeatured = async (p: Product, featured: boolean) => {
     const apply = (value: boolean) =>
@@ -475,6 +525,21 @@ export default function InventoryManager() {
       apply(!featured);
       setListError(err.message || `Failed to update featured flag for "${p.name}".`);
     }
+  };
+
+  const listProps: ProductsListProps = {
+    products: pageData.items,
+    selectedIds,
+    onToggle: toggleSelected,
+    onToggleAllOnPage: toggleAllOnPage,
+    allOnPageSelected,
+    someOnPageSelected,
+    onEdit: handleOpenEditProduct,
+    onDuplicate: handleDuplicateProduct,
+    onSplit: handleSplitVariants,
+    onDelete: (p) => handleDeleteProduct(p.id),
+    onToggleFeatured: handleToggleFeatured,
+    splittingProductId,
   };
 
   return (
@@ -1212,8 +1277,23 @@ export default function InventoryManager() {
       )}
 
       <div className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEEEEE] px-5 py-3.5">
-          <span className="text-sm text-[#555555]">{selectedIds.length} selected</span>
+        <ProductBulkToolbar
+          selectedCount={selectedIds.length}
+          allOnPageSelected={allOnPageSelected}
+          someOnPageSelected={someOnPageSelected}
+          onToggleAllOnPage={toggleAllOnPage}
+          onEdit={() => {
+            const p = products.find((x) => x.id === selectedIds[0]);
+            if (p) handleOpenEditProduct(p);
+          }}
+          onChangeCategory={() => openBulkModal('category')}
+          onUpdateStock={() => openBulkModal('stock')}
+          onChangeStatus={(active) => runBulk(() => setProductsActive(selectedIds, active))}
+          onDelete={handleBulkDelete}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+          busy={bulkBusy}
+        >
           <ProductsPagination
             from={pageData.from}
             to={pageData.to}
@@ -1222,22 +1302,32 @@ export default function InventoryManager() {
             totalPages={pageData.totalPages}
             onPage={setPage}
           />
-        </div>
-        <ProductsTable
-          products={pageData.items}
-          selectedIds={selectedIds}
-          onToggle={toggleSelected}
-          onToggleAllOnPage={toggleAllOnPage}
-          allOnPageSelected={allOnPageSelected}
-          someOnPageSelected={someOnPageSelected}
-          onEdit={handleOpenEditProduct}
-          onDuplicate={handleDuplicateProduct}
-          onSplit={handleSplitVariants}
-          onDelete={(p) => handleDeleteProduct(p.id)}
-          onToggleFeatured={handleToggleFeatured}
-          splittingProductId={splittingProductId}
-        />
+        </ProductBulkToolbar>
+        {viewMode === 'grid' ? <ProductsGrid {...listProps} /> : <ProductsTable {...listProps} />}
       </div>
+
+      {bulkModal === 'category' && (
+        <BulkCategoryModal
+          count={selectedIds.length}
+          categories={categoryDocs}
+          busy={bulkBusy}
+          error={bulkModalError}
+          onClose={() => setBulkModal(null)}
+          onApply={(category, subcategory) =>
+            runBulk(() => changeProductsCategory(selectedIds, category, subcategory), true)
+          }
+        />
+      )}
+      {bulkModal === 'stock' && (
+        <BulkStockModal
+          parentCount={bulkParents.parentIds.length}
+          skipped={bulkParents.skipped}
+          busy={bulkBusy}
+          error={bulkModalError}
+          onClose={() => setBulkModal(null)}
+          onApply={(mode, amount) => runBulk(() => adjustParentStock(bulkParents.parentIds, mode, amount), true)}
+        />
+      )}
 
       <ImageCropperModal
         isOpen={isCropperOpen}
