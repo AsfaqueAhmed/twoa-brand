@@ -1,6 +1,6 @@
 import {
   Home, Package, Layers, ClipboardList, RotateCcw, Users, Ticket, Image as ImageIcon,
-  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, type LucideIcon,
+  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavLeaf { label: string; href: string }
@@ -12,6 +12,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Inventory',
     items: [
+      { label: 'Categories', icon: FolderTree, href: '/admin/categories' },
       { label: 'Products', icon: Package, href: '/admin/products' },
       { label: 'Parent Products', icon: Layers, href: '/admin/parent-products' },
     ],

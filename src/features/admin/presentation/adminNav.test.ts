@@ -12,6 +12,9 @@ describe('activeHref', () => {
   it('matches nested paths to their section', () => {
     expect(activeHref('/admin/orders/anything')).toBe('/admin/orders');
   });
+  it('matches the categories page', () => {
+    expect(activeHref('/admin/categories')).toBe('/admin/categories');
+  });
   it('returns null for unknown routes', () => {
     expect(activeHref('/admin/nope')).toBeNull();
   });
