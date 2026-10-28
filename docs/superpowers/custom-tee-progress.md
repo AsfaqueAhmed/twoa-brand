@@ -32,15 +32,15 @@ npm install
 | C | Design Studio at `/custom-tee/studio`: image and text layers, undo/redo, align/flip/scale, zoom, save and restore (sessionStorage). | Done |
 | C2 | Figma/Canva-style controls: smart-guide snapping, multi-select and marquee, flat groups (Cmd+G), on-canvas text editing, richer text, selection-aware Properties panel, pan/zoom with a 25% visibility limit. Opacity was removed at the owner's request. | Done |
 | UI | Fit-to-screen editor on desktop (no scrolling), Layers above Properties, thin selection lines. | Done |
+| Mobile | Dedicated Mobile Design Studio (`/custom-tee/studio/mobile`), decoupled presentation components in `presentation/mobile/`, drawer bottom sheets (Add Design, Free Gallery, Text with Bengali fonts, Design Settings, Layers), touch stage, and desktop auto-redirect. | Done |
 
 ## What is still to do (in rough priority)
 
-1. **Mobile studio UI.** The owner wants a separate mobile layout for the Design Studio page only. They will send a reference image. Plan: a separate component for screens under `lg`, keeping the canvas, layers, grouping, snapping and saved designs. Needs a decision on touch pan/pinch zoom (not supported today). Until then phones use the old stacked desktop layout.
-2. **Phase D, commerce:** price source, Add to Cart (the button is disabled), artwork upload storage, order persistence, and the Free Gallery tab (shown disabled).
-3. **Data:** only 1 of 8 parent products has an image, so only that tee appears in the picker. The other 7 need images uploaded in the admin.
-4. **Admin form is untested against the real DB** (admin sign-in is Google OAuth; the form was only checked in a temporary harness). Try creating/editing a parent with several images.
-5. **Deferred small items from reviews:** a second finger can disturb a drag on touch screens; opening the popup from the studio and picking another tee discards unsaved work without a warning; the Images tab is empty after a reload; saved design size wins over a newly chosen size for the same tee; opening the Layers tab with 9+ layers at a short (720px) screen clips the last rows; keyboard-only users cannot operate the canvas; multi-selection has no "mixed" value display.
-6. **Merge and deploy** when the owner decides: merge to `main`, then follow the deploy procedure above. Note the images migration is already applied, so production code that predates it only writes `image`; if old code edits a parent image after the migration, run the sync SQL in the migration file's header comment.
+1. **Phase D, commerce:** price source, Add to Cart (the button is disabled), artwork upload storage, order persistence, and the Free Gallery tab (shown disabled on desktop).
+2. **Data:** only 1 of 8 parent products has an image, so only that tee appears in the picker. The other 7 need images uploaded in the admin.
+3. **Admin form is untested against the real DB** (admin sign-in is Google OAuth; the form was only checked in a temporary harness). Try creating/editing a parent with several images.
+4. **Deferred small items from reviews:** a second finger can disturb a drag on touch screens; opening the popup from the studio and picking another tee discards unsaved work without a warning; the Images tab is empty after a reload; saved design size wins over a newly chosen size for the same tee; opening the Layers tab with 9+ layers at a short (720px) screen clips the last rows; keyboard-only users cannot operate the canvas; multi-selection has no "mixed" value display.
+5. **Merge and deploy** when the owner decides: merge to `main`, then follow the deploy procedure above. Note the images migration is already applied, so production code that predates it only writes `image`; if old code edits a parent image after the migration, run the sync SQL in the migration file's header comment.
 
 ## Where things live
 
