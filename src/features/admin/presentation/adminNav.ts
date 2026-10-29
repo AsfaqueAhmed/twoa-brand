@@ -1,5 +1,5 @@
 import {
-  Home, Package, Layers, ClipboardList, RotateCcw, Users, Ticket, Image as ImageIcon,
+  Home, Package, Layers, ClipboardList, RotateCcw, Shirt, Users, Ticket, Image as ImageIcon,
   Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, Download, type LucideIcon,
 } from 'lucide-react';
 
@@ -22,6 +22,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'All Orders', icon: ClipboardList, href: '/admin/orders', badge: 'pendingOrders' },
       { label: 'Order Returns', icon: RotateCcw, href: '/admin/returns' },
+      { label: 'Custom Quotes', icon: Shirt, href: '/admin/custom-quotes' },
       { label: 'Customers', icon: Users, href: '/admin/customers' },
     ],
   },
