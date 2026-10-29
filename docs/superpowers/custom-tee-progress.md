@@ -73,3 +73,10 @@ npm install
 - Whole-branch review findings were fixed in `810fbb6`.
 - Still to test by hand (needs an admin session): submit a quote in the studio, price it in the admin (`set_custom_quote_pricing` is untested), open the link, place the order, download the ZIP from the quote and the order. Also check the base tee image CORS for preview rendering.
 - Remove test quote and order rows after testing.
+
+### Combined designs (bundles) and "Order now"
+
+- The studio button is now **Order now** (filled); Save is outlined.
+- An admin can combine several quotes from the same customer (same last 10 phone digits) into one checkout link and one order: Custom Quotes, open the main quote, **Combine with other designs**. Each design is priced on its own first. The order has one line per design and size; the order screen shows one Download design ZIP per design.
+- Migration `20261029000100_custom_quote_bundles.sql` was **APPLIED to the live DB on 2026-10-29** after a dry run and backups (`backup_orders_20261029_bundles`, `backup_parent_product_size_stock_20261029_bundles`, `backup_custom_quotes_20261029_bundles`).
+- Still to check by hand as admin: the Combine section, the combined checkout page and the per-design ZIP downloads.
