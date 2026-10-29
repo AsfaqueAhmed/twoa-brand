@@ -106,6 +106,10 @@ export default function BackgroundRemovalControls({ layer, onApply, variant }: P
           <Eraser className="h-4 w-4" />
           Remove background
         </button>
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+          <strong className="font-bold">Important:</strong> this tool works best on plain, single-colour backgrounds. For a
+          cleaner result, remove the background with ChatGPT first, then upload the transparent PNG.
+        </p>
       </div>
 
       {canRestore && !busy && (
