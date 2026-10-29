@@ -6,9 +6,10 @@ import { Download, MessageCircle, Phone, X } from 'lucide-react';
 import AdminCard from '@/features/admin/presentation/AdminCard';
 import StatusPill from '@/features/admin/presentation/ui/StatusPill';
 import {
-  STATUS_LABELS, buildQuoteLink, effectiveStatus, quoteMessage, whatsappUrl,
+  STATUS_LABELS, buildQuoteLink, bundleBadge, bundleCandidates, bundleMembers, canLeadBundle, effectiveStatus, quoteMessage, whatsappUrl,
   type CustomQuote, type QuoteLine, type QuoteStatus,
 } from '../domain/customQuote';
+import BundleEditor from './BundleEditor';
 import PricingEditor from './PricingEditor';
 import QuoteLinkBox from './QuoteLinkBox';
 import { BTN, BTN_PRIMARY, FIELD, QUOTE_TONE, formatDate } from './quoteUi';
@@ -17,6 +18,7 @@ const SETTABLE: QuoteStatus[] = ['new', 'contacted', 'declined'];
 
 type Props = {
   quote: CustomQuote;
+  allQuotes: CustomQuote[];
   sizes: string[];
   origin: string;
   previewSrc: (path: string) => string;
@@ -25,18 +27,28 @@ type Props = {
   onSetStatus: (status: QuoteStatus) => Promise<void>;
   onPrice: (lines: QuoteLine[], unitPrice: number, expiresAt: Date, regenerate: boolean) => Promise<void>;
   onDownloadZip: () => Promise<void>;
+  onSetBundle: (memberIds: string[]) => Promise<void>;
+  onOpenQuote: (id: string) => void;
 };
 
 const msg = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 
-export default function QuoteDetail({ quote: q, sizes, origin, previewSrc, onClose, onSaveNote, onSetStatus, onPrice, onDownloadZip }: Props) {
+export default function QuoteDetail({
+  quote: q, allQuotes, sizes, origin, previewSrc, onClose, onSaveNote, onSetStatus, onPrice, onDownloadZip, onSetBundle, onOpenQuote,
+}: Props) {
   const [note, setNote] = useState(q.adminNote);
-  const [busy, setBusy] = useState<'note' | 'status' | 'price' | 'zip' | null>(null);
+  const [busy, setBusy] = useState<'note' | 'status' | 'price' | 'zip' | 'bundle' | null>(null);
   const [error, setError] = useState<{ where: string; text: string } | null>(null);
 
   const st = effectiveStatus(q);
   const ordered = q.status === 'ordered';
-  const hasLink = q.status === 'quoted' && !!q.quoteToken;
+  const merged = !!q.mergedInto;
+  const hasLink = q.status === 'quoted' && !!q.quoteToken && !merged;
+  const members = bundleMembers(q.id, allQuotes);
+  // A lead that stopped being quoted (e.g. declined) still shows the section so its members can be released.
+  const canLead = canLeadBundle(q);
+  const showBundle = canLead || (members.length > 0 && !merged && !ordered);
+  const candidates = canLead ? bundleCandidates(q, allQuotes) : [];
   const link = hasLink ? buildQuoteLink(origin, q.quoteToken!) : '';
   const expiresAt = q.quoteExpiresAt ? new Date(q.quoteExpiresAt) : null;
 
@@ -67,6 +79,9 @@ export default function QuoteDetail({ quote: q, sizes, origin, previewSrc, onClo
         }
       >
         <div className="text-xs text-[#717171]">Requested {formatDate(q.createdAt)}</div>
+        {bundleBadge(q, allQuotes) && (
+          <span className="mt-2 inline-block rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-2 py-0.5 text-[11px] font-semibold text-black">{bundleBadge(q, allQuotes)}</span>
+        )}
         <div className="mt-3 text-sm">
           <div className="font-semibold text-black">{q.name}</div>
           <div className="text-[#555555]">Phone: {q.phone}</div>
@@ -135,14 +150,21 @@ export default function QuoteDetail({ quote: q, sizes, origin, previewSrc, onClo
               <Link href="/admin/orders" className="font-semibold text-black underline">Open orders</Link>
             )}
           </p>
+        ) : merged ? (
+          <p className="text-sm text-[#555555]">
+            Part of combined order{' '}
+            <button type="button" onClick={() => onOpenQuote(q.mergedInto!)} className="font-semibold text-black underline">{q.mergedInto}</button>.
+            {' '}Pricing and the checkout link are managed on that quote. Remove this design from the bundle there to price it on its own.
+          </p>
         ) : (
           <div className="space-y-4">
+            {members.length > 0 && <p className="text-[11px] text-[#717171]">This link also includes {members.length} combined {members.length === 1 ? 'design' : 'designs'}.</p>}
             {hasLink && (
               <QuoteLinkBox
                 link={link}
                 expiresLabel={expiresAt ? expiresAt.toLocaleDateString('en-GB') : undefined}
                 expired={st === 'expired'}
-                whatsappHref={whatsappUrl(q.whatsapp, quoteMessage(q, link, expiresAt ?? new Date()))}
+                whatsappHref={whatsappUrl(q.whatsapp, quoteMessage(q, link, expiresAt ?? new Date(), members.filter((m) => m.status === 'quoted')))}
               />
             )}
             <PricingEditor
@@ -160,6 +182,21 @@ export default function QuoteDetail({ quote: q, sizes, origin, previewSrc, onClo
           </div>
         )}
       </AdminCard>
+
+      {showBundle && (
+        <AdminCard title="Combine with other designs">
+          <BundleEditor
+            key={`${q.id}:${members.map((m) => `${m.id}@${m.updatedAt}`).join(',')}`}
+            lead={q}
+            candidates={candidates}
+            members={members}
+            previewSrc={previewSrc}
+            busy={busy === 'bundle'}
+            error={error?.where === 'bundle' ? error.text : null}
+            onSubmit={(ids) => run('bundle', () => onSetBundle(ids), 'Failed to update the combined link.')}
+          />
+        </AdminCard>
+      )}
     </div>
   );
 }

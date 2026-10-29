@@ -8,7 +8,7 @@ import EmptyState from '@/shared/ui/EmptyState';
 import Spinner from '@/shared/ui/Spinner';
 import ErrorBanner from '@/features/admin/presentation/ui/ErrorBanner';
 import type { CustomQuote, QuoteStatus } from '../domain/customQuote';
-import { listQuotes, previewUrl, setQuotePricing, updateQuote, validSizesForParent } from '../infrastructure/customQuotesAdminRepository';
+import { listQuotes, previewUrl, setQuoteBundle, setQuotePricing, updateQuote, validSizesForParent } from '../infrastructure/customQuotesAdminRepository';
 import { downloadQuoteZip } from '../application/buildQuoteZip';
 import QuoteList from './QuoteList';
 import QuoteDetail from './QuoteDetail';
@@ -68,6 +68,7 @@ function Content() {
             <QuoteDetail
               key={selected.id}
               quote={selected}
+              allQuotes={quotes}
               sizes={sizes}
               origin={typeof window !== 'undefined' ? window.location.origin : ''}
               previewSrc={previewUrl}
@@ -79,6 +80,11 @@ function Content() {
                 await load();
               }}
               onDownloadZip={() => downloadQuoteZip(selected)}
+              onSetBundle={async (ids) => {
+                await setQuoteBundle(selected.id, ids);
+                await load();
+              }}
+              onOpenQuote={(id) => select(id)}
             />
           )}
         </div>

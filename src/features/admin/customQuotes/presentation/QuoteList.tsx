@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import StatusPill from '@/features/admin/presentation/ui/StatusPill';
 import { FilterSearch } from '@/features/admin/presentation/ui/FilterControls';
 import { TABLE_ROW, TableCard, TableScroll, Th } from '@/features/admin/presentation/ui/TableCard';
-import { STATUS_LABELS, effectiveStatus, quoteTotals, type CustomQuote, type QuoteStatus } from '../domain/customQuote';
+import { STATUS_LABELS, bundleBadge, effectiveStatus, quoteTotals, type CustomQuote, type QuoteStatus } from '../domain/customQuote';
 import { QUOTE_TONE, formatDate, formatMoney } from './quoteUi';
 
 const CHIPS: Array<QuoteStatus | 'all'> = ['all', 'new', 'contacted', 'quoted', 'ordered', 'declined', 'expired'];
@@ -14,7 +14,7 @@ export function filterQuotes(quotes: CustomQuote[], status: QuoteStatus | 'all',
   return quotes.filter((x) => {
     if (status !== 'all' && effectiveStatus(x, now) !== status) return false;
     if (!q) return true;
-    return [x.id, x.name, x.phone, x.whatsapp, x.parentName].some((v) => v.toLowerCase().includes(q));
+    return [x.id, x.name, x.phone, x.whatsapp, x.parentName, x.mergedInto ?? ''].some((v) => v.toLowerCase().includes(q));
   });
 }
 
@@ -66,14 +66,20 @@ export default function QuoteList({ quotes, selectedId, onSelect, previewSrc }: 
             const st = effectiveStatus(x);
             const thumb = x.files.previews[0];
             const selected = x.id === selectedId;
+            const badge = bundleBadge(x, quotes);
             return (
-              <tr key={x.id} className={`${TABLE_ROW} cursor-pointer ${selected ? 'bg-[#FAF9F6]' : ''}`}
+              <tr key={x.id} className={`${TABLE_ROW} cursor-pointer ${selected ? 'bg-[#FAF9F6]' : ''} ${x.mergedInto && !selected ? 'text-[#717171] opacity-70' : ''}`}
                 onClick={() => onSelect(x.id)} aria-selected={selected}>
                 <td className="py-3 pl-5 pr-3">
                   <button type="button" onClick={(e) => { e.stopPropagation(); onSelect(x.id); }} className="text-left font-medium text-black hover:underline">
                     {x.id.slice(0, 8)}
                   </button>
                   <div className="text-xs text-[#717171]">{formatDate(x.createdAt)}</div>
+                  {badge && (
+                    <span className="mt-1 inline-block rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-1.5 py-0.5 text-[10px] font-semibold text-black">
+                      {badge}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3">
                   <div className="font-medium text-black">{x.name}</div>

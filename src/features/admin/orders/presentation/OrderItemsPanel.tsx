@@ -18,7 +18,7 @@ interface Props {
 
 const tag = 'rounded-md border border-[#EEEEEE] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-medium text-black';
 
-function QuoteZipButton({ quoteId }: { quoteId: string }) {
+function QuoteZipButton({ quoteId, labelWithId }: { quoteId: string; labelWithId: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const run = async () => {
@@ -49,7 +49,7 @@ function QuoteZipButton({ quoteId }: { quoteId: string }) {
         disabled={busy}
         className="inline-flex items-center gap-1.5 rounded-md border border-[#EEEEEE] bg-white px-3 py-1.5 text-[11px] font-semibold text-black hover:border-black disabled:opacity-50"
       >
-        <Download className="h-3.5 w-3.5" /> {busy ? 'Preparing...' : 'Download design ZIP'}
+        <Download className="h-3.5 w-3.5" /> {busy ? 'Preparing...' : labelWithId ? `Download design ZIP (${quoteId})` : 'Download design ZIP'}
       </button>
       {error && <span role="alert" className="text-[11px] text-red-700">{error}</span>}
     </div>
@@ -60,7 +60,9 @@ export default function OrderItemsPanel({ order, productsById }: Props) {
   const [showImages, setShowImages] = useState(false);
   const closeImages = useCallback(() => setShowImages(false), []);
 
+  // One ZIP button per design: a design ordered in several sizes has several items with the same quote id.
   const seenQuotes = new Set<string>();
+  const designCount = new Set(order.items.map((i) => i.customQuoteId).filter(Boolean)).size;
   return (
     <section className="rounded-lg border border-[#EEEEEE] bg-[#FAF9F6] p-4 text-xs">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -118,7 +120,7 @@ export default function OrderItemsPanel({ order, productsById }: Props) {
                   {item.selectedSize && <span className={tag}>Size: {item.selectedSize}</span>}
                   <span className={tag}>Qty: {item.quantity}</span>
                 </div>
-                {showZip && quoteId && <QuoteZipButton quoteId={quoteId} />}
+                {showZip && quoteId && <QuoteZipButton quoteId={quoteId} labelWithId={designCount > 1} />}
               </div>
               <span className="font-mono text-sm font-bold text-black">{formatCurrency(item.price * item.quantity)}</span>
             </div>

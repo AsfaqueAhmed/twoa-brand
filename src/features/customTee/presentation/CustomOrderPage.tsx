@@ -13,8 +13,43 @@ import PaymentCard from '@/features/checkout/presentation/PaymentCard';
 import { pixelPurchase } from '@/shared/lib/metaPixel';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { ThumbImage } from '@/shared/ui/ThumbImage';
-import { customOrderSubtotal, describeLines, type QuoteCheckout } from '../domain/customOrder';
+import {
+  checkoutContentIds, checkoutDesigns, checkoutHeading, customOrderPieces, customOrderSubtotal, describeLines,
+  type CheckoutDesign, type QuoteCheckout,
+} from '../domain/customOrder';
 import { fetchQuoteForCheckout, placeCustomOrder, previewPublicUrl } from '../infrastructure/customOrderRepository';
+
+function DesignSummary({ design, index, total }: { design: CheckoutDesign; index: number; total: number }) {
+  return (
+    <div className="space-y-3" data-quote-id={design.id}>
+      {total > 1 && <p className="text-[11px] font-semibold uppercase tracking-wider text-[#717171]">Design {index + 1} of {total}</p>}
+      {design.previews.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {design.previews.map((p) => (
+            <figure key={p.viewId} className="w-24">
+              <ThumbImage
+                src={previewPublicUrl(p.path)}
+                alt={`${p.label} preview`}
+                className="h-28 w-24 rounded-lg object-contain bg-[#F5F5F5] border border-[#EEEEEE]"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
+              <figcaption className="mt-1 text-center text-[11px] text-[#717171]">{p.label}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+      <div>
+        <h3 className="text-sm font-bold text-black">{design.parentName || 'Custom T-shirt'}</h3>
+        <p className="text-xs text-[#717171] mt-1">
+          {[design.colorName && `Color: ${design.colorName}`, design.teeSize && `Size: ${design.teeSize}`].filter(Boolean).join('  |  ')}
+        </p>
+        <p className="text-xs text-[#717171] mt-0.5">{describeLines(design.lines)}</p>
+        <p className="text-xs text-[#717171] mt-0.5">{formatCurrency(design.unitPrice)} per piece</p>
+      </div>
+    </div>
+  );
+}
 
 function InvalidState() {
   return (
@@ -84,7 +119,8 @@ function ReadyView({ token, quote }: { token: string; quote: QuoteCheckout }) {
   const [error, setError] = useState('');
 
   const subtotal = customOrderSubtotal(quote);
-  const count = quote.lines.reduce((s, l) => s + l.qty, 0);
+  const count = customOrderPieces(quote);
+  const designs = checkoutDesigns(quote);
   const deliveryFee = computeDeliveryFeeByZone({ districtId, cityCorpId, thanaId });
   const grandTotal = Math.max(0, computeTotal(subtotal, deliveryFee, 0));
 
@@ -145,7 +181,7 @@ function ReadyView({ token, quote }: { token: string; quote: QuoteCheckout }) {
       if (!user) addGuestOrderId(orderId);
       // Strip the one-time token from the URL so the pixel's page-location doesn't carry it.
       window.history.replaceState(window.history.state, '', window.location.pathname);
-      pixelPurchase({ orderId, value: grandTotal, contentIds: [quote.parentProductId || quote.id] });
+      pixelPurchase({ orderId, value: grandTotal, contentIds: checkoutContentIds(quote) });
       router.push('/orders');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to place order. Please try again.');
@@ -158,7 +194,7 @@ function ReadyView({ token, quote }: { token: string; quote: QuoteCheckout }) {
     <div className="mx-auto max-w-7xl px-4 py-5 pb-4 sm:py-8 sm:px-6 lg:px-8" id="custom-order-container">
       <h1 className="text-2xl sm:text-4xl font-bold text-black">Your Custom Order</h1>
       <p className="text-xs sm:text-sm text-[#717171] mt-1 mb-4 sm:mb-6">
-        Quote {quote.id}. Confirm your delivery details. Pay easily with Cash on Delivery.
+        {checkoutHeading(quote)}. Confirm your delivery details. Pay easily with Cash on Delivery.
       </p>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-4 sm:gap-6 items-start">
@@ -176,30 +212,10 @@ function ReadyView({ token, quote }: { token: string; quote: QuoteCheckout }) {
         <aside className="border border-[#EEEEEE] bg-white p-4 sm:p-6 space-y-4 sm:space-y-5 lg:sticky lg:top-24" id="custom-order-summary">
           <h2 className="text-xl sm:text-2xl font-bold text-black border-b border-[#EEEEEE] pb-4">Order Summary</h2>
 
-          {quote.previews.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {quote.previews.map((p) => (
-                <figure key={p.viewId} className="w-24">
-                  <ThumbImage
-                    src={previewPublicUrl(p.path)}
-                    alt={`${p.label} preview`}
-                    className="h-28 w-24 object-contain bg-[#F5F5F5] border border-[#EEEEEE]"
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                  />
-                  <figcaption className="mt-1 text-center text-[11px] text-[#717171]">{p.label}</figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <h3 className="text-sm font-bold text-black">{quote.parentName || 'Custom T-shirt'}</h3>
-            <p className="text-xs text-[#717171] mt-1">
-              {[quote.colorName && `Color: ${quote.colorName}`, quote.teeSize && `Size: ${quote.teeSize}`].filter(Boolean).join('  |  ')}
-            </p>
-            <p className="text-xs text-[#717171] mt-0.5">{describeLines(quote.lines)}</p>
-            <p className="text-xs text-[#717171] mt-0.5">{formatCurrency(quote.unitPrice)} per piece</p>
+          <div className="divide-y divide-[#EEEEEE] [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+            {designs.map((d, i) => (
+              <DesignSummary key={d.id} design={d} index={i} total={designs.length} />
+            ))}
           </div>
 
           <div className="space-y-2 text-sm border-t border-[#EEEEEE] pt-4">

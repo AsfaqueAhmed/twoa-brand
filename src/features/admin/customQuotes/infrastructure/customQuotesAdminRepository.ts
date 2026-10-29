@@ -20,6 +20,7 @@ function toQuote(row: Record<string, any>): CustomQuote {
     quoteToken: row.quote_token ?? undefined,
     quoteExpiresAt: row.quote_expires_at ?? undefined,
     orderId: row.order_id ?? undefined,
+    mergedInto: row.merged_into ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -61,6 +62,11 @@ export async function setQuotePricing(
   });
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+export async function setQuoteBundle(leadId: string, memberIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('set_custom_quote_bundle', { p_lead_id: leadId, p_member_ids: memberIds });
+  if (error) throw new Error(error.message);
 }
 
 export function previewUrl(path: string): string {
