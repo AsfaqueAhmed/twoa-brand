@@ -6,6 +6,10 @@ import { normalizeCategory, titleFromFileName, validateGalleryFile } from '../do
 import { createGalleryItem } from '../infrastructure/galleryAdminRepository';
 import { compressImage } from '@/shared/lib/compressImage';
 import { GALLERY_IMAGE_MAX_BYTES, GALLERY_IMAGE_MAX_EDGE, withExtension } from '@/shared/lib/imageCompression';
+import { DEFAULT_TOLERANCE, MAX_TOLERANCE, MIN_TOLERANCE } from '@/shared/lib/backgroundRemoval';
+import { removeSolidBackgroundFromBlob } from '@/shared/lib/removeBackground';
+
+type BgMode = 'off' | 'solid';
 
 type Props = {
   categories: string[];
@@ -21,6 +25,19 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [bgMode, setBgMode] = useState<BgMode>('off');
+  const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
+  const [includeEnclosed, setIncludeEnclosed] = useState(true);
+
+  // Runs the chosen background remover on one file; the result is a transparent PNG that then goes through the
+  // normal compression step (WebP keeps the transparency). Off, or nothing to remove, returns the file as is.
+  const removeBackground = async (file: File, label: string): Promise<File> => {
+    if (bgMode === 'off') return file;
+    setProgress(`${label}: removing background…`);
+    const res = await removeSolidBackgroundFromBlob(file, tolerance, includeEnclosed);
+    if (!res.changed) return file;
+    return new File([res.blob], withExtension(file.name, 'image/png'), { type: 'image/png' });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +55,9 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
           continue;
         }
         try {
+          const source = await removeBackground(file, `${i + 1} of ${files.length} (${file.name})`);
           setProgress(`Optimising ${i + 1} of ${files.length}…`);
-          const { blob, width, height, mime } = await compressImage(file, {
+          const { blob, width, height, mime } = await compressImage(source, {
             maxBytes: GALLERY_IMAGE_MAX_BYTES,
             maxEdge: GALLERY_IMAGE_MAX_EDGE,
           });
@@ -47,7 +65,7 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
           setProgress(`Uploading ${i + 1} of ${files.length}…`);
           const aspect = width / Math.max(1, height);
           await createGalleryItem({
-            file: blob === file ? file : new File([blob], withExtension(file.name, mime), { type: mime }),
+            file: blob === source ? source : new File([blob], withExtension(file.name, mime), { type: mime }),
             title: titleFromFileName(file.name),
             category: normalizeCategory(category),
             aspect,
@@ -103,6 +121,50 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
             ))}
           </datalist>
         </label>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-semibold text-[#717171]">Remove background before upload</span>
+            <select
+              value={bgMode}
+              disabled={busy}
+              onChange={(e) => setBgMode(e.target.value as BgMode)}
+              className={`${INPUT} w-auto pr-8`}
+            >
+              <option value="off">Off</option>
+              <option value="solid">Solid colour</option>
+            </select>
+          </label>
+          {bgMode === 'solid' && (
+            <label className="flex items-center gap-2 pb-2.5">
+              <span className="text-xs font-semibold text-[#717171]">Tolerance</span>
+              <input
+                type="range"
+                min={MIN_TOLERANCE}
+                max={MAX_TOLERANCE}
+                value={tolerance}
+                disabled={busy}
+                onChange={(e) => setTolerance(Number(e.target.value))}
+                className="w-40 accent-black"
+              />
+              <span className="w-6 text-xs tabular-nums text-[#717171]">{tolerance}</span>
+            </label>
+          )}
+          {bgMode === 'solid' && (
+            <label className="flex items-center gap-2 pb-2.5">
+              <input
+                type="checkbox"
+                checked={includeEnclosed}
+                disabled={busy}
+                onChange={(e) => setIncludeEnclosed(e.target.checked)}
+                className="accent-black"
+              />
+              <span className="text-xs font-semibold text-[#717171]">Also remove inside areas</span>
+            </label>
+          )}
+        </div>
       </div>
 
       {files.length > 0 && (

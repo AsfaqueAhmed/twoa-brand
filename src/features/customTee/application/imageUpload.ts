@@ -19,3 +19,10 @@ export async function fileToDataUrl(file: File, maxEdge = DESIGN_IMAGE_MAX_EDGE)
   registerOriginal(src, blob === file ? file : new File([blob], withExtension(file.name, mime), { type: mime }));
   return { src, aspect: width / height };
 }
+
+// Same as fileToDataUrl for a processed image (e.g. after background removal): the result goes through the same
+// 1 MB compression path and is registered as the artwork original for the quote ZIP.
+export async function blobToDesignImage(blob: Blob, name: string): Promise<{ src: string; aspect: number }> {
+  const type = blob.type || 'image/png';
+  return fileToDataUrl(new File([blob], withExtension(name || 'design', type), { type }));
+}

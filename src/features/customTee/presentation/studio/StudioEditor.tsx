@@ -25,6 +25,7 @@ import LayersList from './LayersList';
 import ProductPanel from './ProductPanel';
 import QuoteRequestModal from '../QuoteRequestModal';
 import PositionScalePanel from './PositionScalePanel';
+import BackgroundRemovalControls from '../BackgroundRemovalControls';
 
 type Props = {
   parent: ParentProduct;
@@ -368,7 +369,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               </button>
             ))}
           </div>
-          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-hidden">
+          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-y-auto">
           <div className={`border-t border-[#EEEEEE] pt-5 lg:border-t-0 lg:pt-0 ${panelTab === 'properties' ? 'lg:hidden' : ''}`}>
             <h2 className={`${SECTION_TITLE} lg:sr-only`}>Design Layers</h2>
             {layersList(desktop ? 5 : undefined)}
@@ -386,6 +387,9 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               )}
               {selectedImage && (
                 <p className="truncate text-xs font-semibold text-black">{selectedImage.name}</p>
+              )}
+              {selectedImage && (
+                <BackgroundRemovalControls variant="desktop" layer={selectedImage} onApply={(id, src) => studio.patch(id, { src })} />
               )}
               {studio.selectedIds.length > 1 && (
                 <SelectionInspector
