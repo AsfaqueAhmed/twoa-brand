@@ -39,6 +39,7 @@ function Content() {
   const selected = useMemo(() => quotes.find((q) => q.id === selectedId) ?? null, [quotes, selectedId]);
   const parentId = selected?.parentProductId;
   useEffect(() => {
+    setSizes([]);
     if (!parentId) return;
     let cancelled = false;
     validSizesForParent(parentId).then((s) => { if (!cancelled) setSizes(s); }).catch(() => { if (!cancelled) setSizes([]); });

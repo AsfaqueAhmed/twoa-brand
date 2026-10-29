@@ -32,16 +32,18 @@ alter table custom_quotes enable row level security;
 create policy custom_quotes_admin_all on custom_quotes for all using (is_admin()) with check (is_admin());
 
 -- --- Storage ---
--- Previews are public by URL (mock-ups only); artwork is private (admin read). Anonymous visitors may only INSERT under quotes/.
+-- Previews are public by URL (mock-ups only); artwork is private (admin read). Anonymous visitors may only INSERT objects
+-- named exactly like the client uploads them (see buildQuoteFiles): quotes/CQ-XXXXXXXX/preview-view-<n>.png and
+-- quotes/CQ-XXXXXXXX/artwork-<n>.<png|jpg|webp>.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
   ('custom-previews', 'custom-previews', true, 5242880, array['image/png', 'image/jpeg', 'image/webp']),
   ('custom-artwork', 'custom-artwork', false, 10485760, array['image/png', 'image/jpeg', 'image/webp'])
 on conflict (id) do nothing;
 
 create policy custom_previews_insert on storage.objects for insert
-  with check (bucket_id = 'custom-previews' and name like 'quotes/%');
+  with check (bucket_id = 'custom-previews' and name ~ '^quotes/CQ-[A-Z0-9]{8}/preview-view-[0-9]{1,2}\.png$');
 create policy custom_artwork_insert on storage.objects for insert
-  with check (bucket_id = 'custom-artwork' and name like 'quotes/%');
+  with check (bucket_id = 'custom-artwork' and name ~ '^quotes/CQ-[A-Z0-9]{8}/artwork-[0-9]{1,2}\.(png|jpg|webp)$');
 create policy custom_artwork_admin_read on storage.objects for select
   using (bucket_id = 'custom-artwork' and is_admin());
 create policy custom_files_admin_delete on storage.objects for delete
@@ -67,11 +69,16 @@ security definer
 set search_path = public
 as $$
 declare
-  v_phone text := regexp_replace(coalesce(p_phone, ''), '[^0-9+]', '', 'g');
-  v_whatsapp text := regexp_replace(coalesce(p_whatsapp, ''), '[^0-9+]', '', 'g');
+  -- Keep digits and at most one leading "+".
+  v_phone text := case when btrim(coalesce(p_phone, '')) like '+%' then '+' else '' end || regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g');
+  v_whatsapp text := case when btrim(coalesce(p_whatsapp, '')) like '+%' then '+' else '' end || regexp_replace(coalesce(p_whatsapp, ''), '[^0-9]', '', 'g');
   v_parent_name text;
+  v_phone10 text;
   v_recent int;
+  v_recent_all int;
   v_file jsonb;
+  v_kind text;
+  v_pattern text;
 begin
   -- Honeypot: bots fill the hidden field; pretend success without saving anything.
   if coalesce(p_website, '') <> '' then
@@ -83,6 +90,12 @@ begin
   end if;
   if length(btrim(coalesce(p_name, ''))) < 2 or length(p_name) > 100 then
     raise exception 'Please enter your name.';
+  end if;
+  if length(coalesce(p_phone, '')) > 30 or length(coalesce(p_whatsapp, '')) > 30 then
+    raise exception 'Please enter a valid phone number.';
+  end if;
+  if length(coalesce(p_color_name, '')) > 60 then
+    raise exception 'Invalid color.';
   end if;
   if length(regexp_replace(v_phone, '[^0-9]', '', 'g')) not between 8 and 15 then
     raise exception 'Please enter a valid phone number.';
@@ -98,12 +111,24 @@ begin
   end if;
 
   -- Every referenced file must live under this quote's own folder.
-  for v_file in
-    select * from jsonb_array_elements(coalesce(p_files -> 'previews', '[]'::jsonb) || coalesce(p_files -> 'artwork', '[]'::jsonb))
+  if jsonb_typeof(coalesce(p_files -> 'previews', '[]'::jsonb)) <> 'array' or jsonb_typeof(coalesce(p_files -> 'artwork', '[]'::jsonb)) <> 'array' then
+    raise exception 'Invalid files.';
+  end if;
+  foreach v_kind in array array['previews', 'artwork']
   loop
-    if coalesce(v_file ->> 'path', '') !~ ('^quotes/' || p_id || '/[A-Za-z0-9._-]+$') then
-      raise exception 'Invalid file reference.';
-    end if;
+    -- Same naming as the storage insert policies and the client's buildQuoteFiles.
+    v_pattern := case when v_kind = 'previews'
+      then '^quotes/' || p_id || '/preview-view-[0-9]{1,2}\.png$'
+      else '^quotes/' || p_id || '/artwork-[0-9]{1,2}\.(png|jpg|webp)$' end;
+    for v_file in select * from jsonb_array_elements(coalesce(p_files -> v_kind, '[]'::jsonb))
+    loop
+      if jsonb_typeof(v_file) <> 'object' or coalesce(v_file ->> 'path', '') !~ v_pattern then
+        raise exception 'Invalid file reference.';
+      end if;
+      if length(coalesce(v_file ->> 'name', '')) > 100 or length(coalesce(v_file ->> 'label', '')) > 100 or length(coalesce(v_file ->> 'viewId', '')) > 100 then
+        raise exception 'Invalid file reference.';
+      end if;
+    end loop;
   end loop;
 
   select name into v_parent_name from parent_products where id = p_parent_product_id;
@@ -114,8 +139,16 @@ begin
     raise exception 'That size is not available.';
   end if;
 
-  select count(*) into v_recent from custom_quotes where phone = v_phone and created_at > now() - interval '1 hour';
+  -- Serialize the count-then-insert so concurrent requests cannot slip past the caps.
+  perform pg_advisory_xact_lock(hashtext('custom_quote_submit'));
+  v_phone10 := right(regexp_replace(v_phone, '[^0-9]', '', 'g'), 10);
+  select count(*) into v_recent from custom_quotes
+  where right(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = v_phone10 and created_at > now() - interval '1 hour';
   if v_recent >= 5 then
+    raise exception 'Too many requests. Please try again later.';
+  end if;
+  select count(*) into v_recent_all from custom_quotes where created_at > now() - interval '1 hour';
+  if v_recent_all >= 40 then
     raise exception 'Too many requests. Please try again later.';
   end if;
 
@@ -143,6 +176,7 @@ declare
   q custom_quotes%rowtype;
   line jsonb;
   v_token text;
+  v_sizes text[] := '{}';
 begin
   if not is_admin() then
     raise exception 'Not authorized';
@@ -167,12 +201,19 @@ begin
     if not exists (select 1 from parent_product_size_stock where parent_id = q.parent_product_id and size = line ->> 'size') then
       raise exception 'Unknown size %.', line ->> 'size';
     end if;
+    if (line ->> 'size') = any (v_sizes) then
+      raise exception 'Each size can only be listed once.';
+    end if;
+    v_sizes := v_sizes || (line ->> 'size');
   end loop;
   if p_unit_price is null or p_unit_price <= 0 or p_unit_price > 1000000 then
     raise exception 'Enter a valid price per piece.';
   end if;
   if p_expires_at is null or p_expires_at <= now() then
     raise exception 'Choose an expiry in the future.';
+  end if;
+  if p_expires_at > now() + interval '60 days' then
+    raise exception 'Expiry can be at most 60 days from now.';
   end if;
 
   v_token := q.quote_token;
@@ -239,10 +280,19 @@ declare
   v_subtotal numeric := 0;
   v_preview text;
   v_item jsonb;
+  v_rec record;
+  v_uid text := coalesce(auth.uid()::text, 'guest');
 begin
   select * into q from custom_quotes where quote_token = p_token for update;
   if not found or q.status <> 'quoted' or q.quote_expires_at is null or q.quote_expires_at <= now() then
     raise exception 'This quote link is no longer valid.';
+  end if;
+
+  if q.lines is null or jsonb_typeof(q.lines) <> 'array' or jsonb_array_length(q.lines) = 0 or q.unit_price is null or q.unit_price <= 0 then
+    raise exception 'This quote has not been priced yet.';
+  end if;
+  if length(coalesce(p_user_email, '')) > 200 then
+    raise exception 'Invalid email.';
   end if;
 
   if length(btrim(coalesce(p_name, ''))) < 2 or length(p_name) > 100 then
@@ -263,26 +313,37 @@ begin
 
   v_preview := q.files -> 'previews' -> 0 ->> 'path';
 
-  -- Check every size first, then decrement (same pooled-stock rule as place_order).
-  for line in select * from jsonb_array_elements(q.lines)
+  -- Aggregate quantities per size (duplicates can never double-spend stock), lock stock rows in sorted size order,
+  -- check every size first, then decrement (same pooled-stock rule as place_order).
+  for v_rec in
+    select l ->> 'size' as size, sum((l ->> 'qty')::int)::int as qty
+    from jsonb_array_elements(q.lines) l
+    group by l ->> 'size'
+    order by l ->> 'size'
   loop
-    v_qty := (line ->> 'qty')::int;
     select stock into v_stock from parent_product_size_stock
-    where parent_id = q.parent_product_id and size = line ->> 'size' for update;
+    where parent_id = q.parent_product_id and size = v_rec.size for update;
     if v_stock is null then
-      raise exception 'Stock record not found for size %', line ->> 'size';
+      raise exception 'Stock record not found for size %', v_rec.size;
     end if;
-    if v_stock < v_qty then
-      raise exception 'Only % left in size %. Please contact us to adjust your order.', v_stock, line ->> 'size';
+    if v_stock < v_rec.qty then
+      raise exception 'Only % left in size %. Please contact us to adjust your order.', v_stock, v_rec.size;
     end if;
+  end loop;
+
+  for v_rec in
+    select l ->> 'size' as size, sum((l ->> 'qty')::int)::int as qty
+    from jsonb_array_elements(q.lines) l
+    group by l ->> 'size'
+    order by l ->> 'size'
+  loop
+    update parent_product_size_stock set stock = stock - v_rec.qty
+    where parent_id = q.parent_product_id and size = v_rec.size;
   end loop;
 
   for line in select * from jsonb_array_elements(q.lines)
   loop
     v_qty := (line ->> 'qty')::int;
-    update parent_product_size_stock set stock = stock - v_qty
-    where parent_id = q.parent_product_id and size = line ->> 'size';
-
     v_subtotal := v_subtotal + q.unit_price * v_qty;
     v_item := jsonb_build_object(
       'productId', 'custom-' || q.id,
@@ -301,7 +362,7 @@ begin
   end loop;
 
   insert into orders (id, user_id, user_name, user_email, address, phone, items, total_amount, promo_code, discount, status, payment_method, created_at, updated_at)
-  values (p_order_id, coalesce(p_user_id, 'guest'), btrim(p_name), coalesce(p_user_email, ''), btrim(p_address), btrim(p_phone), v_items, v_subtotal + p_delivery_fee, null, null, 'pending', 'cash_on_delivery', now(), now());
+  values (p_order_id, v_uid, btrim(p_name), coalesce(p_user_email, ''), btrim(p_address), btrim(p_phone), v_items, v_subtotal + p_delivery_fee, null, null, 'pending', 'cash_on_delivery', now(), now());
 
   update custom_quotes set status = 'ordered', order_id = p_order_id, updated_at = now() where id = q.id;
 

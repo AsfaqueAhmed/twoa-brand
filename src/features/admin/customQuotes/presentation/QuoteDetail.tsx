@@ -150,12 +150,13 @@ export default function QuoteDetail({ quote: q, sizes, origin, previewSrc, onClo
               sizes={sizes}
               initialLines={q.lines}
               initialPrice={q.unitPrice}
-              submitLabel={q.status === 'quoted' ? 'New link' : 'Generate link'}
+              submitLabel={q.status === 'quoted' ? 'Update quote' : 'Generate link'}
               busy={busy === 'price'}
               error={error?.where === 'price' ? error.text : null}
-              onSubmit={(lines, price, exp) => run('price', () => onPrice(lines, price, exp, q.status === 'quoted'), 'Failed to generate link.')}
+              onSubmit={(lines, price, exp) => run('price', () => onPrice(lines, price, exp, !!q.quoteToken && q.status !== 'quoted'), 'Failed to generate link.')}
             />
-            {q.status === 'quoted' && <p className="text-[11px] text-[#717171]">A new link invalidates the previous one.</p>}
+            {q.status === 'quoted' && <p className="text-[11px] text-[#717171]">Updating keeps the current link working.</p>}
+            {q.status !== 'quoted' && q.quoteToken && <p className="text-[11px] text-[#717171]">A new link will be generated; the previous one stops working.</p>}
           </div>
         )}
       </AdminCard>

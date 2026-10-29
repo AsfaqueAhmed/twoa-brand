@@ -7,7 +7,7 @@ export function previewPublicUrl(path: string): string {
 
 export async function fetchQuoteForCheckout(token: string): Promise<QuoteCheckout | null> {
   const { data, error } = await supabase.rpc('get_quote_for_checkout', { p_token: token });
-  if (error) return null;
+  if (error) throw new Error(error.message);
   return parseQuoteCheckout(data);
 }
 

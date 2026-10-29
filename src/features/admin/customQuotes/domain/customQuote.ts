@@ -129,6 +129,20 @@ export function quoteReadme(q: CustomQuote): string {
   return out.join('\n') + '\n';
 }
 
+// Safe ZIP entry name for an artwork file: basename of the storage path (never the submitter-supplied name),
+// restricted charset, no leading dots, never colliding with another entry.
+export function safeArtworkName(path: string, index: number, taken: Set<string>): string {
+  const base = (path.split(/[\\/]/).pop() ?? '').replace(/[^A-Za-z0-9._-]/g, '').replace(/^\.+/, '').slice(0, 100);
+  let name = base || `artwork-${index + 1}`;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  let n = 1;
+  while (taken.has(name.toLowerCase())) name = `${stem}-${++n}${ext}`;
+  taken.add(name.toLowerCase());
+  return name;
+}
+
 export function buildZipPlan(q: CustomQuote): ZipEntry[] {
   const plan: ZipEntry[] = [];
   const used = new Map<string, number>();
@@ -142,9 +156,11 @@ export function buildZipPlan(q: CustomQuote): ZipEntry[] {
     });
   }
   const artworkFiles: Record<string, string> = {};
+  const takenNames = new Set<string>();
   q.files.artwork.forEach((a, i) => {
-    artworkFiles[`artwork:${i}`] = `artwork/${a.name}`;
-    plan.push({ zipPath: `artwork/${a.name}`, source: { kind: 'private', bucket: 'custom-artwork', path: a.path } });
+    const entry = `artwork/${safeArtworkName(a.path, i, takenNames)}`;
+    artworkFiles[`artwork:${i}`] = entry;
+    plan.push({ zipPath: entry, source: { kind: 'private', bucket: 'custom-artwork', path: a.path } });
   });
   plan.push({
     zipPath: 'design.json',

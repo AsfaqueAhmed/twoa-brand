@@ -27,9 +27,11 @@ function InvalidState() {
 
 export default function CustomOrderPage() {
   const token = useSearchParams().get('token') ?? '';
-  const [state, setState] = useState<{ status: 'loading' } | { status: 'invalid' } | { status: 'ready'; quote: QuoteCheckout }>({
+  const [state, setState] = useState<{ status: 'loading' } | { status: 'invalid' } | { status: 'error' } | { status: 'ready'; quote: QuoteCheckout }>({
     status: 'loading',
   });
+
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,17 +45,28 @@ export default function CustomOrderPage() {
         if (!cancelled) setState(quote ? { status: 'ready', quote } : { status: 'invalid' });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: 'invalid' });
+        if (!cancelled) setState({ status: 'error' });
       });
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   if (state.status === 'loading') {
     return <p className="px-4 py-16 text-center text-sm text-[#717171]">Loading your quote...</p>;
   }
   if (state.status === 'invalid') return <InvalidState />;
+  if (state.status === 'error') {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center" id="custom-order-error">
+        <h1 className="text-2xl font-bold text-black">Couldn&apos;t load your quote</h1>
+        <p className="mt-3 text-sm text-[#717171]">Something went wrong while loading. Please check your connection and try again.</p>
+        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="mt-5 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white">
+          Try again
+        </button>
+      </div>
+    );
+  }
   return <ReadyView token={token} quote={state.quote} />;
 }
 
@@ -130,6 +143,8 @@ function ReadyView({ token, quote }: { token: string; quote: QuoteCheckout }) {
         deliveryFee,
       });
       if (!user) addGuestOrderId(orderId);
+      // Strip the one-time token from the URL so the pixel's page-location doesn't carry it.
+      window.history.replaceState(window.history.state, '', window.location.pathname);
       pixelPurchase({ orderId, value: grandTotal, contentIds: [quote.parentProductId || quote.id] });
       router.push('/orders');
     } catch (err) {

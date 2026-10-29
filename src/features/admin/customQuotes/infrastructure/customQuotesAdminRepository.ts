@@ -74,7 +74,8 @@ export async function downloadQuoteFile(bucket: string, path: string): Promise<B
 }
 
 export async function validSizesForParent(parentProductId: string): Promise<string[]> {
-  const { data, error } = await supabase.from('parent_products').select('size_order').eq('id', parentProductId).maybeSingle();
+  // The SQL RPC validates against parent_product_size_stock, so list sizes from the same table.
+  const { data, error } = await supabase.from('parent_product_size_stock').select('size').eq('parent_id', parentProductId);
   if (error) throw new Error(error.message);
-  return Array.isArray(data?.size_order) ? data!.size_order : [];
+  return (data || []).map((r: { size: string }) => r.size);
 }

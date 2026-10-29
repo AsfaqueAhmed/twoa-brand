@@ -105,4 +105,28 @@ describe('zip plan', () => {
     const q = { ...quote, files: { ...quote.files, previews: [{ viewId: 'view-0', label: 'Left / Sleeve?', path: 'quotes/CQ-ABCD2345/preview-view-0.png' }] } };
     expect(buildZipPlan(q)[0].zipPath).toBe('previews/Left-Sleeve.png');
   });
+  it('ignores submitter-supplied artwork names and never escapes artwork/ or clobbers design.json', () => {
+    const q = {
+      ...quote,
+      files: {
+        ...quote.files,
+        artwork: [
+          { name: '../../design.json', path: 'quotes/CQ-ABCD2345/artwork-1.png' },
+          { name: '/etc/passwd', path: 'quotes/CQ-ABCD2345/../evil/artwork-1.png' },
+          { name: 'README.txt', path: '..\\..\\.hidden' },
+          { name: 'x', path: '' },
+        ],
+      },
+    };
+    const plan = buildZipPlan(q);
+    const paths = plan.map((e) => e.zipPath);
+    expect(paths.filter((p) => p === 'design.json')).toHaveLength(1);
+    expect(paths.filter((p) => p === 'README.txt')).toHaveLength(1);
+    const art = paths.filter((p) => p.startsWith('artwork/'));
+    expect(art).toHaveLength(4);
+    expect(new Set(art.map((p) => p.toLowerCase())).size).toBe(4);
+    for (const p of art) expect(p).toMatch(/^artwork\/[A-Za-z0-9_-][A-Za-z0-9._-]*$/);
+    expect(art[0]).toBe('artwork/artwork-1.png');
+    expect(art[1]).toBe('artwork/artwork-1-2.png');
+  });
 });

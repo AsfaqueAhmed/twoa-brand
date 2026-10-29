@@ -27,8 +27,8 @@ export default function PricingEditor({ sizes, initialLines, initialPrice, submi
   const lines: QuoteLine[] = rows.map((r) => ({ size: r.size, qty: Number(r.qty) }));
   const unit = Number(price);
   const dayCount = Number(days);
-  const daysOk = Number.isInteger(dayCount) && dayCount >= 1 && dayCount <= 90;
-  const problem = validateQuotePricing(lines, unit, sizes) ?? (daysOk ? null : 'Expiry must be a whole number of days from 1 to 90.');
+  const daysOk = Number.isInteger(dayCount) && dayCount >= 1 && dayCount <= 60;
+  const problem = validateQuotePricing(lines, unit, sizes) ?? (daysOk ? null : 'Expiry must be a whole number of days from 1 to 60.');
   const totals = useMemo(() => quoteTotals(lines.filter((l) => Number.isFinite(l.qty)), Number.isFinite(unit) ? unit : 0), [rows, price]); // eslint-disable-line react-hooks/exhaustive-deps
   const expiresAt = daysOk ? new Date(Date.now() + dayCount * DAY_MS) : null;
 
@@ -64,7 +64,7 @@ export default function PricingEditor({ sizes, initialLines, initialPrice, submi
         </div>
         <div>
           <label htmlFor="quote-days" className="mb-1 block text-xs font-medium text-[#717171]">Expires in (days)</label>
-          <input id="quote-days" type="number" min={1} max={90} inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} className={FIELD} />
+          <input id="quote-days" type="number" min={1} max={60} inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} className={FIELD} />
           <div className="mt-1 text-[11px] text-[#717171]">{expiresAt ? `Until ${expiresAt.toLocaleDateString('en-GB')}` : ' '}</div>
         </div>
       </div>

@@ -57,8 +57,21 @@ export async function renderViewPng(params: { baseImageUrl: string; layers: Laye
   const W = params.width ?? DEFAULT_WIDTH;
   const visible = params.layers.filter((l) => l.visible);
   await prepareFonts(visible);
-  const base = await loadImage(params.baseImageUrl, true);
-  const H = Math.round((W * base.naturalHeight) / base.naturalWidth);
+  // If the product image host lacks CORS, the base can't be drawn without tainting the canvas. Fall back to a light
+  // background (keeping the base's aspect ratio when it can still be loaded without CORS) so the quote still renders.
+  let base: HTMLImageElement | null = null;
+  let H = W;
+  try {
+    base = await loadImage(params.baseImageUrl, true);
+    H = Math.round((W * base.naturalHeight) / base.naturalWidth);
+  } catch {
+    try {
+      const plain = await loadImage(params.baseImageUrl, false);
+      if (plain.naturalWidth > 0) H = Math.round((W * plain.naturalHeight) / plain.naturalWidth);
+    } catch {
+      /* keep square */
+    }
+  }
   const images = new Map<string, HTMLImageElement>();
   await Promise.all(
     visible.filter((l): l is ImageLayer => l.type === 'image').map(async (l) => images.set(l.id, await loadImage(l.src, false))),
@@ -69,7 +82,12 @@ export async function renderViewPng(params: { baseImageUrl: string; layers: Laye
   canvas.height = H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create a canvas for the preview.');
-  ctx.drawImage(base, 0, 0, W, H);
+  if (base) {
+    ctx.drawImage(base, 0, 0, W, H);
+  } else {
+    ctx.fillStyle = '#F2F2F2';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   for (const layer of visible) {
     ctx.save();
