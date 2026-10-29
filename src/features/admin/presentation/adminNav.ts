@@ -1,6 +1,6 @@
 import {
   Home, Package, Layers, ClipboardList, RotateCcw, Shirt, Users, Ticket, Image as ImageIcon,
-  Ruler, Rss, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, Download, type LucideIcon,
+  Ruler, Rss, Images, BarChart3, TrendingUp, UserSearch, Truck, FolderTree, Download, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavLeaf { label: string; href: string }
@@ -37,6 +37,7 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { label: 'Banners', icon: ImageIcon, href: '/admin/banners' },
+      { label: 'Gallery', icon: Images, href: '/admin/gallery' },
     ],
   },
   { title: 'Size Charts', items: [{ label: 'All Size Charts', icon: Ruler, href: '/admin/size-charts' }] },
