@@ -93,7 +93,8 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
                 <ThumbImage
                   key={i}
                   src={item.image}
-                  alt={item.name}
+                  alt={item.customQuoteId ? `${item.name} (custom design)` : item.name}
+                  title={item.customQuoteId ? 'Custom design' : undefined}
                   className="h-10 w-10 rounded-md border border-[#EEEEEE] bg-[#F5F5F5] object-cover"
                   referrerPolicy="no-referrer"
                   loading="lazy"

@@ -61,7 +61,8 @@ export default function EditOrderPage() {
 function EditOrderForm({ order, products }: { order: Order; products: Product[] }) {
   const router = useRouter();
   const initial = useMemo(() => orderBreakdown(order), [order]);
-  const itemsEditable = canEditItems(order.status);
+  const hasCustom = order.items.some((i) => i.customQuoteId);
+  const itemsEditable = canEditItems(order.status) && !hasCustom;
 
   const [userName, setUserName] = useState(order.userName);
   const [phone, setPhone] = useState(order.phone);
@@ -181,7 +182,9 @@ function EditOrderForm({ order, products }: { order: Order; products: Product[] 
           ) : (
             <AdminCard title="Items">
               <p className="mb-3 rounded-md border border-[#EEEEEE] bg-[#FAF9F6] p-3 text-xs text-[#717171]">
-                Items can&apos;t be changed once an order is out for delivery, delivered or cancelled.
+                {hasCustom
+                  ? "This order contains a custom tee quote. Items can't be edited here; contact the customer or create a new order."
+                  : "Items can't be changed once an order is out for delivery, delivered or cancelled."}
               </p>
               <ul className="divide-y divide-[#EEEEEE] text-sm">
                 {order.items.map((item, i) => (
