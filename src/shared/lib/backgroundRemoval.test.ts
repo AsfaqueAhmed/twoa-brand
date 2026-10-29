@@ -3,11 +3,9 @@ import {
   DEFAULT_TOLERANCE,
   MAX_TOLERANCE,
   MIN_TOLERANCE,
-  aiBackgroundRemovalSupported,
   clampTolerance,
   colorDistance,
   estimateBackgroundColor,
-  isLikelyMobile,
   removeSolidBackground,
 } from './backgroundRemoval';
 
@@ -143,39 +141,5 @@ describe('removeSolidBackground', () => {
     const { data } = removeSolidBackground(d, w, h);
     expect(alphaAt(data, w, 0, 0)).toBe(0);
     expect(alphaAt(data, w, 8, 8)).toBe(255);
-  });
-});
-
-describe('isLikelyMobile', () => {
-  it('detects phones from the user agent', () => {
-    expect(isLikelyMobile({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', maxTouchPoints: 5, screenWidth: 390 })).toBe(true);
-    expect(isLikelyMobile({ userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile', maxTouchPoints: 5, screenWidth: 412 })).toBe(true);
-  });
-
-  it('treats a touch device with a small screen as mobile (iPadOS reports a desktop UA)', () => {
-    expect(isLikelyMobile({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', maxTouchPoints: 5, screenWidth: 820 })).toBe(true);
-  });
-
-  it('treats a desktop as not mobile', () => {
-    expect(isLikelyMobile({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', maxTouchPoints: 0, screenWidth: 1512 })).toBe(false);
-    expect(isLikelyMobile({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 10, screenWidth: 1920 })).toBe(false);
-  });
-});
-
-describe('aiBackgroundRemovalSupported', () => {
-  it('is offered whenever WebGPU is available', () => {
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: true, isMobile: true, deviceMemoryGb: 2 })).toBe(true);
-  });
-
-  it('is offered on desktops with enough or unknown memory', () => {
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: false, deviceMemoryGb: 8 })).toBe(true);
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: false, deviceMemoryGb: 4 })).toBe(true);
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: false })).toBe(true);
-  });
-
-  it('is not offered on low-memory desktops or mobiles without WebGPU', () => {
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: false, deviceMemoryGb: 2 })).toBe(false);
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: true, deviceMemoryGb: 8 })).toBe(false);
-    expect(aiBackgroundRemovalSupported({ hasWebGpu: false, isMobile: true })).toBe(false);
   });
 });

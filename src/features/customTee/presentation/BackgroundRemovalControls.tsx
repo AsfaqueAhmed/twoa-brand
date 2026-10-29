@@ -1,19 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eraser, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
+import { Eraser, RefreshCw, RotateCcw } from 'lucide-react';
 import type { ImageLayer } from '../domain/layers';
 import { DEFAULT_TOLERANCE, MAX_TOLERANCE, MIN_TOLERANCE } from '@/shared/lib/backgroundRemoval';
-import {
-  AI_MODEL_NOTE,
-  aiModelNoteSeen,
-  detectAiBackgroundRemoval,
-  markAiModelNoteSeen,
-  progressLabel,
-  removeBackgroundAi,
-  removeSolidBackgroundFromBlob,
-  srcToBlob,
-} from '@/shared/lib/removeBackground';
+import { removeSolidBackgroundFromBlob, srcToBlob } from '@/shared/lib/removeBackground';
 import { blobToDesignImage } from '../application/imageUpload';
 
 type Props = {
@@ -28,63 +19,46 @@ const STYLES = {
     wrap: 'space-y-3 rounded-lg border border-[#EEEEEE] p-3',
     title: 'text-[10px] font-bold uppercase tracking-wider text-[#717171]',
     btn: 'flex w-full items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] px-3 py-2.5 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black disabled:cursor-not-allowed disabled:text-[#CDCDCD] disabled:hover:border-[#EEEEEE]',
-    primary: 'rounded-lg bg-black px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#333333]',
-    secondary: 'rounded-lg border border-[#EEEEEE] px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-black hover:border-black',
     muted: 'text-[11px] text-[#717171]',
-    note: 'space-y-2 rounded-lg bg-[#F5F5F5] p-3',
   },
   mobile: {
     wrap: 'space-y-3',
     title: 'mb-2 block text-[11px] font-bold uppercase tracking-wider text-zinc-500',
     btn: 'flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white py-3 text-xs font-bold text-zinc-900 transition active:scale-98 disabled:opacity-40',
-    primary: 'rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-white active:scale-95 transition',
-    secondary: 'rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-bold text-zinc-900 active:scale-95 transition',
     muted: 'text-[11px] text-zinc-500',
-    note: 'space-y-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-3',
   },
 } as const;
 
-// "Remove background" for the selected image layer: an instant solid-colour remover and, where the device can
-// handle it, an AI remover. The result replaces the layer's image as a normal (undoable) edit.
+// "Remove background" for the selected image layer: an instant solid-colour remover. The result replaces the layer's image as a normal (undoable) edit.
 export default function BackgroundRemovalControls({ layer, onApply, variant }: Props) {
   const s = STYLES[variant];
-  const [aiSupported, setAiSupported] = useState(false);
   const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [confirmAi, setConfirmAi] = useState(false);
   const [previous, setPrevious] = useState<{ layerId: string; before: string; after: string } | null>(null);
 
-  useEffect(() => setAiSupported(detectAiBackgroundRemoval()), []);
   useEffect(() => {
     setError('');
     setStatus('');
-    setConfirmAi(false);
   }, [layer.id]);
 
-  const run = async (mode: 'solid' | 'ai') => {
+  const run = async () => {
     if (busy) return;
     const layerId = layer.id;
     const before = layer.src;
     setBusy(true);
     setError('');
-    setStatus(mode === 'ai' ? 'Preparing…' : 'Removing background…');
+    setStatus('Removing background…');
     try {
       const input = await srcToBlob(before);
-      let output: Blob;
-      if (mode === 'solid') {
-        const res = await removeSolidBackgroundFromBlob(input, tolerance);
-        if (!res.changed) {
-          setStatus('');
-          setError('No solid background found at the edges. Try a higher tolerance or the AI remover.');
-          return;
-        }
-        output = res.blob;
-      } else {
-        output = await removeBackgroundAi(input, (p) => setStatus(progressLabel(p)));
+      const res = await removeSolidBackgroundFromBlob(input, tolerance);
+      if (!res.changed) {
+        setStatus('');
+        setError('No solid background found at the edges. Try a higher tolerance.');
+        return;
       }
-      const { src } = await blobToDesignImage(output, `${layer.name || 'design'}-no-bg`);
+      const { src } = await blobToDesignImage(res.blob, `${layer.name || 'design'}-no-bg`);
       onApply(layerId, src);
       setPrevious({ layerId, before, after: src });
       setStatus('Background removed. Use Undo or Restore original to go back.');
@@ -94,11 +68,6 @@ export default function BackgroundRemovalControls({ layer, onApply, variant }: P
     } finally {
       setBusy(false);
     }
-  };
-
-  const startAi = () => {
-    if (aiModelNoteSeen()) void run('ai');
-    else setConfirmAi(true);
   };
 
   const canRestore = previous && previous.layerId === layer.id && previous.after === layer.src;
@@ -122,38 +91,11 @@ export default function BackgroundRemovalControls({ layer, onApply, variant }: P
           />
           <span className={`${s.muted} w-6 shrink-0 text-right tabular-nums`}>{tolerance}</span>
         </div>
-        <button type="button" disabled={busy} onClick={() => void run('solid')} className={s.btn}>
+        <button type="button" disabled={busy} onClick={() => void run()} className={s.btn}>
           <Eraser className="h-4 w-4" />
-          Remove solid background
+          Remove background
         </button>
       </div>
-
-      {aiSupported && !confirmAi && (
-        <button type="button" disabled={busy} onClick={startAi} className={s.btn}>
-          <Sparkles className="h-4 w-4" />
-          AI remove background
-        </button>
-      )}
-
-      {confirmAi && (
-        <div role="dialog" aria-label="AI background removal" className={s.note}>
-          <p className={s.muted}>{AI_MODEL_NOTE}</p>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setConfirmAi(false)} className={s.secondary}>Cancel</button>
-            <button
-              type="button"
-              onClick={() => {
-                markAiModelNoteSeen();
-                setConfirmAi(false);
-                void run('ai');
-              }}
-              className={s.primary}
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
 
       {canRestore && !busy && (
         <button type="button" onClick={() => {

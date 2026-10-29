@@ -369,7 +369,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               </button>
             ))}
           </div>
-          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-hidden">
+          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-y-auto">
           <div className={`border-t border-[#EEEEEE] pt-5 lg:border-t-0 lg:pt-0 ${panelTab === 'properties' ? 'lg:hidden' : ''}`}>
             <h2 className={`${SECTION_TITLE} lg:sr-only`}>Design Layers</h2>
             {layersList(desktop ? 5 : undefined)}

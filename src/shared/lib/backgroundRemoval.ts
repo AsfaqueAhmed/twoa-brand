@@ -1,4 +1,4 @@
-// Pure pixel code for the "Remove solid background" tool, plus the capability gate for the AI remover.
+// Pure pixel code for the "Remove solid background" tool, .
 // Everything here works on plain RGBA arrays so it runs (and is tested) without a DOM.
 
 export const MIN_TOLERANCE = 5;
@@ -129,22 +129,4 @@ export function removeSolidBackground(
     data[a] = next;
   }
   return { data, changed, background: bg };
-}
-
-// ---- Capability gate for the AI remover ----
-
-export function isLikelyMobile(info: { userAgent: string; maxTouchPoints: number; screenWidth: number }): boolean {
-  if (/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|BlackBerry|Opera Mini|IEMobile/i.test(info.userAgent)) return true;
-  // iPadOS and some tablets report a desktop UA: a touch screen on a small display is treated as mobile.
-  return info.maxTouchPoints > 1 && info.screenWidth < 1024;
-}
-
-/**
- * The AI remover downloads a ~115 MB model and needs a lot of memory: offer it when WebGPU is available, or on
- * non-mobile devices with at least 4 GB of memory (or when the browser does not say).
- */
-export function aiBackgroundRemovalSupported(opts: { hasWebGpu: boolean; isMobile: boolean; deviceMemoryGb?: number | null }): boolean {
-  if (opts.hasWebGpu) return true;
-  if (opts.isMobile) return false;
-  return opts.deviceMemoryGb == null || opts.deviceMemoryGb >= 4;
 }
