@@ -1,25 +1,74 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
-import {
-  GALLERY_CATEGORIES,
-  type GalleryCategory,
-  type GalleryItem,
-  filterGalleryByCategory,
-} from '../galleryData';
+import { Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { ALL_CATEGORY, filterGallery, galleryCategories, type GalleryArtwork } from '../../../domain/gallery';
+import { useGallery } from '../../../application/useGallery';
+import { loadGalleryArtworkAsAsset } from '../../../application/galleryArtwork';
 
 type Props = {
   onSelectArtwork: (artwork: { name: string; src: string; aspect: number }) => void;
 };
 
 export default function FreeGallerySheet({ onSelectArtwork }: Props) {
-  const [selectedCategory, setSelectedCategory] = useState<GalleryCategory>('All');
+  const { items, loading, error, reload } = useGallery();
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORY);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
 
-  const items = useMemo(() => {
-    return filterGalleryByCategory(selectedCategory, searchQuery);
-  }, [selectedCategory, searchQuery]);
+  const categories = useMemo(() => galleryCategories(items), [items]);
+  const category = categories.includes(selectedCategory) ? selectedCategory : ALL_CATEGORY;
+  const visible = useMemo(() => filterGallery(items, category, searchQuery), [items, category, searchQuery]);
+
+  const pick = async (item: GalleryArtwork) => {
+    if (pendingId) return;
+    setPendingId(item.id);
+    setPickError(null);
+    try {
+      onSelectArtwork(await loadGalleryArtworkAsAsset(item));
+    } catch (err) {
+      setPickError(err instanceof Error ? err.message : 'Could not load that artwork.');
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-3 pb-6" aria-busy="true" aria-label="Loading gallery">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="rounded-2xl border border-zinc-200 bg-white p-2.5">
+            <div className="aspect-square w-full animate-pulse rounded-xl bg-zinc-100" />
+            <div className="mt-2 h-3 w-3/4 animate-pulse rounded bg-zinc-100" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-dashed border-zinc-200 p-8 text-center">
+        <p role="alert" className="text-xs text-red-600">{error}</p>
+        <button
+          type="button"
+          onClick={reload}
+          className="inline-flex items-center gap-1.5 rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-zinc-500">
+        No artwork yet
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-6">
@@ -36,6 +85,7 @@ export default function FreeGallerySheet({ onSelectArtwork }: Props) {
         {searchQuery && (
           <button
             type="button"
+            aria-label="Clear search"
             onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black"
           >
@@ -46,17 +96,15 @@ export default function FreeGallerySheet({ onSelectArtwork }: Props) {
 
       {/* Category Pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {GALLERY_CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat;
+        {categories.map((cat) => {
+          const isActive = category === cat;
           return (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
               className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold tracking-tight transition ${
-                isActive
-                  ? 'bg-black text-white shadow-xs'
-                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                isActive ? 'bg-black text-white shadow-xs' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
               }`}
             >
               {cat}
@@ -65,27 +113,39 @@ export default function FreeGallerySheet({ onSelectArtwork }: Props) {
         })}
       </div>
 
+      {pickError && (
+        <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+          {pickError}
+        </p>
+      )}
+
       {/* Artwork Grid */}
-      {items.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-zinc-500">
           No artwork found matching your search.
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {items.map((item) => (
+          {visible.map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => onSelectArtwork({ name: item.title, src: item.src, aspect: item.aspect })}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2.5 text-left shadow-2xs hover:border-black transition active:scale-98"
+              disabled={pendingId !== null}
+              onClick={() => pick(item)}
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2.5 text-left shadow-2xs hover:border-black transition active:scale-98 disabled:cursor-wait"
             >
               <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-100 group-hover:scale-102 transition-transform">
-                <img src={item.src} alt={item.title} className="h-full w-full object-contain" />
+                <img src={item.imageUrl} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-contain" />
               </div>
               <div className="mt-2 min-w-0">
                 <span className="block truncate text-xs font-bold text-zinc-900">{item.title}</span>
-                <span className="block text-[10px] font-medium text-zinc-400 capitalize">{item.category}</span>
+                <span className="block truncate text-[10px] font-medium text-zinc-400">{item.category}</span>
               </div>
+              {pendingId === item.id && (
+                <span className="absolute inset-0 flex items-center justify-center bg-white/70">
+                  <Loader2 className="h-5 w-5 animate-spin text-black" />
+                </span>
+              )}
             </button>
           ))}
         </div>

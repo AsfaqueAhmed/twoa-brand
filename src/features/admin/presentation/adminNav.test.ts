@@ -18,6 +18,9 @@ describe('activeHref', () => {
   it('matches the data export page', () => {
     expect(activeHref('/admin/data-export')).toBe('/admin/data-export');
   });
+  it('matches the gallery page', () => {
+    expect(activeHref('/admin/gallery')).toBe('/admin/gallery');
+  });
   it('returns null for unknown routes', () => {
     expect(activeHref('/admin/nope')).toBeNull();
   });

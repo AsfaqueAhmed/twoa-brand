@@ -20,6 +20,13 @@ function toOrderItem(item: Record<string, any>): OrderItem {
     };
   }
   if (item.parentProductId) orderItem.parentProductId = item.parentProductId;
+  if (item.customQuoteId) orderItem.customQuoteId = item.customQuoteId;
+  if (item.customPreviewPath) {
+    orderItem.customPreviewPath = item.customPreviewPath;
+    if (!orderItem.image) {
+      orderItem.image = supabase.storage.from('custom-previews').getPublicUrl(item.customPreviewPath).data.publicUrl;
+    }
+  }
   return orderItem;
 }
 

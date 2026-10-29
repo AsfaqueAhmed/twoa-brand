@@ -1,3 +1,5 @@
+import { registerOriginal } from './artworkOriginals';
+
 // Reads an image file, downscales it so its longest edge is at most `maxEdge`, and returns a data URL.
 // Fully opaque images are encoded as JPEG (small); images with any transparency stay PNG.
 export async function fileToDataUrl(file: File, maxEdge = 1200): Promise<{ src: string; aspect: number }> {
@@ -27,6 +29,7 @@ export async function fileToDataUrl(file: File, maxEdge = 1200): Promise<{ src: 
       }
     }
     const src = hasAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
+    registerOriginal(src, file);
     return { src, aspect: width / height };
   } finally {
     URL.revokeObjectURL(url);
