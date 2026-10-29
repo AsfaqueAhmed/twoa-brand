@@ -115,7 +115,7 @@ export default function QuoteRequestModal({ parentProductId, parentName, size, c
 
   if (doneId) {
     return (
-      <Modal onClose={onClose} title="Request a quote">
+      <Modal onClose={onClose} title="Order now">
         <div className="flex flex-col items-center gap-3 pb-8 text-center">
           <CheckCircle2 className="h-10 w-10 text-green-600" aria-hidden="true" />
           <h2 className="text-base font-bold text-black">Request sent</h2>
@@ -129,10 +129,10 @@ export default function QuoteRequestModal({ parentProductId, parentName, size, c
   }
 
   return (
-    <Modal onClose={onClose} title="Request a quote">
+    <Modal onClose={onClose} title="Order now">
       <form onSubmit={submit} noValidate className="flex flex-col gap-4 pb-6">
         <div>
-          <h2 className="text-base font-bold text-black">Request a quote</h2>
+          <h2 className="text-base font-bold text-black">Order now</h2>
           <p className="mt-1 text-sm text-[#717171]">Tell us how to reach you and we&apos;ll send you a price on WhatsApp.</p>
           <p className="mt-1 text-[11px] text-[#717171]">
             {parentName} · Size {size}

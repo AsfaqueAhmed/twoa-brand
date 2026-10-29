@@ -47,11 +47,11 @@ export default function MobileHeader({
             type="button"
             onClick={onRequestQuote}
             disabled={quoteDisabled}
-            aria-label="Request a quote"
+            aria-label="Order now"
             title={quoteDisabled ? 'Add something to your design first' : undefined}
-            className="flex items-center justify-center rounded-full border border-black bg-white px-4 py-2.5 text-xs font-bold text-black transition hover:bg-zinc-100 active:scale-95 disabled:border-[#EEEEEE] disabled:text-[#9A9A9A] disabled:hover:bg-white"
+            className="flex items-center justify-center rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:bg-[#EEEEEE] disabled:text-[#9A9A9A] disabled:shadow-none disabled:hover:bg-[#EEEEEE]"
           >
-            Quote
+            Order now
           </button>
         )}
         <button
@@ -59,7 +59,7 @@ export default function MobileHeader({
           onClick={onSave}
           disabled={saving}
           aria-label="Save"
-          className="flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50"
+          className="flex items-center justify-center rounded-full border border-black bg-white px-5 py-2.5 text-xs font-bold text-black transition hover:bg-zinc-100 active:scale-95 disabled:opacity-50"
         >
           {saving ? (
             <span className="flex items-center gap-1.5">

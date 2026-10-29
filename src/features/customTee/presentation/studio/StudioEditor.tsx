@@ -421,20 +421,20 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              aria-label="Request a quote"
+              aria-label="Order now"
               disabled={!hasAnyLayers}
               title={hasAnyLayers ? undefined : 'Add something to your design first'}
               onClick={() => setQuoteOpen(true)}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-black px-2 py-3.5 text-[10px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:bg-[#EEEEEE] disabled:text-[#9A9A9A]"
             >
               <MessageSquareQuote className="h-4 w-4 shrink-0" />
-              <span className="whitespace-nowrap">Request a quote</span>
+              <span className="whitespace-nowrap">Order now</span>
             </button>
             <button
               type="button"
               disabled={saving}
               onClick={save}
-              className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-lg border border-black bg-white px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-black hover:bg-[#F5F5F5] disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? 'Saving…' : 'Save Design'}
