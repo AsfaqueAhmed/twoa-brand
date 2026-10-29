@@ -80,3 +80,9 @@ npm install
 - An admin can combine several quotes from the same customer (same last 10 phone digits) into one checkout link and one order: Custom Quotes, open the main quote, **Combine with other designs**. Each design is priced on its own first. The order has one line per design and size; the order screen shows one Download design ZIP per design.
 - Migration `20261029000100_custom_quote_bundles.sql` was **APPLIED to the live DB on 2026-10-29** after a dry run and backups (`backup_orders_20261029_bundles`, `backup_parent_product_size_stock_20261029_bundles`, `backup_custom_quotes_20261029_bundles`).
 - Still to check by hand as admin: the Combine section, the combined checkout page and the per-design ZIP downloads.
+
+### Free Gallery (admin-managed)
+
+- Admin **Gallery** page (`/admin/gallery`, after Banners) uploads and manages artwork (title, category, sort order, hide/show, delete). Both studios read the same active rows: mobile Free Gallery sheet and the desktop Free Gallery tab. The old built-in drawn SVG gallery was removed, so it starts empty until artwork is uploaded.
+- Migration `20261029000200_gallery_artworks.sql` was **APPLIED to the live DB on 2026-10-29** (table `gallery_artworks`, public bucket `gallery`, admin-only writes) after a dry run and backups (`backup_orders_20261029_gallery`, `backup_custom_quotes_20261029_gallery`).
+- Checked in the browser: both studios show the "No artwork yet" empty state. Still to check as admin: upload an image, see it in both studios, add it to a design and send an Order now request. Studio visitors see changes after a page reload (first fetch is cached).
