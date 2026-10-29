@@ -26,7 +26,7 @@ const item = (over: Partial<AdminGalleryItem>): AdminGalleryItem => ({
 });
 
 describe('validateGalleryFile', () => {
-  it('accepts png, jpeg and webp up to 5 MB', () => {
+  it('accepts png, jpeg and webp up to 25 MB', () => {
     for (const type of ['image/png', 'image/jpeg', 'image/webp']) {
       expect(validateGalleryFile({ type, size: GALLERY_MAX_BYTES })).toBeNull();
     }
@@ -34,7 +34,7 @@ describe('validateGalleryFile', () => {
   it('rejects other types and oversized files', () => {
     expect(validateGalleryFile({ type: 'image/gif', size: 10 })).toMatch(/PNG, JPG or WebP/);
     expect(validateGalleryFile({ type: 'image/svg+xml', size: 10 })).toMatch(/PNG, JPG or WebP/);
-    expect(validateGalleryFile({ type: 'image/png', size: GALLERY_MAX_BYTES + 1 })).toMatch(/5 MB/);
+    expect(validateGalleryFile({ type: 'image/png', size: GALLERY_MAX_BYTES + 1 })).toMatch(/25 MB/);
   });
 });
 

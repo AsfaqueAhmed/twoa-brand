@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { RefreshCw, Upload } from 'lucide-react';
 import { normalizeCategory, titleFromFileName, validateGalleryFile } from '../domain/galleryAdmin';
 import { createGalleryItem } from '../infrastructure/galleryAdminRepository';
+import { compressImage } from '@/shared/lib/compressImage';
+import { GALLERY_IMAGE_MAX_BYTES, GALLERY_IMAGE_MAX_EDGE, withExtension } from '@/shared/lib/imageCompression';
 
 type Props = {
   categories: string[];
@@ -12,17 +14,6 @@ type Props = {
 };
 
 const INPUT = 'w-full rounded-lg border border-[#EEEEEE] px-3 py-2.5 text-sm text-black focus:border-black focus:outline-none';
-
-// Natural pixel ratio (width / height) of an image file.
-function readAspect(file: File): Promise<number> {
-  const url = URL.createObjectURL(file);
-  return new Promise<number>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img.naturalWidth / Math.max(1, img.naturalHeight));
-    img.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-    img.src = url;
-  }).finally(() => URL.revokeObjectURL(url));
-}
 
 export default function GalleryUploadForm({ categories, firstSortOrder, onUploaded }: Props) {
   const [files, setFiles] = useState<File[]>([]);
@@ -47,9 +38,16 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
           continue;
         }
         try {
-          const aspect = await readAspect(file);
+          setProgress(`Optimising ${i + 1} of ${files.length}…`);
+          const { blob, width, height, mime } = await compressImage(file, {
+            maxBytes: GALLERY_IMAGE_MAX_BYTES,
+            maxEdge: GALLERY_IMAGE_MAX_EDGE,
+          });
+          if (blob.size > GALLERY_IMAGE_MAX_BYTES) throw new Error('Could not shrink this image under 500 KB.');
+          setProgress(`Uploading ${i + 1} of ${files.length}…`);
+          const aspect = width / Math.max(1, height);
           await createGalleryItem({
-            file,
+            file: blob === file ? file : new File([blob], withExtension(file.name, mime), { type: mime }),
             title: titleFromFileName(file.name),
             category: normalizeCategory(category),
             aspect,
@@ -74,7 +72,7 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
       <h2 className="text-sm font-bold text-black">Upload artwork</h2>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block space-y-1.5">
-          <span className="text-xs font-semibold text-[#717171]">Images (PNG, JPG or WebP, up to 5 MB each)</span>
+          <span className="text-xs font-semibold text-[#717171]">Images (PNG, JPG or WebP, shrunk to under 500 KB automatically)</span>
           <input
             type="file"
             multiple

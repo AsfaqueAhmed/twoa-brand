@@ -1,6 +1,7 @@
 import { DEFAULT_GALLERY_CATEGORY, galleryImageUrl } from '@/features/customTee/domain/gallery';
 
-export const GALLERY_MAX_BYTES = 5 * 1024 * 1024;
+// Source files up to 25 MB are accepted; they are shrunk to under 500 KB in the browser before upload.
+export const GALLERY_MAX_BYTES = 25 * 1024 * 1024;
 export const GALLERY_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const GALLERY_TITLE_MAX = 100;
 export const GALLERY_CATEGORY_MAX = 40;
@@ -19,7 +20,7 @@ export type AdminGalleryItem = {
 
 export function validateGalleryFile(file: { type: string; size: number }): string | null {
   if (!(GALLERY_MIME_TYPES as readonly string[]).includes(file.type)) return 'Use a PNG, JPG or WebP image.';
-  if (file.size > GALLERY_MAX_BYTES) return 'Images must be 5 MB or smaller.';
+  if (file.size > GALLERY_MAX_BYTES) return 'Images must be 25 MB or smaller.';
   return null;
 }
 
