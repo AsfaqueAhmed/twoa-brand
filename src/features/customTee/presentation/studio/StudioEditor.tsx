@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Save, ShoppingBag } from 'lucide-react';
+import { MessageSquareQuote, Save } from 'lucide-react';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
 import { type Layer } from '../../domain/layers';
@@ -23,6 +23,7 @@ import SelectionInspector from './SelectionInspector';
 import AlignPanel from './AlignPanel';
 import LayersList from './LayersList';
 import ProductPanel from './ProductPanel';
+import QuoteRequestModal from '../QuoteRequestModal';
 import PositionScalePanel from './PositionScalePanel';
 
 type Props = {
@@ -72,6 +73,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [desktop, setDesktop] = useState(false);
@@ -212,6 +214,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
+
+  const quoteDesign: StudioDesign = {
+    parentProductId: parent.id,
+    size,
+    colorName,
+    layersByView: pruneLayersByView(studio.layersByView, views.map((v) => v.id)),
+  };
+  const hasAnyLayers = Object.values(quoteDesign.layersByView).some((l) => l.length > 0);
 
   const save = async () => {
     setSaving(true);
@@ -411,12 +421,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              disabled
-              title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-lg bg-[#EEEEEE] px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-[#9A9A9A]"
+              aria-label="Request a quote"
+              disabled={!hasAnyLayers}
+              title={hasAnyLayers ? undefined : 'Add something to your design first'}
+              onClick={() => setQuoteOpen(true)}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-black px-2 py-3.5 text-[10px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:bg-[#EEEEEE] disabled:text-[#9A9A9A]"
             >
-              <ShoppingBag className="h-4 w-4" />
-              Add to Cart
+              <MessageSquareQuote className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap">Request a quote</span>
             </button>
             <button
               type="button"
@@ -428,10 +440,20 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               {saving ? 'Saving…' : 'Save Design'}
             </button>
           </div>
-          <p className="text-center text-[10px] text-[#717171]">Add to Cart and pricing are coming soon.</p>
           </div>
         </aside>
       </div>
+      {quoteOpen && (
+        <QuoteRequestModal
+          parentProductId={parent.id}
+          parentName={parent.name}
+          size={size}
+          colorName={colorName}
+          design={quoteDesign}
+          views={views}
+          onClose={() => setQuoteOpen(false)}
+        />
+      )}
     </div>
   );
 }

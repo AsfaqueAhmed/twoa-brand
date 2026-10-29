@@ -23,6 +23,7 @@ import { fileToDataUrl } from '../../application/imageUpload';
 import { useStudioState, type Asset } from '../../application/useStudioState';
 
 import MobileHeader from './MobileHeader';
+import QuoteRequestModal from '../QuoteRequestModal';
 import MobileCanvas from './MobileCanvas';
 import MobileToolDock, { type MobileToolTab } from './MobileToolDock';
 import MobileBottomSheet from './MobileBottomSheet';
@@ -62,6 +63,7 @@ export default function MobileStudioEditor({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [measure, setMeasure] = useState<{ stage: CanvasPx; sizes: Record<string, Size> } | null>(null);
 
@@ -185,6 +187,14 @@ export default function MobileStudioEditor({
     else studio.patch(l.id, { flipY: !l.flipY });
   };
 
+  const quoteDesign: StudioDesign = {
+    parentProductId: parent.id,
+    size,
+    colorName,
+    layersByView: pruneLayersByView(studio.layersByView, views.map((v) => v.id)),
+  };
+  const hasAnyLayers = Object.values(quoteDesign.layersByView).some((l) => l.length > 0);
+
   // Save session design
   const save = async () => {
     setSaving(true);
@@ -227,6 +237,8 @@ export default function MobileStudioEditor({
         subtitle={subtitle}
         onBack={() => router.push('/')}
         onSave={save}
+        onRequestQuote={() => setQuoteOpen(true)}
+        quoteDisabled={!hasAnyLayers}
         saving={saving}
       />
 
@@ -366,6 +378,18 @@ export default function MobileStudioEditor({
           />
         )}
       </MobileBottomSheet>
+
+      {quoteOpen && (
+        <QuoteRequestModal
+          parentProductId={parent.id}
+          parentName={parent.name}
+          size={size}
+          colorName={colorName}
+          design={quoteDesign}
+          views={views}
+          onClose={() => setQuoteOpen(false)}
+        />
+      )}
     </div>
   );
 }
