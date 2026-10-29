@@ -272,7 +272,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1 lg:min-h-0 lg:overflow-hidden" />
 
         <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:min-h-0 lg:overflow-hidden lg:border-b-0 lg:border-r">
-          {tool === 'design' && <DesignPanel onFiles={onFiles} busy={uploading} error={uploadError} />}
+          {tool === 'design' && (
+            <DesignPanel
+              onFiles={onFiles}
+              onGalleryArtwork={(a) => studio.addImage(studio.rememberAsset(a))}
+              busy={uploading}
+              error={uploadError}
+            />
+          )}
           {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} maxItems={desktop ? 6 : undefined} />}
           {tool === 'text' && <TextAddPanel onAdd={(init) => studio.addText(init)} />}
           {tool === 'layers' && (
