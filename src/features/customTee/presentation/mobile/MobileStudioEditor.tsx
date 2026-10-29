@@ -346,6 +346,7 @@ export default function MobileStudioEditor({
           <DesignSettingsSheet
             layer={studio.selected}
             onPatch={(patch) => studio.patch(studio.selected!.id, patch)}
+            onSetImageSrc={(id, src) => studio.patch(id, { src })}
             onLive={(patch) => studio.patchLive(studio.selected!.id, patch)}
             onSettle={studio.settleGesture}
             onAlign={handleAlign}
