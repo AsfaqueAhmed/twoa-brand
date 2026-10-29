@@ -64,3 +64,12 @@ npm install
 - Studio and popup style: black and white, 8px radius (`rounded-lg`), borders `#EEEEEE`, muted text `#717171`, buttons `text-[11px] font-bold uppercase tracking-widest`. The admin keeps its own sharp-corner style.
 - Layer coordinates are fractions of the canvas; saved designs live in `sessionStorage['custom-tee-design']` as `layersByView` (view ids `view-0`, `view-1`, ...); the selected tee hand-off is `sessionStorage['custom-tee-selection']` plus `?tee=&size=` query params.
 - Browser testing tip: with the preview tool, set an explicit viewport (e.g. 1440x900); plain wheel-pan only works at `lg` (>=1024px) widths.
+
+## Quote flow (phase D) — branch `feat/custom-tee-quotes` (not pushed, not merged)
+
+- Customers press **Request a quote** in the studio (desktop and mobile); admin works in **Custom Quotes**, sets sizes, price per piece and expiry, and sends a one-time link `/custom-order?token=...`; the customer places a COD order; admin downloads a ZIP of the design from the quote or order.
+- Spec `docs/superpowers/specs/2026-10-29-custom-tee-quotes-design.md`, plan `docs/superpowers/plans/2026-10-29-custom-tee-quotes.md`.
+- **Migration `20261029000000_custom_tee_quotes.sql` was APPLIED to the live DB on 2026-10-29** after a dry run and a backup (`backup_orders_20261029_quotes`, `backup_parent_product_size_stock_20261029_quotes`). Live code on `main` does not yet use it, so nothing breaks.
+- Whole-branch review findings were fixed in `810fbb6`.
+- Still to test by hand (needs an admin session): submit a quote in the studio, price it in the admin (`set_custom_quote_pricing` is untested), open the link, place the order, download the ZIP from the quote and the order. Also check the base tee image CORS for preview rendering.
+- Remove test quote and order rows after testing.
