@@ -25,6 +25,7 @@ export interface CustomQuote {
   quoteToken?: string;
   quoteExpiresAt?: string;
   orderId?: string;
+  mergedInto?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -83,14 +84,81 @@ function linesSummary(lines: QuoteLine[]): string {
   return lines.map((l) => `${l.size} x ${l.qty}`).join(', ');
 }
 
-export function quoteMessage(q: CustomQuote, link: string, expiresAt: Date): string {
-  const { pieces, subtotal } = quoteTotals(q.lines, q.unitPrice ?? 0);
+export function quoteMessage(q: CustomQuote, link: string, expiresAt: Date, members: CustomQuote[] = []): string {
+  const expiry = `This link works once and expires on ${expiresAt.toLocaleDateString('en-GB')}.`;
+  if (members.length === 0) {
+    const { pieces, subtotal } = quoteTotals(q.lines, q.unitPrice ?? 0);
+    return [
+      `Hi ${q.name}, thanks for your custom tee request (${q.parentName}).`,
+      `Your quote: ${pieces} pieces (${linesSummary(q.lines)}) at ${q.unitPrice ?? 0} each = ${subtotal}.`,
+      `Please confirm and place your order here: ${link}`,
+      expiry,
+    ].join('\n');
+  }
+  const designs = [q, ...members];
   return [
-    `Hi ${q.name}, thanks for your custom tee request (${q.parentName}).`,
-    `Your quote: ${pieces} pieces (${linesSummary(q.lines)}) at ${q.unitPrice ?? 0} each = ${subtotal}.`,
+    `Hi ${q.name}, thanks for your custom tee requests. Your quote covers ${designs.length} designs:`,
+    ...designs.map((d) => {
+      const { pieces, subtotal } = quoteTotals(d.lines, d.unitPrice ?? 0);
+      return `- ${d.parentName}: ${pieces} pieces (${linesSummary(d.lines)}) at ${d.unitPrice ?? 0} each = ${subtotal}`;
+    }),
+    `Total: ${bundleSubtotal(designs)}.`,
     `Please confirm and place your order here: ${link}`,
-    `This link works once and expires on ${expiresAt.toLocaleDateString('en-GB')}.`,
+    expiry,
   ].join('\n');
+}
+
+// --- Bundles: several quotes of one customer combined into one checkout (lead + members). ---
+
+export const MAX_BUNDLE_MEMBERS = 10;
+
+export function phone10(phone: string): string {
+  return phone.replace(/\D/g, '').slice(-10);
+}
+
+export function isPriced(q: Pick<CustomQuote, 'lines' | 'unitPrice'>): boolean {
+  return q.lines.length > 0 && q.unitPrice != null && q.unitPrice > 0;
+}
+
+export function bundleMembers(leadId: string, quotes: CustomQuote[]): CustomQuote[] {
+  return quotes
+    .filter((q) => q.mergedInto === leadId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+export function canLeadBundle(q: CustomQuote): boolean {
+  return q.status === 'quoted' && !q.mergedInto && !!q.quoteToken && isPriced(q);
+}
+
+// Quotes that may be combined into `lead` (the same rules the set_custom_quote_bundle RPC enforces).
+export function bundleCandidates(lead: CustomQuote, quotes: CustomQuote[]): CustomQuote[] {
+  const leaders = new Set(quotes.map((q) => q.mergedInto).filter(Boolean));
+  const phone = phone10(lead.phone);
+  return quotes
+    .filter(
+      (q) =>
+        q.id !== lead.id &&
+        q.status === 'quoted' &&
+        isPriced(q) &&
+        (!q.mergedInto || q.mergedInto === lead.id) &&
+        !leaders.has(q.id) &&
+        phone10(q.phone) === phone,
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+export function bundleBadge(q: CustomQuote, quotes: CustomQuote[]): string | null {
+  if (q.mergedInto) return `In combined order ${q.mergedInto}`;
+  const n = quotes.filter((x) => x.mergedInto === q.id).length;
+  return n > 0 ? `Combined +${n} ${n === 1 ? 'design' : 'designs'}` : null;
+}
+
+export function bundleSubtotal(designs: CustomQuote[]): number {
+  return designs.reduce((s, d) => s + quoteTotals(d.lines, d.unitPrice ?? 0).subtotal, 0);
+}
+
+export function describeQuoteLines(lines: QuoteLine[]): string {
+  return linesSummary(lines);
 }
 
 function sanitize(label: string): string {

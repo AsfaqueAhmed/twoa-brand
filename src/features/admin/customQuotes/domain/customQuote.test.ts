@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  bundleBadge,
+  bundleCandidates,
+  bundleMembers,
+  bundleSubtotal,
+  canLeadBundle,
+  phone10,
   buildQuoteLink,
   buildZipPlan,
   effectiveStatus,
@@ -128,5 +134,59 @@ describe('zip plan', () => {
     for (const p of art) expect(p).toMatch(/^artwork\/[A-Za-z0-9_-][A-Za-z0-9._-]*$/);
     expect(art[0]).toBe('artwork/artwork-1.png');
     expect(art[1]).toBe('artwork/artwork-1-2.png');
+  });
+});
+
+describe('bundles', () => {
+  const mk = (id: string, patch: Partial<CustomQuote> = {}): CustomQuote => ({ ...quote, id, quoteToken: `tok-${id}`, ...patch });
+  const lead = mk('CQ-LEAD0001', { createdAt: '2026-10-29T01:00:00.000Z' });
+  const a = mk('CQ-AAAA0001', { phone: '+880 1711-223344', createdAt: '2026-10-29T03:00:00.000Z' });
+  const b = mk('CQ-BBBB0001', { createdAt: '2026-10-29T02:00:00.000Z', mergedInto: 'CQ-LEAD0001' });
+  const otherPhone = mk('CQ-OTHR0001', { phone: '01999888777' });
+  const unpriced = mk('CQ-UNPR0001', { unitPrice: undefined, lines: [] });
+  const newQ = mk('CQ-NEWW0001', { status: 'new' });
+  const elsewhere = mk('CQ-ELSE0001', { mergedInto: 'CQ-OTHERLEAD' });
+  const otherLead = mk('CQ-OTHERLEAD');
+  const all = [lead, a, b, otherPhone, unpriced, newQ, elsewhere, otherLead];
+
+  it('compares phones by the last 10 digits', () => {
+    expect(phone10('+880 1711-223344')).toBe('1711223344');
+    expect(phone10('01711223344')).toBe('1711223344');
+  });
+
+  it('lists members of a bundle', () => {
+    expect(bundleMembers('CQ-LEAD0001', all).map((q) => q.id)).toEqual(['CQ-BBBB0001']);
+    expect(bundleMembers('CQ-AAAA0001', all)).toEqual([]);
+  });
+
+  it('picks candidates: same phone, quoted, priced, not merged elsewhere, not a lead, not the lead itself', () => {
+    expect(bundleCandidates(lead, all).map((q) => q.id)).toEqual(['CQ-BBBB0001', 'CQ-AAAA0001']);
+  });
+
+  it('only quoted, unmerged, priced quotes with a link can lead a bundle', () => {
+    expect(canLeadBundle(lead)).toBe(true);
+    expect(canLeadBundle(b)).toBe(false);
+    expect(canLeadBundle(newQ)).toBe(false);
+    expect(canLeadBundle(unpriced)).toBe(false);
+    expect(canLeadBundle({ ...lead, quoteToken: undefined })).toBe(false);
+  });
+
+  it('labels members and leads', () => {
+    expect(bundleBadge(b, all)).toBe('In combined order CQ-LEAD0001');
+    expect(bundleBadge(lead, all)).toBe('Combined +1 design');
+    expect(bundleBadge(otherLead, [...all, mk('CQ-X', { mergedInto: 'CQ-OTHERLEAD' })])).toBe('Combined +2 designs');
+    expect(bundleBadge(a, all)).toBeNull();
+  });
+
+  it('sums the bundle subtotal', () => {
+    expect(bundleSubtotal([lead, { ...b, unitPrice: 100, lines: [{ size: 'M', qty: 2 }] }])).toBe(3250 + 200);
+  });
+
+  it('writes a combined customer message listing every design', () => {
+    const msg = quoteMessage(lead, 'https://x/l', new Date('2026-11-05T00:00:00Z'), [{ ...b, parentName: 'Black Tee', unitPrice: 100, lines: [{ size: 'L', qty: 1 }] }]);
+    expect(msg).toContain('2 designs');
+    expect(msg).toContain('Black Tee');
+    expect(msg).toContain('3350');
+    expect(msg).toContain('https://x/l');
   });
 });
