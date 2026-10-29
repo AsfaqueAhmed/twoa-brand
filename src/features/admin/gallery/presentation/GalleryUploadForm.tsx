@@ -27,13 +27,14 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
   const [errors, setErrors] = useState<string[]>([]);
   const [bgMode, setBgMode] = useState<BgMode>('off');
   const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
+  const [includeEnclosed, setIncludeEnclosed] = useState(true);
 
   // Runs the chosen background remover on one file; the result is a transparent PNG that then goes through the
   // normal compression step (WebP keeps the transparency). Off, or nothing to remove, returns the file as is.
   const removeBackground = async (file: File, label: string): Promise<File> => {
     if (bgMode === 'off') return file;
     setProgress(`${label}: removing background…`);
-    const res = await removeSolidBackgroundFromBlob(file, tolerance);
+    const res = await removeSolidBackgroundFromBlob(file, tolerance, includeEnclosed);
     if (!res.changed) return file;
     return new File([res.blob], withExtension(file.name, 'image/png'), { type: 'image/png' });
   };
@@ -149,6 +150,18 @@ export default function GalleryUploadForm({ categories, firstSortOrder, onUpload
                 className="w-40 accent-black"
               />
               <span className="w-6 text-xs tabular-nums text-[#717171]">{tolerance}</span>
+            </label>
+          )}
+          {bgMode === 'solid' && (
+            <label className="flex items-center gap-2 pb-2.5">
+              <input
+                type="checkbox"
+                checked={includeEnclosed}
+                disabled={busy}
+                onChange={(e) => setIncludeEnclosed(e.target.checked)}
+                className="accent-black"
+              />
+              <span className="text-xs font-semibold text-[#717171]">Also remove inside areas</span>
             </label>
           )}
         </div>

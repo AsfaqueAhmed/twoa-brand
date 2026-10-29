@@ -66,14 +66,14 @@ export type SolidRemovalResult = { data: Uint8ClampedArray; changed: boolean; ba
 /**
  * Removes a solid background: finds the background colour from the border, flood-fills from the edges through
  * pixels within `tolerance` (0..255 colour distance) and makes them transparent. Areas of the same colour that are
- * enclosed by the artwork are not reached, so they stay. Artwork pixels touching the removed area get an alpha ramp
+ * enclosed by the artwork are not reached, so they stay, unless `includeEnclosed` removes every matching pixel. Artwork pixels touching the removed area get an alpha ramp
  * (by colour distance) so anti-aliased edges do not leave a hard fringe. Returns a new array; the input is untouched.
  */
 export function removeSolidBackground(
   input: Uint8ClampedArray,
   width: number,
   height: number,
-  opts: { tolerance?: number } = {},
+  opts: { tolerance?: number; includeEnclosed?: boolean } = {},
 ): SolidRemovalResult {
   const data = input.slice();
   const bg = estimateBackgroundColor(input, width, height);
@@ -87,6 +87,10 @@ export function removeSolidBackground(
   const passable = (p: number) => input[p * 4 + 3] <= TRANSPARENT_ALPHA || dist(p) <= tolerance;
 
   const stack: number[] = [];
+  if (opts.includeEnclosed) {
+    // Every pixel close to the background colour goes, including areas enclosed by the artwork (e.g. inside a circle).
+    for (let p = 0; p < n; p++) if (passable(p)) isBg[p] = 1;
+  }
   for (const p of borderIndices(width, height)) {
     if (!isBg[p] && passable(p)) {
       isBg[p] = 1;

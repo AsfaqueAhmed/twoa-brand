@@ -143,3 +143,39 @@ describe('removeSolidBackground', () => {
     expect(alphaAt(data, w, 8, 8)).toBe(255);
   });
 });
+
+describe('removeSolidBackground includeEnclosed', () => {
+  // 12x12 white image with a red ring (outer 3..8) that encloses a white 2x2 hole at the centre.
+  const make = () => {
+    const w = 12;
+    const d = new Uint8ClampedArray(w * w * 4).fill(255);
+    for (let y = 3; y < 9; y++) {
+      for (let x = 3; x < 9; x++) {
+        const hole = x >= 5 && x <= 6 && y >= 5 && y <= 6;
+        if (hole) continue;
+        const o = (y * w + x) * 4;
+        d[o] = 220;
+        d[o + 1] = 40;
+        d[o + 2] = 40;
+      }
+    }
+    return { d, w };
+  };
+  const alphaAt = (data: Uint8ClampedArray, w: number, x: number, y: number) => data[(y * w + x) * 4 + 3];
+
+  it('keeps an enclosed hole by default', () => {
+    const { d, w } = make();
+    const { data } = removeSolidBackground(d, w, w);
+    expect(alphaAt(data, w, 0, 0)).toBe(0);
+    expect(alphaAt(data, w, 5, 5)).toBe(255);
+  });
+
+  it('removes the enclosed hole too when includeEnclosed is set, and keeps the ring', () => {
+    const { d, w } = make();
+    const { data, changed } = removeSolidBackground(d, w, w, { includeEnclosed: true });
+    expect(changed).toBe(true);
+    expect(alphaAt(data, w, 0, 0)).toBe(0);
+    expect(alphaAt(data, w, 5, 5)).toBe(0);
+    expect(alphaAt(data, w, 3, 3)).toBe(255);
+  });
+});

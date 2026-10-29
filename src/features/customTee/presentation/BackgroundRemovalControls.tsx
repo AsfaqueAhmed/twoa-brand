@@ -33,6 +33,7 @@ const STYLES = {
 export default function BackgroundRemovalControls({ layer, onApply, variant }: Props) {
   const s = STYLES[variant];
   const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
+  const [includeEnclosed, setIncludeEnclosed] = useState(true);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -52,10 +53,10 @@ export default function BackgroundRemovalControls({ layer, onApply, variant }: P
     setStatus('Removing background…');
     try {
       const input = await srcToBlob(before);
-      const res = await removeSolidBackgroundFromBlob(input, tolerance);
+      const res = await removeSolidBackgroundFromBlob(input, tolerance, includeEnclosed);
       if (!res.changed) {
         setStatus('');
-        setError('No solid background found at the edges. Try a higher tolerance.');
+        setError('No matching background found. Try a higher tolerance.');
         return;
       }
       const { src } = await blobToDesignImage(res.blob, `${layer.name || 'design'}-no-bg`);
@@ -91,6 +92,16 @@ export default function BackgroundRemovalControls({ layer, onApply, variant }: P
           />
           <span className={`${s.muted} w-6 shrink-0 text-right tabular-nums`}>{tolerance}</span>
         </div>
+        <label className={`${s.muted} flex items-center gap-2`}>
+          <input
+            type="checkbox"
+            checked={includeEnclosed}
+            disabled={busy}
+            onChange={(e) => setIncludeEnclosed(e.target.checked)}
+            className="accent-black"
+          />
+          Also remove inside areas (e.g. inside a circle)
+        </label>
         <button type="button" disabled={busy} onClick={() => void run()} className={s.btn}>
           <Eraser className="h-4 w-4" />
           Remove background

@@ -43,11 +43,11 @@ export async function srcToBlob(src: string): Promise<Blob> {
   return res.blob();
 }
 
-export async function removeSolidBackgroundFromBlob(blob: Blob, tolerance: number): Promise<{ blob: Blob; changed: boolean }> {
+export async function removeSolidBackgroundFromBlob(blob: Blob, tolerance: number, includeEnclosed = false): Promise<{ blob: Blob; changed: boolean }> {
   const img = await loadImage(blob);
   const { canvas, ctx } = drawToCanvas(img);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const { data, changed } = removeSolidBackground(imageData.data, canvas.width, canvas.height, { tolerance: clampTolerance(tolerance) });
+  const { data, changed } = removeSolidBackground(imageData.data, canvas.width, canvas.height, { tolerance: clampTolerance(tolerance), includeEnclosed });
   if (!changed) return { blob, changed: false };
   imageData.data.set(data);
   ctx.putImageData(imageData, 0, 0);
