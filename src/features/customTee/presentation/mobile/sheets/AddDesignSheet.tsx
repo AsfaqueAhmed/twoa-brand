@@ -4,9 +4,7 @@ import { useRef, useState } from 'react';
 import {
   ChevronRight,
   HardDrive,
-  Image as ImageIcon,
   LayoutGrid,
-  Sparkles,
   UploadCloud,
 } from 'lucide-react';
 import type { Asset } from '../../../application/useStudioState';
@@ -166,34 +164,6 @@ export default function AddDesignSheet({
                   <HardDrive className="h-4 w-4" />
                 </span>
                 <span className="text-xs font-bold text-zinc-900">From Device</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-zinc-400" />
-            </button>
-
-            <button
-              type="button"
-              onClick={triggerFileInput}
-              className="flex w-full items-center justify-between p-3.5 text-left hover:bg-zinc-50 active:bg-zinc-100 transition"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                  <Sparkles className="h-4 w-4" />
-                </span>
-                <span className="text-xs font-bold text-zinc-900">Google Drive</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-zinc-400" />
-            </button>
-
-            <button
-              type="button"
-              onClick={triggerFileInput}
-              className="flex w-full items-center justify-between p-3.5 text-left hover:bg-zinc-50 active:bg-zinc-100 transition"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <ImageIcon className="h-4 w-4" />
-                </span>
-                <span className="text-xs font-bold text-zinc-900">Dropbox</span>
               </div>
               <ChevronRight className="h-4 w-4 text-zinc-400" />
             </button>
