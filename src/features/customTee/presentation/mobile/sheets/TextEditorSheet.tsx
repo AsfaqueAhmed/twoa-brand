@@ -12,7 +12,7 @@ import {
   type TextLayer,
 } from '../../../domain/layers';
 import { MOBILE_FONTS, ensureGoogleFontsLoaded } from '../fonts';
-import { FONT_CATEGORIES, type FontCategory } from '../../../domain/fonts';
+import { FONT_PICKER_CATEGORIES, type FontCategory } from '../../../domain/fonts';
 import { SheetFooterContext } from '../MobileBottomSheet';
 
 type TextSubTab = 'font' | 'style' | 'color' | 'effects';
@@ -193,7 +193,7 @@ export default function TextEditorSheet({
       {subTab === 'font' && (
         <div className="space-y-3">
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
-            {(['All', ...FONT_CATEGORIES] as const).map((cat) => (
+            {(['All', ...FONT_PICKER_CATEGORIES] as const).map((cat) => (
               <button
                 key={cat}
                 type="button"

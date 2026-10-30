@@ -16,7 +16,7 @@ import {
   scaleToPercent,
 } from '../../domain/layers';
 import Select from '../Select';
-import { DEFAULT_FONT_FAMILY } from '../../domain/fonts';
+import { DEFAULT_FONT_FAMILY, FONT_PICKER_OPTIONS } from '../../domain/fonts';
 import { ensureFontsLoaded } from '../../application/fontLoader';
 
 type Props = {
@@ -28,9 +28,9 @@ type Props = {
 
 const LABEL = 'mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#717171]';
 const TOGGLE = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-black transition-colors';
-const fontLabels = FONT_OPTIONS.map((f) => f.label);
+const fontLabels = FONT_PICKER_OPTIONS.map((f) => f.label);
 const labelFor = (family: string) => FONT_OPTIONS.find((f) => f.family === family)?.label ?? 'Sans';
-const familyFor = (label: string) => FONT_OPTIONS.find((f) => f.label === label)?.family ?? DEFAULT_FONT_FAMILY;
+const familyFor = (label: string) => FONT_PICKER_OPTIONS.find((f) => f.label === label)?.family ?? DEFAULT_FONT_FAMILY;
 const ALIGNS: { value: TextAlign; label: string; icon: typeof AlignLeft }[] = [
   { value: 'left', label: 'Align text left', icon: AlignLeft },
   { value: 'center', label: 'Align text center', icon: AlignCenter },

@@ -1,4 +1,4 @@
-export type FontCategory = 'Bengali' | 'Brush' | 'Graffiti' | 'Bold' | 'Script' | 'Handwritten' | 'Clean' | 'Elegant' | 'Fun' | 'Retro' | 'Classic';
+export type FontCategory = 'Bengali' | 'Cartoon' | 'Brush' | 'Calligraphy' | 'Sport' | 'Stencil' | 'Graffiti' | 'Bold' | 'Script' | 'Handwritten' | 'Clean' | 'Elegant' | 'Fun' | 'Retro' | 'Classic';
 
 export type FontOption = {
   label: string;
@@ -23,6 +23,37 @@ export const FONT_CATALOG: readonly FontOption[] = [
   { label: 'Tiro Bangla', family: "'Tiro Bangla', serif", category: 'Bengali', script: 'bengali', google: 'Tiro+Bangla:ital@0;1' },
   { label: 'Noto Serif Bengali', family: "'Noto Serif Bengali', serif", category: 'Bengali', script: 'bengali', google: 'Noto+Serif+Bengali:wght@400;700' },
   { label: 'Mina', family: "'Mina', sans-serif", category: 'Bengali', script: 'bengali', google: 'Mina:wght@400;700' },
+  { label: 'Lohit Bengali', family: "'Lohit Bengali', sans-serif", category: 'Bengali', script: 'bengali', google: 'Lohit+Bengali' },
+  { label: 'Chewy', family: "'Chewy', cursive", category: 'Cartoon', script: 'latin', google: 'Chewy' },
+  { label: 'Luckiest Guy', family: "'Luckiest Guy', cursive", category: 'Cartoon', script: 'latin', google: 'Luckiest+Guy' },
+  { label: 'Bubblegum Sans', family: "'Bubblegum Sans', cursive", category: 'Cartoon', script: 'latin', google: 'Bubblegum+Sans' },
+  { label: 'Titan One', family: "'Titan One', sans-serif", category: 'Cartoon', script: 'latin', google: 'Titan+One' },
+  { label: 'Coiny', family: "'Coiny', cursive", category: 'Cartoon', script: 'latin', google: 'Coiny' },
+  { label: 'Bungee Shade', family: "'Bungee Shade', cursive", category: 'Cartoon', script: 'latin', google: 'Bungee+Shade' },
+  { label: 'Concert One', family: "'Concert One', cursive", category: 'Cartoon', script: 'latin', google: 'Concert+One' },
+  { label: 'Gorditas', family: "'Gorditas', cursive", category: 'Cartoon', script: 'latin', google: 'Gorditas:wght@400;700' },
+  { label: 'Sriracha', family: "'Sriracha', cursive", category: 'Brush', script: 'latin', google: 'Sriracha' },
+  { label: 'Kalam', family: "'Kalam', cursive", category: 'Brush', script: 'latin', google: 'Kalam:wght@400;700' },
+  { label: 'Homemade Apple', family: "'Homemade Apple', cursive", category: 'Brush', script: 'latin', google: 'Homemade+Apple' },
+  { label: 'Merienda', family: "'Merienda', cursive", category: 'Brush', script: 'latin', google: 'Merienda:wght@400;700' },
+  { label: 'Allura', family: "'Allura', cursive", category: 'Calligraphy', script: 'latin', google: 'Allura' },
+  { label: 'Parisienne', family: "'Parisienne', cursive", category: 'Calligraphy', script: 'latin', google: 'Parisienne' },
+  { label: 'Alex Brush', family: "'Alex Brush', cursive", category: 'Calligraphy', script: 'latin', google: 'Alex+Brush' },
+  { label: 'Italianno', family: "'Italianno', cursive", category: 'Calligraphy', script: 'latin', google: 'Italianno' },
+  { label: 'Tangerine', family: "'Tangerine', cursive", category: 'Calligraphy', script: 'latin', google: 'Tangerine:wght@400;700' },
+  { label: 'Rochester', family: "'Rochester', cursive", category: 'Calligraphy', script: 'latin', google: 'Rochester' },
+  { label: 'Petit Formal Script', family: "'Petit Formal Script', cursive", category: 'Calligraphy', script: 'latin', google: 'Petit+Formal+Script' },
+  { label: 'Rouge Script', family: "'Rouge Script', cursive", category: 'Calligraphy', script: 'latin', google: 'Rouge+Script' },
+  { label: 'Mr Dafoe', family: "'Mr Dafoe', cursive", category: 'Calligraphy', script: 'latin', google: 'Mr+Dafoe' },
+  { label: 'Qwitcher Grypen', family: "'Qwitcher Grypen', cursive", category: 'Calligraphy', script: 'latin', google: 'Qwitcher+Grypen:wght@400;700' },
+  { label: 'Teko', family: "'Teko', sans-serif", category: 'Sport', script: 'latin', google: 'Teko:wght@400;700' },
+  { label: 'Graduate', family: "'Graduate', serif", category: 'Sport', script: 'latin', google: 'Graduate' },
+  { label: 'Chakra Petch', family: "'Chakra Petch', sans-serif", category: 'Sport', script: 'latin', google: 'Chakra+Petch:wght@400;700' },
+  { label: 'Saira Stencil One', family: "'Saira Stencil One', sans-serif", category: 'Stencil', script: 'latin', google: 'Saira+Stencil+One' },
+  { label: 'Stardos Stencil', family: "'Stardos Stencil', serif", category: 'Stencil', script: 'latin', google: 'Stardos+Stencil:wght@400;700' },
+  { label: 'VT323', family: "'VT323', monospace", category: 'Retro', script: 'latin', google: 'VT323' },
+  { label: 'Silkscreen', family: "'Silkscreen', monospace", category: 'Retro', script: 'latin', google: 'Silkscreen:wght@400;700' },
+  { label: 'Space Mono', family: "'Space Mono', monospace", category: 'Retro', script: 'latin', google: 'Space+Mono:wght@400;700' },
   { label: 'Permanent Marker', family: "'Permanent Marker', cursive", category: 'Brush', script: 'latin', google: 'Permanent+Marker' },
   { label: 'Knewave', family: "'Knewave', cursive", category: 'Brush', script: 'latin', google: 'Knewave' },
   { label: 'Kaushan Script', family: "'Kaushan Script', cursive", category: 'Brush', script: 'latin', google: 'Kaushan+Script' },
@@ -82,12 +113,21 @@ export const FONT_CATALOG: readonly FontOption[] = [
   { label: 'Poppins', family: "'Poppins', sans-serif", category: 'Clean', script: 'latin', google: 'Poppins:wght@400;700' },
   { label: 'Raleway', family: "'Raleway', sans-serif", category: 'Clean', script: 'latin', google: 'Raleway:wght@400;800' },
   { label: 'Space Grotesk', family: "'Space Grotesk', sans-serif", category: 'Clean', script: 'latin', google: 'Space+Grotesk:wght@400;700' },
+  { label: 'DM Sans', family: "'DM Sans', sans-serif", category: 'Clean', script: 'latin', google: 'DM+Sans:wght@400;700' },
+  { label: 'Manrope', family: "'Manrope', sans-serif", category: 'Clean', script: 'latin', google: 'Manrope:wght@400;700' },
+  { label: 'Outfit', family: "'Outfit', sans-serif", category: 'Clean', script: 'latin', google: 'Outfit:wght@400;700' },
+  { label: 'Work Sans', family: "'Work Sans', sans-serif", category: 'Clean', script: 'latin', google: 'Work+Sans:wght@400;700' },
+  { label: 'Nunito Sans', family: "'Nunito Sans', sans-serif", category: 'Clean', script: 'latin', google: 'Nunito+Sans:wght@400;700' },
+  { label: 'Plus Jakarta Sans', family: "'Plus Jakarta Sans', sans-serif", category: 'Clean', script: 'latin', google: 'Plus+Jakarta+Sans:wght@400;700' },
+  { label: 'Barlow Condensed', family: "'Barlow Condensed', sans-serif", category: 'Bold', script: 'latin', google: 'Barlow+Condensed:wght@400;700;800' },
   { label: 'Playfair Display', family: "'Playfair Display', serif", category: 'Elegant', script: 'latin', google: 'Playfair+Display:ital,wght@0,400;0,700;1,400;1,700' },
   { label: 'Abril Fatface', family: "'Abril Fatface', serif", category: 'Elegant', script: 'latin', google: 'Abril+Fatface' },
   { label: 'DM Serif Display', family: "'DM Serif Display', serif", category: 'Elegant', script: 'latin', google: 'DM+Serif+Display:ital@0;1' },
   { label: 'Cinzel', family: "'Cinzel', serif", category: 'Elegant', script: 'latin', google: 'Cinzel:wght@400;700' },
   { label: 'Bodoni Moda', family: "'Bodoni Moda', serif", category: 'Elegant', script: 'latin', google: 'Bodoni+Moda:wght@400;700' },
   { label: 'Cormorant Garamond', family: "'Cormorant Garamond', serif", category: 'Elegant', script: 'latin', google: 'Cormorant+Garamond:wght@400;700' },
+  { label: 'Lora', family: "'Lora', serif", category: 'Elegant', script: 'latin', google: 'Lora:wght@400;700' },
+  { label: 'Libre Baskerville', family: "'Libre Baskerville', serif", category: 'Elegant', script: 'latin', google: 'Libre+Baskerville:wght@400;700' },
   { label: 'Bungee', family: "'Bungee', sans-serif", category: 'Fun', script: 'latin', google: 'Bungee' },
   { label: 'Righteous', family: "'Righteous', sans-serif", category: 'Fun', script: 'latin', google: 'Righteous' },
   { label: 'Lilita One', family: "'Lilita One', sans-serif", category: 'Fun', script: 'latin', google: 'Lilita+One' },
@@ -106,10 +146,32 @@ export const FONT_CATALOG: readonly FontOption[] = [
   { label: 'Script', family: '"Brush Script MT", "Segoe Script", cursive', category: 'Classic', script: 'latin' },
 ] as const;
 
-/** Default for new text: Arial, a Latin system font (Bengali text falls back through the system stack). */
-export const DEFAULT_FONT_FAMILY = 'Arial, Helvetica, sans-serif';
+/** Default for new text: Noto Sans Bengali covers Bangla and Latin copy cleanly. */
+export const DEFAULT_FONT_FAMILY = "'Noto Sans Bengali', sans-serif";
 
-export const FONT_CATEGORIES: readonly FontCategory[] = ['Bengali', 'Brush', 'Graffiti', 'Bold', 'Script', 'Handwritten', 'Clean', 'Elegant', 'Fun', 'Retro', 'Classic'];
+export const FONT_CATEGORIES: readonly FontCategory[] = ['Bengali', 'Cartoon', 'Brush', 'Calligraphy', 'Sport', 'Stencil', 'Graffiti', 'Bold', 'Script', 'Handwritten', 'Clean', 'Elegant', 'Fun', 'Retro', 'Classic'];
+
+// A focused set for the picker. The full catalog remains available to load older saved designs.
+const PICKER_FONT_LABELS = new Set([
+  'Noto Sans Bengali', 'Hind Siliguri', 'Baloo Da 2', 'Anek Bangla', 'Galada', 'Atma', 'Alkatra',
+  'Tiro Bangla', 'Noto Serif Bengali', 'Lohit Bengali',
+  'Chewy', 'Luckiest Guy', 'Bubblegum Sans', 'Titan One', 'Coiny', 'Bungee Shade', 'Concert One', 'Gorditas', 'Chango', 'Lilita One',
+  'Permanent Marker', 'Knewave', 'Kaushan Script', 'Sriracha', 'Kalam', 'Homemade Apple', 'Merienda', 'Mansalva', 'Gochi Hand', 'Covered By Your Grace', 'Sedgwick Ave Display', 'Bangers', 'Rubik Spray Paint',
+  'Allura', 'Parisienne', 'Alex Brush', 'Italianno', 'Tangerine', 'Rochester', 'Petit Formal Script', 'Rouge Script', 'Mr Dafoe', 'Qwitcher Grypen', 'Yellowtail',
+  'Bebas Neue', 'Anton', 'Oswald', 'Barlow Condensed', 'League Spartan', 'Archivo Black', 'Black Ops One', 'Fjalla One',
+  'Teko', 'Graduate', 'Chakra Petch', 'Saira Stencil One', 'Stardos Stencil',
+  'VT323', 'Silkscreen', 'Space Mono',
+  'Pacifico', 'Lobster', 'Dancing Script', 'Caveat',
+  'Inter', 'Montserrat', 'Poppins', 'Space Grotesk', 'DM Sans', 'Manrope', 'Outfit', 'Work Sans', 'Nunito Sans', 'Plus Jakarta Sans',
+  'Playfair Display', 'DM Serif Display', 'Cormorant Garamond', 'Lora', 'Libre Baskerville',
+  'Bungee', 'Righteous', 'Fredoka', 'Orbitron', 'Audiowide', 'Press Start 2P',
+  'Sans', 'Serif', 'Mono', 'Impact', 'Script',
+]);
+
+export const FONT_PICKER_OPTIONS = FONT_CATALOG.filter((font) => PICKER_FONT_LABELS.has(font.label));
+export const FONT_PICKER_CATEGORIES = FONT_CATEGORIES.filter((category) =>
+  FONT_PICKER_OPTIONS.some((font) => font.category === category),
+);
 
 export const GOOGLE_FONTS_URL = `https://fonts.googleapis.com/css2?${FONT_CATALOG.filter((f) => f.google)
   .map((f) => `family=${f.google}`)
