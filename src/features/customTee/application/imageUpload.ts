@@ -1,34 +1,28 @@
-// Reads an image file, downscales it so its longest edge is at most `maxEdge`, and returns a data URL.
-// Fully opaque images are encoded as JPEG (small); images with any transparency stay PNG.
-export async function fileToDataUrl(file: File, maxEdge = 1200): Promise<{ src: string; aspect: number }> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error('Could not read that image.'));
-      el.src = url;
-    });
-    const ratio = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
-    const width = Math.max(1, Math.round(img.naturalWidth * ratio));
-    const height = Math.max(1, Math.round(img.naturalHeight * ratio));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not process that image.');
-    ctx.drawImage(img, 0, 0, width, height);
-    const { data } = ctx.getImageData(0, 0, width, height);
-    let hasAlpha = false;
-    for (let i = 3; i < data.length; i += 4) {
-      if (data[i] < 255) {
-        hasAlpha = true;
-        break;
-      }
-    }
-    const src = hasAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
-    return { src, aspect: width / height };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+import { compressImage } from '@/shared/lib/compressImage';
+import { DESIGN_IMAGE_MAX_BYTES, DESIGN_IMAGE_MAX_EDGE, withExtension } from '@/shared/lib/imageCompression';
+import { registerOriginal } from './artworkOriginals';
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Could not read that image.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Reads an image file, shrinks it to at most 1 MB / 2000 px (transparency is kept), and returns a data URL.
+// The shrunken file is what a quote uploads as the artwork original.
+export async function fileToDataUrl(file: File, maxEdge = DESIGN_IMAGE_MAX_EDGE): Promise<{ src: string; aspect: number }> {
+  const { blob, width, height, mime } = await compressImage(file, { maxBytes: DESIGN_IMAGE_MAX_BYTES, maxEdge });
+  const src = await blobToDataUrl(blob);
+  registerOriginal(src, blob === file ? file : new File([blob], withExtension(file.name, mime), { type: mime }));
+  return { src, aspect: width / height };
+}
+
+// Same as fileToDataUrl for a processed image (e.g. after background removal): the result goes through the same
+// 1 MB compression path and is registered as the artwork original for the quote ZIP.
+export async function blobToDesignImage(blob: Blob, name: string): Promise<{ src: string; aspect: number }> {
+  const type = blob.type || 'image/png';
+  return fileToDataUrl(new File([blob], withExtension(name || 'design', type), { type }));
 }

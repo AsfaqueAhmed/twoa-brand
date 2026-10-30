@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Save, ShoppingBag } from 'lucide-react';
+import { MessageSquareQuote, Save } from 'lucide-react';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
 import { type Layer } from '../../domain/layers';
@@ -23,7 +23,9 @@ import SelectionInspector from './SelectionInspector';
 import AlignPanel from './AlignPanel';
 import LayersList from './LayersList';
 import ProductPanel from './ProductPanel';
+import QuoteRequestModal from '../QuoteRequestModal';
 import PositionScalePanel from './PositionScalePanel';
+import BackgroundRemovalControls from '../BackgroundRemovalControls';
 
 type Props = {
   parent: ParentProduct;
@@ -72,6 +74,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [desktop, setDesktop] = useState(false);
@@ -213,6 +216,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  const quoteDesign: StudioDesign = {
+    parentProductId: parent.id,
+    size,
+    colorName,
+    layersByView: pruneLayersByView(studio.layersByView, views.map((v) => v.id)),
+  };
+  const hasAnyLayers = Object.values(quoteDesign.layersByView).some((l) => l.length > 0);
+
   const save = async () => {
     setSaving(true);
     setStatus(null);
@@ -262,7 +273,14 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
         <ToolRail active={tool} onChange={setTool} className="order-2 lg:order-1 lg:min-h-0 lg:overflow-hidden" />
 
         <aside className="order-3 border-b border-[#EEEEEE] p-5 lg:order-2 lg:min-h-0 lg:overflow-hidden lg:border-b-0 lg:border-r">
-          {tool === 'design' && <DesignPanel onFiles={onFiles} busy={uploading} error={uploadError} />}
+          {tool === 'design' && (
+            <DesignPanel
+              onFiles={onFiles}
+              onGalleryArtwork={(a) => studio.addImage(studio.rememberAsset(a))}
+              busy={uploading}
+              error={uploadError}
+            />
+          )}
           {tool === 'images' && <ImagesPanel assets={studio.assets} onAdd={studio.addImage} maxItems={desktop ? 6 : undefined} />}
           {tool === 'text' && <TextAddPanel onAdd={(init) => studio.addText(init)} />}
           {tool === 'layers' && (
@@ -351,7 +369,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               </button>
             ))}
           </div>
-          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-hidden">
+          <div className="space-y-6 lg:min-h-0 lg:flex-1 lg:space-y-0 lg:overflow-y-auto">
           <div className={`border-t border-[#EEEEEE] pt-5 lg:border-t-0 lg:pt-0 ${panelTab === 'properties' ? 'lg:hidden' : ''}`}>
             <h2 className={`${SECTION_TITLE} lg:sr-only`}>Design Layers</h2>
             {layersList(desktop ? 5 : undefined)}
@@ -369,6 +387,9 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
               )}
               {selectedImage && (
                 <p className="truncate text-xs font-semibold text-black">{selectedImage.name}</p>
+              )}
+              {selectedImage && (
+                <BackgroundRemovalControls variant="desktop" layer={selectedImage} onApply={(id, src) => studio.patch(id, { src })} />
               )}
               {studio.selectedIds.length > 1 && (
                 <SelectionInspector
@@ -411,27 +432,39 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              disabled
-              title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-lg bg-[#EEEEEE] px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-[#9A9A9A]"
+              aria-label="Order now"
+              disabled={!hasAnyLayers}
+              title={hasAnyLayers ? undefined : 'Add something to your design first'}
+              onClick={() => setQuoteOpen(true)}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-black px-2 py-3.5 text-[10px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:bg-[#EEEEEE] disabled:text-[#9A9A9A]"
             >
-              <ShoppingBag className="h-4 w-4" />
-              Add to Cart
+              <MessageSquareQuote className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap">Order now</span>
             </button>
             <button
               type="button"
               disabled={saving}
               onClick={save}
-              className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-white hover:bg-[#333333] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-lg border border-black bg-white px-4 py-3.5 text-[11px] lg:py-2.5 font-bold uppercase tracking-widest text-black hover:bg-[#F5F5F5] disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {saving ? 'Saving…' : 'Save Design'}
             </button>
           </div>
-          <p className="text-center text-[10px] text-[#717171]">Add to Cart and pricing are coming soon.</p>
           </div>
         </aside>
       </div>
+      {quoteOpen && (
+        <QuoteRequestModal
+          parentProductId={parent.id}
+          parentName={parent.name}
+          size={size}
+          colorName={colorName}
+          design={quoteDesign}
+          views={views}
+          onClose={() => setQuoteOpen(false)}
+        />
+      )}
     </div>
   );
 }

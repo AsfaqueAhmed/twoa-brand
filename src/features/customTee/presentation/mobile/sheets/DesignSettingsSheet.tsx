@@ -23,10 +23,13 @@ import {
   scaleToPercent,
 } from '../../../domain/layers';
 import TextEditorSheet from './TextEditorSheet';
+import BackgroundRemovalControls from '../../BackgroundRemovalControls';
 
 type Props = {
   layer: Layer;
   onPatch: (patch: LayerPatch) => void;
+  /** Replaces an image layer's src (undoable); used by background removal. */
+  onSetImageSrc: (layerId: string, src: string) => void;
   onLive: (patch: LayerPatch) => void;
   onSettle: () => void;
   onAlign: (edge: AlignEdge) => void;
@@ -63,6 +66,7 @@ export default function DesignSettingsSheet({
   onDelete,
   onDone,
   onPatch,
+  onSetImageSrc,
 }: Props) {
   const percent = scaleToPercent(layer.scale);
   const [text, setText] = useState(String(percent));
@@ -85,6 +89,12 @@ export default function DesignSettingsSheet({
           </div>
         </div>
       </div>
+      )}
+
+      {layer.type === 'image' && (
+        <div className="border-t border-zinc-100 pt-4">
+          <BackgroundRemovalControls variant="mobile" layer={layer} onApply={onSetImageSrc} />
+        </div>
       )}
 
       {layer.type === 'text' && (

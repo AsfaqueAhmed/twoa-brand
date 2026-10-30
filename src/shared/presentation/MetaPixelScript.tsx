@@ -9,6 +9,8 @@ function PixelRouteTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // The /custom-order URL carries a one-time checkout token; never send it to Meta.
+    if (pathname?.startsWith('/custom-order')) return;
     pixelPageView();
     // Fires on real Next.js route changes. ViewContent for product pages is
     // fired separately by the product detail view.
@@ -33,7 +35,7 @@ export default function MetaPixelScript() {
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${META_PIXEL_ID}');
-          fbq('track', 'PageView');
+          if (location.pathname.indexOf('/custom-order') !== 0) fbq('track', 'PageView');
         `}
       </Script>
       <noscript>

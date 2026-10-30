@@ -89,6 +89,8 @@ export interface OrderItem {
   selectedSize?: string; // For products with size variants
   selectedVariant?: ProductVariant; // For products with design/color variants
   parentProductId?: string; // Snapshot of the parent product whose pooled stock this line decremented
+  customQuoteId?: string; // Set on lines created from an approved custom tee quote
+  customPreviewPath?: string; // Storage path (custom-previews bucket) of the design preview
 }
 
 export interface Order {

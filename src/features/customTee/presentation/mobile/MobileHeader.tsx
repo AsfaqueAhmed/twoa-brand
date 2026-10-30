@@ -7,6 +7,8 @@ type Props = {
   subtitle?: string;
   onBack: () => void;
   onSave: () => void;
+  onRequestQuote?: () => void;
+  quoteDisabled?: boolean;
   saving?: boolean;
 };
 
@@ -15,6 +17,8 @@ export default function MobileHeader({
   subtitle,
   onBack,
   onSave,
+  onRequestQuote,
+  quoteDisabled = false,
   saving = false,
 }: Props) {
   return (
@@ -37,13 +41,25 @@ export default function MobileHeader({
         </div>
       </div>
 
-      <div className="shrink-0 pl-2">
+      <div className="flex shrink-0 items-center gap-2 pl-2">
+        {onRequestQuote && (
+          <button
+            type="button"
+            onClick={onRequestQuote}
+            disabled={quoteDisabled}
+            aria-label="Order now"
+            title={quoteDisabled ? 'Add something to your design first' : undefined}
+            className="flex items-center justify-center rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:bg-[#EEEEEE] disabled:text-[#9A9A9A] disabled:shadow-none disabled:hover:bg-[#EEEEEE]"
+          >
+            Order now
+          </button>
+        )}
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
           aria-label="Save"
-          className="flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50"
+          className="flex items-center justify-center rounded-full border border-black bg-white px-5 py-2.5 text-xs font-bold text-black transition hover:bg-zinc-100 active:scale-95 disabled:opacity-50"
         >
           {saving ? (
             <span className="flex items-center gap-1.5">
