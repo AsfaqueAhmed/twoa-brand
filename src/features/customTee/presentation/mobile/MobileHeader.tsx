@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2 } from 'lucide-react';
 
 type Props = {
   title?: string;
@@ -10,6 +10,9 @@ type Props = {
   onRequestQuote?: () => void;
   quoteDisabled?: boolean;
   saving?: boolean;
+  onDownload?: () => void;
+  downloadDisabled?: boolean;
+  downloading?: boolean;
 };
 
 export default function MobileHeader({
@@ -20,6 +23,9 @@ export default function MobileHeader({
   onRequestQuote,
   quoteDisabled = false,
   saving = false,
+  onDownload,
+  downloadDisabled = false,
+  downloading = false,
 }: Props) {
   return (
     <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between border-b border-[#EEEEEE] bg-white px-4">
@@ -42,6 +48,17 @@ export default function MobileHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 pl-2">
+        {onDownload && (
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={downloadDisabled || downloading}
+            aria-label="Download design"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-black bg-white text-black transition hover:bg-zinc-100 active:scale-95 disabled:border-[#EEEEEE] disabled:text-[#9A9A9A] disabled:hover:bg-white"
+          >
+            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          </button>
+        )}
         {onRequestQuote && (
           <button
             type="button"

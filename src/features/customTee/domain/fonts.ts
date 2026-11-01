@@ -54,6 +54,40 @@ export const FONT_CATALOG: readonly FontOption[] = [
   { label: 'VT323', family: "'VT323', monospace", category: 'Retro', script: 'latin', google: 'VT323' },
   { label: 'Silkscreen', family: "'Silkscreen', monospace", category: 'Retro', script: 'latin', google: 'Silkscreen:wght@400;700' },
   { label: 'Space Mono', family: "'Space Mono', monospace", category: 'Retro', script: 'latin', google: 'Space+Mono:wght@400;700' },
+  { label: 'Fugaz One', family: "'Fugaz One', sans-serif", category: 'Sport', script: 'latin', google: 'Fugaz+One' },
+  { label: 'Squada One', family: "'Squada One', sans-serif", category: 'Sport', script: 'latin', google: 'Squada+One' },
+  { label: 'Bungee Inline', family: "'Bungee Inline', sans-serif", category: 'Sport', script: 'latin', google: 'Bungee+Inline' },
+  { label: 'Racing Sans One', family: "'Racing Sans One', cursive", category: 'Sport', script: 'latin', google: 'Racing+Sans+One' },
+  { label: 'Baloo 2', family: "'Baloo 2', cursive", category: 'Cartoon', script: 'latin', google: 'Baloo+2:wght@400;700' },
+  { label: 'Sniglet', family: "'Sniglet', cursive", category: 'Cartoon', script: 'latin', google: 'Sniglet:wght@400;800' },
+  { label: 'Modak', family: "'Modak', cursive", category: 'Cartoon', script: 'latin', google: 'Modak' },
+  { label: 'Rammetto One', family: "'Rammetto One', cursive", category: 'Cartoon', script: 'latin', google: 'Rammetto+One' },
+  { label: 'Ephesis', family: "'Ephesis', cursive", category: 'Calligraphy', script: 'latin', google: 'Ephesis' },
+  { label: 'Ballet', family: "'Ballet', cursive", category: 'Calligraphy', script: 'latin', google: 'Ballet' },
+  { label: 'Pinyon Script', family: "'Pinyon Script', cursive", category: 'Calligraphy', script: 'latin', google: 'Pinyon+Script' },
+  { label: 'Gloria Hallelujah', family: "'Gloria Hallelujah', cursive", category: 'Handwritten', script: 'latin', google: 'Gloria+Hallelujah' },
+  { label: 'Patrick Hand', family: "'Patrick Hand', cursive", category: 'Handwritten', script: 'latin', google: 'Patrick+Hand' },
+  { label: 'Indie Flower', family: "'Indie Flower', cursive", category: 'Handwritten', script: 'latin', google: 'Indie+Flower' },
+  { label: 'Architects Daughter', family: "'Architects Daughter', cursive", category: 'Handwritten', script: 'latin', google: 'Architects+Daughter' },
+  { label: 'Nanum Pen Script', family: "'Nanum Pen Script', cursive", category: 'Handwritten', script: 'latin', google: 'Nanum+Pen+Script' },
+  { label: 'Rampart One', family: "'Rampart One', sans-serif", category: 'Stencil', script: 'latin', google: 'Rampart+One' },
+  { label: 'Allerta Stencil', family: "'Allerta Stencil', sans-serif", category: 'Stencil', script: 'latin', google: 'Allerta+Stencil' },
+  { label: 'Big Shoulders Stencil Display', family: "'Big Shoulders Stencil Display', sans-serif", category: 'Stencil', script: 'latin', google: 'Big+Shoulders+Stencil+Display:wght@400;800' },
+  { label: 'Major Mono Display', family: "'Major Mono Display', monospace", category: 'Retro', script: 'latin', google: 'Major+Mono+Display' },
+  { label: 'Nosifer', family: "'Nosifer', cursive", category: 'Fun', script: 'latin', google: 'Nosifer' },
+  { label: 'Faster One', family: "'Faster One', cursive", category: 'Retro', script: 'latin', google: 'Faster+One' },
+  { label: 'Rye', family: "'Rye', serif", category: 'Retro', script: 'latin', google: 'Rye' },
+  { label: 'Shrikhand', family: "'Shrikhand', cursive", category: 'Fun', script: 'latin', google: 'Shrikhand' },
+  { label: 'Bowlby One SC', family: "'Bowlby One SC', sans-serif", category: 'Bold', script: 'latin', google: 'Bowlby+One+SC' },
+  { label: 'Passion One', family: "'Passion One', sans-serif", category: 'Bold', script: 'latin', google: 'Passion+One:wght@400;700' },
+  { label: 'Dela Gothic One', family: "'Dela Gothic One', sans-serif", category: 'Bold', script: 'latin', google: 'Dela+Gothic+One' },
+  { label: 'Merriweather', family: "'Merriweather', serif", category: 'Elegant', script: 'latin', google: 'Merriweather:wght@400;700' },
+  { label: 'Cormorant Infant', family: "'Cormorant Infant', serif", category: 'Elegant', script: 'latin', google: 'Cormorant+Infant:wght@400;700' },
+  { label: 'Marcellus', family: "'Marcellus', serif", category: 'Elegant', script: 'latin', google: 'Marcellus' },
+  { label: 'Rubik', family: "'Rubik', sans-serif", category: 'Clean', script: 'latin', google: 'Rubik:wght@400;700' },
+  { label: 'Quicksand', family: "'Quicksand', sans-serif", category: 'Clean', script: 'latin', google: 'Quicksand:wght@400;700' },
+  { label: 'Urbanist', family: "'Urbanist', sans-serif", category: 'Clean', script: 'latin', google: 'Urbanist:wght@400;700' },
+  { label: 'Sora', family: "'Sora', sans-serif", category: 'Clean', script: 'latin', google: 'Sora:wght@400;700' },
   { label: 'Permanent Marker', family: "'Permanent Marker', cursive", category: 'Brush', script: 'latin', google: 'Permanent+Marker' },
   { label: 'Knewave', family: "'Knewave', cursive", category: 'Brush', script: 'latin', google: 'Knewave' },
   { label: 'Kaushan Script', family: "'Kaushan Script', cursive", category: 'Brush', script: 'latin', google: 'Kaushan+Script' },
@@ -151,28 +185,18 @@ export const DEFAULT_FONT_FAMILY = "'Noto Sans Bengali', sans-serif";
 
 export const FONT_CATEGORIES: readonly FontCategory[] = ['Bengali', 'Cartoon', 'Brush', 'Calligraphy', 'Sport', 'Stencil', 'Graffiti', 'Bold', 'Script', 'Handwritten', 'Clean', 'Elegant', 'Fun', 'Retro', 'Classic'];
 
-// A focused set for the picker. The full catalog remains available to load older saved designs.
-const PICKER_FONT_LABELS = new Set([
-  'Noto Sans Bengali', 'Hind Siliguri', 'Baloo Da 2', 'Anek Bangla', 'Galada', 'Atma', 'Alkatra',
-  'Tiro Bangla', 'Noto Serif Bengali', 'Lohit Bengali',
-  'Chewy', 'Luckiest Guy', 'Bubblegum Sans', 'Titan One', 'Coiny', 'Bungee Shade', 'Concert One', 'Gorditas', 'Chango', 'Lilita One',
-  'Permanent Marker', 'Knewave', 'Kaushan Script', 'Sriracha', 'Kalam', 'Homemade Apple', 'Merienda', 'Mansalva', 'Gochi Hand', 'Covered By Your Grace', 'Sedgwick Ave Display', 'Bangers', 'Rubik Spray Paint',
-  'Allura', 'Parisienne', 'Alex Brush', 'Italianno', 'Tangerine', 'Rochester', 'Petit Formal Script', 'Rouge Script', 'Mr Dafoe', 'Qwitcher Grypen', 'Yellowtail',
-  'Bebas Neue', 'Anton', 'Oswald', 'Barlow Condensed', 'League Spartan', 'Archivo Black', 'Black Ops One', 'Fjalla One',
-  'Teko', 'Graduate', 'Chakra Petch', 'Saira Stencil One', 'Stardos Stencil',
-  'VT323', 'Silkscreen', 'Space Mono',
-  'Pacifico', 'Lobster', 'Dancing Script', 'Caveat',
-  'Inter', 'Montserrat', 'Poppins', 'Space Grotesk', 'DM Sans', 'Manrope', 'Outfit', 'Work Sans', 'Nunito Sans', 'Plus Jakarta Sans',
-  'Playfair Display', 'DM Serif Display', 'Cormorant Garamond', 'Lora', 'Libre Baskerville',
-  'Bungee', 'Righteous', 'Fredoka', 'Orbitron', 'Audiowide', 'Press Start 2P',
-  'Sans', 'Serif', 'Mono', 'Impact', 'Script',
-]);
-
-export const FONT_PICKER_OPTIONS = FONT_CATALOG.filter((font) => PICKER_FONT_LABELS.has(font.label));
+// The picker lists the full catalog: existing fonts plus the newly added ones.
+export const FONT_PICKER_OPTIONS = FONT_CATALOG;
 export const FONT_PICKER_CATEGORIES = FONT_CATEGORIES.filter((category) =>
   FONT_PICKER_OPTIONS.some((font) => font.category === category),
 );
 
-export const GOOGLE_FONTS_URL = `https://fonts.googleapis.com/css2?${FONT_CATALOG.filter((f) => f.google)
-  .map((f) => `family=${f.google}`)
-  .join('&')}&display=swap`;
+// Google Fonts rejects very long URLs, so the catalog is requested in chunks.
+const FONTS_PER_REQUEST = 40;
+const googleFamilies = FONT_CATALOG.filter((f) => f.google).map((f) => `family=${f.google}`);
+
+export const GOOGLE_FONTS_URLS: readonly string[] = Array.from(
+  { length: Math.ceil(googleFamilies.length / FONTS_PER_REQUEST) },
+  (_, i) =>
+    `https://fonts.googleapis.com/css2?${googleFamilies.slice(i * FONTS_PER_REQUEST, (i + 1) * FONTS_PER_REQUEST).join('&')}&display=swap`,
+);

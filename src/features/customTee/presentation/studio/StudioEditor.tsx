@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquareQuote, Save } from 'lucide-react';
 import type { ParentProduct } from '@/shared/domain/types';
 import type { ParentCardData } from '../../domain/cards';
-import { type Layer } from '../../domain/layers';
+import { type Layer, fullMockupFrame } from '../../domain/layers';
 import { isSingleUnit, selectionUnits } from '../../domain/grouping';
 import type { CanvasPx, Size } from '../../domain/geometry';
 import { DESIGN_STORAGE_KEY, type StudioDesign, pruneLayersByView, serializeDesign, validateArtworkFile } from '../../domain/design';
 import { HANDOFF_KEY, resolveStudioTarget } from '../../domain/studioTarget';
 import { buildViews } from '../../domain/views';
 import { fileToDataUrl } from '../../application/imageUpload';
+import { downloadViewPng } from '../../application/downloadDesign';
 import { useStudioState } from '../../application/useStudioState';
 import Canvas, { type CanvasHandle } from './Canvas';
 import StudioToolbar from './StudioToolbar';
@@ -75,6 +76,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [desktop, setDesktop] = useState(false);
@@ -105,7 +107,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     setPanelTab(hasSelection ? 'properties' : 'layers');
   }, [hasSelection]);
 
-  const onFiles = async (files: FileList | null) => {
+  const onFiles = async (files: FileList | null, fullMockup = false) => {
     if (!files || files.length === 0) return;
     setUploading(true);
     setUploadError(null);
@@ -118,7 +120,8 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             continue;
           }
           const { src, aspect } = await fileToDataUrl(file);
-          studio.addImage(studio.rememberAsset({ name: file.name, src, aspect }));
+          const frame = fullMockup ? fullMockupFrame(aspect, stagePxRef.current.h / stagePxRef.current.w) : undefined;
+          studio.addImage(studio.rememberAsset({ name: file.name, src, aspect }), frame);
         } catch (err) {
           setUploadError(err instanceof Error ? err.message : 'Could not read that image.');
         }
@@ -155,6 +158,17 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
     if (!el) return;
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     else el.requestFullscreen?.()?.catch(() => {});
+  };
+  const downloadDesign = async () => {
+    if (!view || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadViewPng(view, studio.layers, parent.name);
+    } catch (err) {
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Could not download your design.' });
+    } finally {
+      setDownloading(false);
+    }
   };
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
   useEffect(() => {
@@ -276,6 +290,7 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
           {tool === 'design' && (
             <DesignPanel
               onFiles={onFiles}
+              onFullMockup={(files) => onFiles(files, true)}
               onGalleryArtwork={(a) => studio.addImage(studio.rememberAsset(a))}
               busy={uploading}
               error={uploadError}
@@ -308,6 +323,9 @@ export default function StudioEditor({ parent, card, initialSize, initialColor, 
             fullscreen={fullscreen}
             onFullscreen={toggleFullscreen}
             fullscreenSupported={fullscreenSupported}
+            onDownload={downloadDesign}
+            downloading={downloading}
+            canDownload={studio.layers.length > 0}
           />
           <p className="text-[10px] text-[#717171]">Wheel to pan · Ctrl/Cmd + wheel to zoom · Space + drag to pan · Shift-click or drag a box to multi-select · Cmd/Ctrl + G to group · On touch screens use the zoom buttons</p>
           <Canvas

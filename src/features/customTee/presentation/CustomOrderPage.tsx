@@ -55,7 +55,7 @@ function InvalidState() {
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center" id="custom-order-invalid">
       <h1 className="text-2xl font-bold text-black">Quote unavailable</h1>
-      <p className="mt-3 text-sm text-[#717171]">This quote link is no longer valid. Please contact us on WhatsApp.</p>
+      <p className="mt-3 text-sm text-[#717171]">This quote link is no longer valid. Please contact us on WhatsApp: <a href="https://wa.me/8801676507998" target="_blank" rel="noopener noreferrer" className="font-semibold text-black underline">01676507998</a>.</p>
     </div>
   );
 }

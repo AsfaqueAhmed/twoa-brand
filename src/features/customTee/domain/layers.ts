@@ -92,6 +92,12 @@ export function createImageLayer(init: { id: string; name: string; src: string; 
   return { ...baseDefaults, type: 'image', ...init };
 }
 
+/** Centre and scale an image so it covers the whole canvas (a ready-made full mockup). `canvasHW` is canvas height / width. */
+export function fullMockupFrame(aspect: number, canvasHW: number): { x: number; y: number; scale: number } {
+  const scale = Math.min(MAX_SCALE, Math.max(1, canvasHW * aspect));
+  return { x: 0.5, y: 0.5, scale };
+}
+
 export function createTextLayer(init: {
   id: string;
   text: string;

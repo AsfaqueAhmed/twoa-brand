@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import {
   ChevronRight,
   HardDrive,
+  Image as ImageIcon,
   LayoutGrid,
   UploadCloud,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ type SubTab = 'upload' | 'gallery' | 'my-designs';
 type Props = {
   assets: Asset[];
   onUploadFiles: (files: FileList | null) => void;
+  onUploadFullMockup: (files: FileList | null) => void;
   onSelectAsset: (asset: Asset) => void;
   onSelectArtwork: (artwork: { name: string; src: string; aspect: number }) => void;
   uploading?: boolean;
@@ -25,6 +27,7 @@ type Props = {
 export default function AddDesignSheet({
   assets,
   onUploadFiles,
+  onUploadFullMockup,
   onSelectAsset,
   onSelectArtwork,
   uploading = false,
@@ -33,6 +36,7 @@ export default function AddDesignSheet({
 }: Props) {
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mockupInputRef = useRef<HTMLInputElement>(null);
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
@@ -49,6 +53,17 @@ export default function AddDesignSheet({
         className="hidden"
         onChange={(e) => {
           onUploadFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
+
+      <input
+        ref={mockupInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          onUploadFullMockup(e.target.files);
           e.target.value = '';
         }}
       />
@@ -116,6 +131,16 @@ export default function AddDesignSheet({
               <p className="mt-2 text-xs font-bold text-indigo-600 animate-pulse">Uploading image...</p>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => mockupInputRef.current?.click()}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-black bg-white py-3 text-xs font-bold text-black transition hover:bg-zinc-100 active:scale-95"
+          >
+            <ImageIcon className="h-4 w-4" />
+            Upload full mockup
+          </button>
+          <p className="-mt-3 text-center text-[11px] font-medium text-zinc-400">A ready-made design image — fills the whole product view.</p>
 
           {/* Recent Uploads Section */}
           <div>

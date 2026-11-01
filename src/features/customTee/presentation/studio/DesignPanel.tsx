@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Image as ImageIcon, Upload } from 'lucide-react';
 import type { GalleryAsset } from '../../application/galleryArtwork';
 import GalleryPanel from './GalleryPanel';
 
 type Props = {
   onFiles: (files: FileList | null) => void;
+  onFullMockup: (files: FileList | null) => void;
   onGalleryArtwork: (asset: GalleryAsset) => void;
   busy: boolean;
   error: string | null;
@@ -16,7 +17,7 @@ type Tab = 'upload' | 'gallery';
 
 const TAB = 'rounded-md px-3 py-2 text-[11px] font-bold uppercase tracking-wider';
 
-export default function DesignPanel({ onFiles, onGalleryArtwork, busy, error }: Props) {
+export default function DesignPanel({ onFiles, onFullMockup, onGalleryArtwork, busy, error }: Props) {
   const [tab, setTab] = useState<Tab>('upload');
   return (
     <div className="flex flex-col gap-4 lg:h-full lg:min-h-0">
@@ -67,6 +68,25 @@ export default function DesignPanel({ onFiles, onGalleryArtwork, busy, error }: 
             className="sr-only"
             onChange={(e) => {
               onFiles(e.target.files);
+              e.target.value = '';
+            }}
+          />
+
+          <label
+            htmlFor="mockup-file"
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-black px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-black hover:bg-[#F5F5F5]"
+          >
+            <ImageIcon className="h-4 w-4" />
+            Upload full mockup
+          </label>
+          <p className="-mt-2 text-[10px] text-[#717171]">A ready-made design image — fills the whole product view.</p>
+          <input
+            id="mockup-file"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="sr-only"
+            onChange={(e) => {
+              onFullMockup(e.target.files);
               e.target.value = '';
             }}
           />

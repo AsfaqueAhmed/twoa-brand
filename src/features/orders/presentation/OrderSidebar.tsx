@@ -2,7 +2,7 @@ import { ChevronRight, Clock, FileText, Headphones, MessageSquare, Phone } from 
 import type { Order } from '@/shared/domain/types';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
 import { computeOrderBilling, orderNumber } from '../domain/orderBilling';
-import { SUPPORT_MESSAGE_URL, SUPPORT_PHONE } from './supportContacts';
+import { SUPPORT_PHONE, SUPPORT_WHATSAPP_URL } from './supportContacts';
 import { ThumbImage } from '@/shared/ui/ThumbImage';
 
 const Row = ({ label, value, valueClass = 'text-black' }: { label: string; value: string; valueClass?: string }) => (
@@ -63,14 +63,14 @@ export function HelpCard() {
           </span>
         </a>
         <a
-          href={SUPPORT_MESSAGE_URL}
+          href={SUPPORT_WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 border border-black p-3 hover:bg-[#F5F5F5] transition-colors"
         >
           <MessageSquare className="h-5 w-5 shrink-0" />
           <span>
-            <span className="block text-sm font-bold text-black">Message Us</span>
+            <span className="block text-sm font-bold text-black">WhatsApp Us</span>
             <span className="block text-xs text-[#717171]">We're here to help</span>
           </span>
         </a>

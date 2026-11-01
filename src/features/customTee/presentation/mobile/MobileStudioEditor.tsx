@@ -9,6 +9,7 @@ import {
   type Layer,
   type LayerPatch,
   alignLayer,
+  fullMockupFrame,
 } from '../../domain/layers';
 import {
   DESIGN_STORAGE_KEY,
@@ -18,6 +19,7 @@ import {
   validateArtworkFile,
 } from '../../domain/design';
 import { HANDOFF_KEY, resolveStudioTarget } from '../../domain/studioTarget';
+import { downloadViewPng } from '../../application/downloadDesign';
 import { buildViews } from '../../domain/views';
 import { fileToDataUrl } from '../../application/imageUpload';
 import { useStudioState, type Asset } from '../../application/useStudioState';
@@ -64,6 +66,7 @@ export default function MobileStudioEditor({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [measure, setMeasure] = useState<{ stage: CanvasPx; sizes: Record<string, Size> } | null>(null);
 
@@ -110,7 +113,7 @@ export default function MobileStudioEditor({
   };
 
   // Upload handler
-  const handleFiles = async (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null, fullMockup = false) => {
     if (!files || files.length === 0) return;
     setUploading(true);
     setUploadError(null);
@@ -124,7 +127,8 @@ export default function MobileStudioEditor({
           }
           const { src, aspect } = await fileToDataUrl(file);
           const asset = studio.rememberAsset({ name: file.name, src, aspect });
-          studio.addImage(asset);
+          const frame = fullMockup ? fullMockupFrame(aspect, measure ? measure.stage.h / measure.stage.w : 1) : undefined;
+          studio.addImage(asset, frame);
           closeSheet();
         } catch (err) {
           setUploadError(err instanceof Error ? err.message : 'Could not read image file.');
@@ -226,6 +230,19 @@ export default function MobileStudioEditor({
     }
   };
 
+  const download = async () => {
+    if (!view || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadViewPng(view, studio.layers, parent.name);
+    } catch (err) {
+      setSaveToast(err instanceof Error ? err.message : 'Could not download your design.');
+      setTimeout(() => setSaveToast(null), 3000);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // Subtitle formatted
   const subtitle = `${colorName || parent.name} • Size ${size}`;
 
@@ -240,6 +257,9 @@ export default function MobileStudioEditor({
         onRequestQuote={() => setQuoteOpen(true)}
         quoteDisabled={!hasAnyLayers}
         saving={saving}
+        onDownload={download}
+        downloadDisabled={!hasAnyLayers}
+        downloading={downloading}
       />
 
       {/* Save Notification Toast */}
@@ -325,6 +345,7 @@ export default function MobileStudioEditor({
           <AddDesignSheet
             assets={studio.assets}
             onUploadFiles={handleFiles}
+            onUploadFullMockup={(files) => handleFiles(files, true)}
             onSelectAsset={handleSelectAsset}
             onSelectArtwork={handleSelectArtwork}
             uploading={uploading}

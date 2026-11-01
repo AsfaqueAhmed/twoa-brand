@@ -61,7 +61,8 @@ export function useStudioState(initialLayersByView: ByView, viewId: string) {
   );
 
   const addImage = useCallback(
-    (a: Asset) => addAndSelect(createImageLayer({ id: nextId('layer'), name: a.name, src: a.src, aspect: a.aspect })),
+    (a: Asset, frame?: { x: number; y: number; scale: number }) =>
+      addAndSelect({ ...createImageLayer({ id: nextId('layer'), name: a.name, src: a.src, aspect: a.aspect }), ...frame }),
     [addAndSelect], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const addText = useCallback(
