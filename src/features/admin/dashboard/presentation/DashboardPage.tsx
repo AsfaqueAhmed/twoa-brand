@@ -85,9 +85,9 @@ export default function DashboardPage() {
             <StatCard icon={Users} label="New Customers" value={String(view.cur.newCustomers)} change={view.change.customers} />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="space-y-6 xl:col-span-2">
-              <div className="grid gap-6 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <div className="min-w-0 space-y-6 xl:col-span-2">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
                 <AdminCard title="Sales Overview" className="lg:col-span-3"><SalesChart data={view.series} /></AdminCard>
                 <AdminCard title="Orders by Status" className="lg:col-span-2"><StatusDonut counts={view.statusCounts} /></AdminCard>
               </div>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 <TopSellers items={view.top} />
               </AdminCard>
             </div>
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               <AdminCard title="Quick Actions"><QuickActions /></AdminCard>
               <AdminCard title="Low Stock Products" action={<Link href="/admin/products" className="text-xs underline">View All</Link>}>
                 <LowStockList items={view.lowStock} />
