@@ -16,6 +16,7 @@ export const FONT_CATALOG: readonly FontOption[] = [
   { label: 'Noto Sans Bengali', family: "'Noto Sans Bengali', sans-serif", category: 'Bengali', script: 'bengali', google: 'Noto+Sans+Bengali:wght@400;700' },
   { label: 'Hind Siliguri', family: "'Hind Siliguri', sans-serif", category: 'Bengali', script: 'bengali', google: 'Hind+Siliguri:wght@400;700' },
   { label: 'Baloo Da 2', family: "'Baloo Da 2', sans-serif", category: 'Bengali', script: 'bengali', google: 'Baloo+Da+2:wght@400;700' },
+  { label: 'Google Sans', family: "'Google Sans', sans-serif", category: 'Bengali', script: 'bengali', google: 'Google+Sans:wght@400;700' },
   { label: 'Anek Bangla', family: "'Anek Bangla', sans-serif", category: 'Bengali', script: 'bengali', google: 'Anek+Bangla:wght@400;700' },
   { label: 'Galada', family: "'Galada', cursive", category: 'Bengali', script: 'bengali', google: 'Galada' },
   { label: 'Atma', family: "'Atma', cursive", category: 'Bengali', script: 'bengali', google: 'Atma:wght@400;700' },
