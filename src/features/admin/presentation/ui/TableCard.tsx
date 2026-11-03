@@ -1,3 +1,5 @@
+import MobileCards from './MobileCards';
+
 // Table building blocks. Class constants keep headers/rows consistent across screens.
 export const TABLE_HEAD_ROW = 'border-b border-[#EEEEEE] bg-[#FAF9F6] text-xs font-medium text-[#555555]';
 export const TABLE_BODY = 'divide-y divide-[#EEEEEE] text-sm text-[#1A1A1A]';
@@ -12,14 +14,14 @@ export function TableCard({ children }: { children: React.ReactNode }) {
 /** Horizontally scrolling <table> with the standard header row; pass min-width class via `minWidth`. */
 export function TableScroll({ minWidth = 'min-w-[860px]', head, children }: { minWidth?: string; head: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto">
+    <MobileCards>
       <table className={`w-full ${minWidth} border-collapse text-left`}>
         <thead>
           <tr className={TABLE_HEAD_ROW}>{head}</tr>
         </thead>
         <tbody className={TABLE_BODY}>{children}</tbody>
       </table>
-    </div>
+    </MobileCards>
   );
 }
 

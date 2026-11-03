@@ -1,3 +1,4 @@
+import MobileCards from '@/features/admin/presentation/ui/MobileCards';
 import { Edit2, Trash2 } from 'lucide-react';
 import { TABLE_BODY, TABLE_HEAD_ROW, TABLE_ROW } from '@/features/admin/presentation/ui/TableCard';
 import type { ParentProduct } from '@/shared/domain/types';
@@ -42,7 +43,7 @@ function SizeChips({ pp }: { pp: ParentProduct }) {
 
 export default function ParentProductsTable({ parents, linked, onEdit, onDelete, emptyText = 'No parent products found.' }: Props) {
   return (
-    <div className="overflow-x-auto">
+    <MobileCards>
       <table className="w-full min-w-[960px] border-collapse text-left">
         <thead>
           <tr className={TABLE_HEAD_ROW}>
@@ -144,6 +145,6 @@ export default function ParentProductsTable({ parents, linked, onEdit, onDelete,
           )}
         </tbody>
       </table>
-    </div>
+    </MobileCards>
   );
 }

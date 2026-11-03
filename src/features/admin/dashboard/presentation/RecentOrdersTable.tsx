@@ -1,3 +1,4 @@
+import MobileCards from '@/features/admin/presentation/ui/MobileCards';
 import type { Order, OrderStatus } from '@/shared/domain/types';
 import { STATUS_LABELS } from '@/features/admin/analytics/domain/analytics';
 import { formatCurrency } from '@/shared/lib/formatCurrency';
@@ -10,7 +11,7 @@ const BADGE: Record<OrderStatus, string> = {
 export default function RecentOrdersTable({ orders }: { orders: Order[] }) {
   if (orders.length === 0) return <p className="text-sm text-[#717171]">No orders in this period.</p>;
   return (
-    <div className="overflow-x-auto">
+    <MobileCards>
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead className="text-xs text-[#717171]">
           <tr><th scope="col" className="py-2 font-medium">#</th><th scope="col" className="font-medium">Customer</th><th scope="col" className="font-medium">Items</th><th scope="col" className="font-medium">Amount</th><th scope="col" className="font-medium">Status</th><th scope="col" className="font-medium">Date</th></tr>
@@ -28,6 +29,6 @@ export default function RecentOrdersTable({ orders }: { orders: Order[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </MobileCards>
   );
 }

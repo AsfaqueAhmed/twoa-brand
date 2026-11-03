@@ -1,3 +1,4 @@
+import MobileCards from '@/features/admin/presentation/ui/MobileCards';
 import { Edit2 } from 'lucide-react';
 import { TABLE_BODY, TABLE_HEAD_ROW, TABLE_ROW } from '@/features/admin/presentation/ui/TableCard';
 import type { Product } from '@/shared/domain/types';
@@ -63,7 +64,7 @@ export default function ProductsTable(props: ProductsListProps) {
   const selected = new Set(selectedIds);
 
   return (
-    <div className="overflow-x-auto">
+    <MobileCards>
       <table className="w-full min-w-[920px] border-collapse text-left">
         <thead>
           <tr className={TABLE_HEAD_ROW}>
@@ -170,6 +171,6 @@ export default function ProductsTable(props: ProductsListProps) {
           )}
         </tbody>
       </table>
-    </div>
+    </MobileCards>
   );
 }

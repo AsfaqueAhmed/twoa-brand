@@ -78,7 +78,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard icon={ShoppingCart} label="Total Orders" value={String(view.cur.totalOrders)} change={view.change.orders} />
             <StatCard icon={Coins} label="Total Sales" value={formatCurrency(view.cur.totalSales)} change={view.change.sales} />
             <StatCard icon={Package} label="Products Sold" value={String(view.cur.productsSold)} change={view.change.sold} />

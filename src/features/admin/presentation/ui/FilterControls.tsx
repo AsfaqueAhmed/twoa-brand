@@ -9,7 +9,7 @@ export const FILTER_CONTROL =
 // inner padding on the right as the label has on the left.
 export function FilterSelect({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <div className="relative min-w-[9.5rem]">
+    <div className="relative min-w-[9.5rem] max-sm:flex-1">
       <select {...props} className={SELECT}>
         {children}
       </select>
@@ -28,7 +28,7 @@ type SearchProps = {
 
 export function FilterSearch({ value, onChange, placeholder = 'Search...', id, ariaLabel }: SearchProps) {
   return (
-    <div className="relative min-w-[220px] flex-1">
+    <div className="relative min-w-[220px] flex-1 max-sm:min-w-full">
       <Search aria-hidden="true" className="absolute left-3.5 top-3 h-4 w-4 text-[#717171]" />
       <input
         type="text"

@@ -7,7 +7,7 @@ type Props = { activeCount: number; onReset: () => void; children: React.ReactNo
 // standard "Filter" indicator (with active-count badge) and Reset button.
 export default function FilterBar({ activeCount, onReset, children }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#EEEEEE] bg-[#FAF9F6] p-4">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#EEEEEE] bg-[#FAF9F6] p-4 max-sm:gap-2 max-sm:p-3">
       {children}
       <span className={FILTER_CONTROL}>
         <Filter className="h-3.5 w-3.5" />

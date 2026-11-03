@@ -42,7 +42,8 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
 
   return (
     <div id={`admin-order-row-${order.id}`} className={`rounded-xl border border-[#EEEEEE] bg-white p-4 shadow-xs ${selected ? 'ring-1 ring-black' : ''}`}>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex items-start gap-3 sm:contents">
         {onToggleSelected && (
           <input
             type="checkbox"
@@ -50,11 +51,11 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
             checked={selected}
             onChange={onToggleSelected}
             disabled={disabled}
-            className="h-4 w-4 shrink-0 rounded border-[#CCCCCC] accent-black disabled:opacity-50"
+            className="mt-1 h-4 w-4 shrink-0 rounded border-[#CCCCCC] accent-black disabled:opacity-50 sm:mt-0"
           />
         )}
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-sm font-bold text-black">{shortOrderId(order.id).toUpperCase()}</span>
             <button
               type="button"
@@ -68,8 +69,9 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           </div>
           <p className="mt-1 text-[11px] text-[#717171]">Placed on {formatPlacedOn(order.createdAt)}</p>
         </div>
+        </div>
 
-        <div className="flex min-w-0 flex-1 basis-48 items-center gap-3">
+        <div className="flex min-w-0 flex-1 basis-48 items-center gap-3 max-sm:basis-auto">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-[#919191]">
             <User className="h-5 w-5" />
           </span>
@@ -106,7 +108,8 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-[#717171]">
+        <div className="flex items-center gap-3 max-sm:border-t max-sm:border-[#F5F5F5] max-sm:pt-3 sm:contents">
+        <div className="flex items-center gap-2 text-[#717171] max-sm:flex-1">
           <ShoppingCart className="h-5 w-5" />
           <span className="text-sm">{count} {count === 1 ? 'item' : 'items'}</span>
         </div>
@@ -114,7 +117,7 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
         <Link
           id={`admin-order-edit-${order.id}`}
           href={`/admin/orders/edit?id=${order.id}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[#EEEEEE] px-3.5 py-2 text-xs font-semibold text-black hover:border-black"
+          className="inline-flex items-center gap-1.5 rounded-md border border-[#EEEEEE] px-3.5 py-2 text-xs font-semibold text-black hover:border-black max-sm:py-2.5"
         >
           <Pencil className="h-3.5 w-3.5" /> Edit
         </Link>
@@ -123,10 +126,11 @@ export default function AdminOrderCard({ order, onStatusChange, selected = false
           aria-expanded={expanded}
           aria-label={expanded ? 'Collapse order' : 'Expand order'}
           onClick={() => setExpanded((e) => !e)}
-          className="rounded-md p-1.5 text-[#717171] hover:bg-[#F5F5F5] hover:text-black"
+          className="rounded-md p-1.5 text-[#717171] hover:bg-[#F5F5F5] hover:text-black max-sm:p-2"
         >
           <ChevronDown className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </button>
+        </div>
       </div>
 
       {expanded && (
