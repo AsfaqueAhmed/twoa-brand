@@ -1,21 +1,29 @@
 {
   "short_name": "2A",
-  "name": "2A Delivery & Tracking",
+  "name": "2A \u2014 Authentic & Aesthetic",
   "icons": [
     {
-      "src": "https://img.icons8.com/color/192/shopping-bag.png",
+      "src": "/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
-      "src": "https://img.icons8.com/color/512/shopping-bag.png",
+      "src": "/icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "display": "standalone",
   "orientation": "portrait",
   "description": "Premium e-commerce mobile-first store with Cash on Delivery and live tracking timeline."

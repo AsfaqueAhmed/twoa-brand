@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: '2A',
   description: 'Premium Quality, Paid on Delivery',
   manifest: '/manifest.json',
+  icons: { apple: '/apple-touch-icon.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
