@@ -27,8 +27,8 @@ export default function Navbar() {
     router.push(tab === 'shop' ? '/' : tab === 'orders' ? '/orders' : '/admin');
   };
   const onOpenCart = () => router.push('/cart');
-  // Product, cart and checkout pages carry their own sticky action bar on mobile.
-  const hideBottomNav = ['/product', '/cart', '/checkout'].some((p) => pathname.startsWith(p));
+  // Product, cart and checkout pages carry their own sticky action bar on mobile; the admin has its own tab bar.
+  const hideBottomNav = ['/product', '/cart', '/checkout', '/admin'].some((p) => pathname.startsWith(p));
   const onSignIn = signIn;
   const onSignOut = signOut;
 

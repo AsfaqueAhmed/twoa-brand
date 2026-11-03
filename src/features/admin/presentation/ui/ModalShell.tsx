@@ -22,14 +22,14 @@ export default function ModalShell({ title, onClose, busy = false, children }: P
 
   if (typeof document === 'undefined') return null;
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 max-sm:items-end max-sm:p-0">
       <div className="absolute inset-0 bg-[#1A1A1A]/40" onClick={() => { if (!busy) onClose(); }} />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-md rounded-xl border border-[#EEEEEE] bg-white p-6 shadow-2xl"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-[#EEEEEE] bg-white p-6 shadow-2xl max-sm:rounded-b-none max-sm:p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
       >
         <h3 id={titleId} className="mb-4 text-base font-bold text-black">{title}</h3>
         {children}

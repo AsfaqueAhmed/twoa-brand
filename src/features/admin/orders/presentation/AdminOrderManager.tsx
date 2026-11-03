@@ -134,7 +134,7 @@ export default function AdminOrderManager() {
       />
 
       {/* Header Filtering and Sorting controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#FAF9F6] border border-[#EEEEEE] rounded-lg p-5 max-sm:gap-3 max-sm:p-3">
         {/* Search Input */}
         <div className="relative">
           <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#717171]" />
@@ -149,12 +149,12 @@ export default function AdminOrderManager() {
         </div>
 
         {/* Status Tabs selector */}
-        <div className="flex bg-[#F5F5F5] p-1 border border-[#EEEEEE] rounded-lg justify-between col-span-1 md:col-span-2">
+        <div className="flex bg-[#F5F5F5] p-1 border border-[#EEEEEE] rounded-lg justify-between col-span-1 md:col-span-2 max-sm:overflow-x-auto max-sm:justify-start">
           {(['all', 'pending', 'confirmed', 'out_for_delivery', 'delivered', 'cancelled'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setOrderStatusFilter(st)}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-lg ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 text-[10px] font-bold uppercase max-sm:py-2 tracking-wider transition-all rounded-lg ${
                 orderStatusFilter === st ? 'bg-white text-black shadow-xs' : 'text-[#717171] hover:text-black'
               }`}
             >

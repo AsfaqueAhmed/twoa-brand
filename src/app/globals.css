@@ -19,3 +19,36 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
   animation: shimmer 1.6s infinite;
 }
+
+/* Admin tables collapse into stacked cards on phones (see MobileCards.tsx for the data-* attributes). */
+@media (max-width: 639px) {
+  .admin-cards { overflow-x: visible; }
+  .admin-cards table,
+  .admin-cards tbody,
+  .admin-cards tr,
+  .admin-cards td { display: block; width: 100%; min-width: 0; }
+  .admin-cards thead { display: none; }
+  .admin-cards tr { position: relative; padding: 0.875rem 1rem; }
+  .admin-cards td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem 0 !important;
+    text-align: right;
+  }
+  .admin-cards td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #717171;
+  }
+  .admin-cards td[data-stack]:not([data-primary]) { flex-direction: column; align-items: flex-start; gap: 0.125rem; text-align: left; }
+  .admin-cards td[data-primary] { justify-content: flex-start; text-align: left; padding-bottom: 0.5rem !important; }
+  .admin-cards td[data-actions] { justify-content: flex-start; padding-top: 0.75rem !important; }
+  .admin-cards td[data-select] { position: absolute; top: 0.875rem; right: 1rem; width: auto; padding: 0 !important; }
+  .admin-cards td[data-primary] .truncate { max-width: none; }
+  .admin-cards td[colspan] { display: block; text-align: center; }
+}

@@ -6,7 +6,7 @@ export default function Pagination({ from, to, total, page, totalPages, onPage, 
   if (total === 0) return null;
   const btn = 'rounded-lg border border-[#EEEEEE] bg-white p-2 text-black hover:border-black disabled:opacity-40 disabled:hover:border-[#EEEEEE]';
   return (
-    <div className="flex items-center gap-3" id={id}>
+    <div className="flex flex-wrap items-center gap-3" id={id}>
       <span className="whitespace-nowrap text-xs text-[#717171]">
         Showing {from}-{to} of {total}
       </span>

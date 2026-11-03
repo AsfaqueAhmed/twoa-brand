@@ -55,7 +55,7 @@ export default function SelectionStepTwo({ parents, products, selection, onChang
           <p className="rounded-lg bg-[#F5F5F5] px-4 py-3 text-xs text-[#717171]">No tees match this selection.</p>
         ) : (
           <div className="overflow-y-auto p-1" style={{ maxHeight: maxHeight ? maxHeight + 8 : undefined }}>
-            <div ref={gridRef} className="grid grid-cols-4 gap-3">
+            <div ref={gridRef} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {cards.map((card) => (
                 <ParentCard
                   key={card.parent.id}
